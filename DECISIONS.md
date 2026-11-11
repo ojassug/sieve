@@ -173,3 +173,26 @@ Implementation decisions too small or too local for an ADR, plus session hand-ov
 
 - **Evidence.** `node bench/lex.ts` runs at 32–34 MB/s (median of 5 passes over 43.7 MB) on Windows 11 with Node 26.4.
 - **Implication.** A cold lex of a 10,000-file repository that averages 10 KB per file (100 MB) takes about 3 s. That is a tenth of T6's 30-second budget for the whole static graph. Extraction is cached by (blob oid, extractor version), so incremental runs only re-lex changed blobs.
+
+## 16. Graph representation (`core/graph`)
+
+- **Context.** Architecture §3.2 and §3.3 specify the graph:
+  - CSR adjacency in both directions;
+  - a provenance per edge (static, dynamic or declared);
+  - a multi-source reverse BFS with parent pointers for why-paths;
+  - output that is deterministic across runs and OSes (P6).
+- **Decision.**
+  - **Edge direction.** An edge points from the dependent to what it depends on. The BFS walks the reverse arrays from the changed nodes.
+  - **Canonical ids.** `GraphBuilder.build()` numbers nodes in sorted name order, in UTF-16 code-unit order. The same graph built in any order therefore gives identical CSR arrays, BFS order and why-paths.
+  - **Ties.** Seeds and neighbours are visited in ascending id order, and the first discovery wins. A why-path is therefore a shortest path to the lowest-numbered nearest seed.
+  - **Provenance is a 3-bit mask:** `STATIC=1`, `DYNAMIC=2`, `DECLARED=4`. Duplicate edges are merged by OR-ing the bits, because one edge is often both static and dynamic.
+    - This differs from ADR-0009 and §4.2, which give SMAP a "2-bit provenance per edge". Two bits can't represent combinations of three sources.
+    - To settle when SMAP is built (week 3): a 3-bit mask, or 2 bits plus a rule that drops a source.
+  - Seeds that aren't nodes throw. Callers map changed paths to nodes, or to escalations (§3.5), first.
+- **Evidence.**
+  - P1: a node is reached exactly when its forward closure meets the change set. Checked against a DFS oracle over the raw edge list on 2,000 random graphs, with cycles allowed.
+  - P3: monotonicity, on 2,000 graphs.
+  - Why-paths follow real edges and are shortest, checked by an independent BFS on 1,000 graphs.
+  - Building with permuted insertion order gives identical arrays and why-paths, on 1,000 graphs.
+  - 5 hand mutants, all caught.
+  - At 100,000 nodes and 1M edges, the reverse BFS takes 7.6–8.5 ms in the worst case, when every node is reached; §3.3 expected tens of milliseconds. The build takes 1.6 s ([bench/README.md](bench/README.md)).
