@@ -4,3 +4,7 @@ export { lsTree, readObjectFormat, type ObjectFormat } from './git/git.ts';
 export { LsTreeParser, parseLsTree, type LsTreeEntry, type ObjectType } from './git/ls-tree.ts';
 export { dialectOf, lexImports, lexImportsFromBytes, type Dialect, type DiagnosticCode, type ImportKind, type ImportRecord, type LexDiagnostic, type LexResult } from './lex/ts.ts';
 export { DECLARED, DYNAMIC, Graph, GraphBuilder, reverseReach, STATIC, whyPath, type Reach } from './graph/graph.ts';
+export { globToRegExp } from './resolve/glob.ts';
+export { parseJsonc } from './resolve/jsonc.ts';
+export { dirname, exportsTargets, joinPath, MemoryVfs, Resolver, type EntryKind, type GlobEvidence, type Resolution, type ResolutionKind, type ResolveRequest, type Vfs } from './resolve/resolver.ts';
+export { parsePnpmWorkspace } from './resolve/yaml.ts';
