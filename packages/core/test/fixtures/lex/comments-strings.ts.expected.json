@@ -1,0 +1,36 @@
+{
+  "imports": [
+    {
+      "kind": "dynamic",
+      "line": 7,
+      "specifier": "./after-url"
+    },
+    {
+      "kind": "dynamic",
+      "line": 8,
+      "specifier": "./after-escaped-quote"
+    },
+    {
+      "kind": "dynamic",
+      "line": 9,
+      "specifier": "./after-escaped-double"
+    },
+    {
+      "kind": "dynamic",
+      "line": 11,
+      "specifier": "./after-continuation"
+    },
+    {
+      "kind": "dynamic",
+      "line": 12,
+      "specifier": "./ascii-escape"
+    },
+    {
+      "kind": "require",
+      "line": 13,
+      "specifier": "./byte-escape"
+    }
+  ],
+  "diagnostics": [],
+  "uncertain": false
+}

@@ -1,0 +1,16 @@
+{
+  "imports": [
+    {
+      "kind": "static",
+      "line": 2,
+      "specifier": "./crlf-a"
+    },
+    {
+      "kind": "dynamic",
+      "line": 4,
+      "specifier": "./crlf-b"
+    }
+  ],
+  "diagnostics": [],
+  "uncertain": false
+}

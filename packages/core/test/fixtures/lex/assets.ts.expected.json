@@ -1,0 +1,26 @@
+{
+  "imports": [
+    {
+      "kind": "static",
+      "line": 1,
+      "specifier": "./readme.md?raw"
+    },
+    {
+      "kind": "static",
+      "line": 2,
+      "specifier": "./logo.svg?url"
+    },
+    {
+      "kind": "static",
+      "line": 3,
+      "specifier": "./heavy.ts?worker&inline"
+    },
+    {
+      "kind": "static",
+      "line": 4,
+      "specifier": "./app.module.css"
+    }
+  ],
+  "diagnostics": [],
+  "uncertain": false
+}

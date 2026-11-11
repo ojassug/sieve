@@ -1,0 +1,70 @@
+{
+  "imports": [
+    {
+      "kind": "glob",
+      "line": 1,
+      "specifier": null,
+      "patterns": [
+        "./modules/*.ts"
+      ]
+    },
+    {
+      "kind": "glob",
+      "line": 2,
+      "specifier": null,
+      "patterns": [
+        "./docs/*.md",
+        "!./docs/draft-*.md"
+      ],
+      "query": "?raw"
+    },
+    {
+      "kind": "glob",
+      "line": 3,
+      "specifier": null,
+      "patterns": [
+        "./legacy/*.js"
+      ]
+    },
+    {
+      "kind": "glob",
+      "line": 4,
+      "specifier": null,
+      "patterns": [
+        "./*.ts"
+      ],
+      "base": "./src"
+    },
+    {
+      "kind": "glob",
+      "line": 5,
+      "specifier": null,
+      "patterns": null
+    },
+    {
+      "kind": "glob",
+      "line": 6,
+      "specifier": null,
+      "patterns": [
+        "./tpl/*.ts"
+      ]
+    },
+    {
+      "kind": "meta-resolve",
+      "line": 7,
+      "specifier": "./worker.ts"
+    },
+    {
+      "kind": "url",
+      "line": 8,
+      "specifier": "./logo.png"
+    },
+    {
+      "kind": "url",
+      "line": 9,
+      "specifier": null
+    }
+  ],
+  "diagnostics": [],
+  "uncertain": false
+}

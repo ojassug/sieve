@@ -1,0 +1,21 @@
+{
+  "imports": [
+    {
+      "kind": "static",
+      "line": 1,
+      "specifier": "react"
+    },
+    {
+      "kind": "dynamic",
+      "line": 2,
+      "specifier": "./LazyPanel"
+    },
+    {
+      "kind": "dynamic",
+      "line": 20,
+      "specifier": "./Panel"
+    }
+  ],
+  "diagnostics": [],
+  "uncertain": false
+}

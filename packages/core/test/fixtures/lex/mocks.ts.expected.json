@@ -1,0 +1,66 @@
+{
+  "imports": [
+    {
+      "kind": "mock",
+      "line": 1,
+      "specifier": "./a"
+    },
+    {
+      "kind": "mock",
+      "line": 2,
+      "specifier": "./b"
+    },
+    {
+      "kind": "mock",
+      "line": 3,
+      "specifier": "./c"
+    },
+    {
+      "kind": "dynamic",
+      "line": 3,
+      "specifier": "./c"
+    },
+    {
+      "kind": "mock",
+      "line": 4,
+      "specifier": "../d"
+    },
+    {
+      "kind": "mock",
+      "line": 5,
+      "specifier": "./e"
+    },
+    {
+      "kind": "mock",
+      "line": 6,
+      "specifier": "./f"
+    },
+    {
+      "kind": "actual",
+      "line": 7,
+      "specifier": "./g"
+    },
+    {
+      "kind": "actual",
+      "line": 8,
+      "specifier": "./h"
+    },
+    {
+      "kind": "mock",
+      "line": 9,
+      "specifier": "./i"
+    },
+    {
+      "kind": "mock",
+      "line": 10,
+      "specifier": "./j"
+    },
+    {
+      "kind": "mock",
+      "line": 11,
+      "specifier": null
+    }
+  ],
+  "diagnostics": [],
+  "uncertain": false
+}

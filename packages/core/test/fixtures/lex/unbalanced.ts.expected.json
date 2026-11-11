@@ -1,0 +1,16 @@
+{
+  "imports": [
+    {
+      "kind": "static",
+      "line": 1,
+      "specifier": "./a"
+    }
+  ],
+  "diagnostics": [
+    {
+      "code": "unbalanced",
+      "line": 2
+    }
+  ],
+  "uncertain": true
+}

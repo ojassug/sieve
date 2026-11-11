@@ -1,0 +1,36 @@
+{
+  "imports": [
+    {
+      "kind": "dynamic",
+      "line": 9,
+      "specifier": "./m1"
+    },
+    {
+      "kind": "dynamic",
+      "line": 10,
+      "specifier": "./m2"
+    },
+    {
+      "kind": "dynamic",
+      "line": 11,
+      "specifier": "./m3"
+    },
+    {
+      "kind": "dynamic",
+      "line": 12,
+      "specifier": "./m4"
+    },
+    {
+      "kind": "dynamic",
+      "line": 13,
+      "specifier": "./m5"
+    },
+    {
+      "kind": "dynamic",
+      "line": 14,
+      "specifier": "./m6"
+    }
+  ],
+  "diagnostics": [],
+  "uncertain": false
+}

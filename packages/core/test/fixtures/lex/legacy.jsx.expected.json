@@ -1,0 +1,21 @@
+{
+  "imports": [
+    {
+      "kind": "side-effect",
+      "line": 1,
+      "specifier": "./styles.css"
+    },
+    {
+      "kind": "require",
+      "line": 3,
+      "specifier": "./side-panel"
+    },
+    {
+      "kind": "dynamic",
+      "line": 6,
+      "specifier": "./after-jsx"
+    }
+  ],
+  "diagnostics": [],
+  "uncertain": false
+}
