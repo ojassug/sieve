@@ -1,0 +1,47 @@
+[
+  {
+    "from": "apps/web/src/app.ts",
+    "specifier": "ui",
+    "expect": {
+      "kind": "file",
+      "targets": [
+        "libs/ui/lib/main.js",
+        "libs/ui/src/index.ts"
+      ],
+      "configsIncludes": [
+        "libs/ui/package.json",
+        "pnpm-workspace.yaml"
+      ],
+      "globs": [
+        {
+          "key": "workspaces",
+          "matches": [
+            "nested=libs/deep/nested/pkg",
+            "pnpm-root=",
+            "ui=libs/ui",
+            "web=apps/web"
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "from": "apps/web/src/app.ts",
+    "specifier": "nested",
+    "expect": {
+      "kind": "file",
+      "targets": [
+        "libs/deep/nested/pkg/index.js"
+      ]
+    }
+  },
+  {
+    "from": "apps/web/src/app.ts",
+    "specifier": "fake",
+    "expect": {
+      "kind": "external",
+      "targets": [],
+      "packageName": "fake"
+    }
+  }
+]

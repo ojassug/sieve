@@ -196,3 +196,46 @@ Implementation decisions too small or too local for an ADR, plus session hand-ov
   - Building with permuted insertion order gives identical arrays and why-paths, on 1,000 graphs.
   - 5 hand mutants, all caught.
   - At 100,000 nodes and 1M edges, the reverse BFS takes 7.6–8.5 ms in the worst case, when every node is reached; §3.3 expected tens of milliseconds. The build takes 1.6 s ([bench/README.md](bench/README.md)).
+
+## 17. Module resolution (`core/resolve`)
+
+- **Context.**
+  - Architecture §3.2 asks the resolver to cover relative paths, extensions, index files, tsconfig `paths`/`baseUrl`/`extends`, package `exports`/`imports` and workspaces, with "probe recording".
+  - Kickoff gaps 3 and 4 asked where to probe, and how to handle runners that order candidates differently.
+- **Decision.**
+  - **Where it probes.** The resolver works on a virtual file system: git's case-sensitive listing of one snapshot, through the `Vfs` interface, never the working tree. Untracked and ignored files are invisible to it; `generated` rules and the M2 fs hooks cover them.
+  - **Union of runners.** For a missing exact path, every candidate any runner might pick is probed:
+    - the path itself;
+    - `.js`→`.ts`/`.tsx`, `.jsx`→`.tsx`, `.mjs`→`.mts`, `.cjs`→`.cts`;
+    - the extensions `.ts .tsx .mts .cts .js .jsx .mjs .cjs .json`;
+    - for a directory, its package.json entry and `index` with every extension.
+
+    Every existing candidate is a target and every missing one an absent (⊥) node. When the exact path exists, it alone is the target, because Vite, Jest and Node all try it first.
+  - **Directories.** Any path probed as a directory is a `d:` node, including one that doesn't exist. A missing directory is one `d:` node instead of eleven `index` probes, and it is still sound: if the directory appears, its listing changes.
+  - **Exports and imports.** Targets are the union over every condition except `types`/`typings`, through nested conditions and fallback arrays. The key is chosen by Node's `PATTERN_KEY_COMPARE`, the most specific match. `null` means not exported. Without `exports`, the entry is the union of `main`, `module`, `browser` and `jsnext:main`, plus `index`.
+  - **tsconfig.**
+    - The nearest `tsconfig.json` governs. Each missing `tsconfig.json` on the way up is a ⊥ node.
+    - `extends` may omit `.json`, and chains are followed.
+    - Package bases are not readable from git. Those under `@tsconfig/` are assumed to set no paths; any other package base marks the result uncertain.
+    - The best `paths` match (longest prefix) and `baseUrl` add candidates on top of normal resolution, never instead of it.
+  - **Workspaces.**
+    - Packages come from pnpm-workspace.yaml, or else the root package.json `workspaces`, with `!` excludes.
+    - A bare import depends on one synthetic node, `workspaces`, that lists every `name=dir`. Its edges therefore don't grow with the number of packages, and a rename or a new package still affects every bare import.
+    - Duplicate package names make the result uncertain.
+  - **Mocks.**
+    - An external package also depends on the `__mocks__` listing at the repo root and at the importer's package root, because Jest uses `<root>/__mocks__/<pkg>` automatically. Existing mock files there are targets.
+    - `vi.mock` and `jest.mock` records add `__mocks__/<name>` next to each resolved module.
+  - **Everything else is explicit:**
+    - `node:` and builtins → `builtin`;
+    - `data:` → `ignored`;
+    - `http(s):` → `unresolved: remote module`;
+    - other schemes such as `virtual:` → `unresolved: virtual module`;
+    - a path below a symlinked directory → `unresolved: symlinked directory`;
+    - an unparseable package.json or tsconfig → `uncertain`.
+- **Evidence.**
+  - 5 fixture repositories with 43 hand-derived cases.
+  - An exact probe list for one import.
+  - Unit tests for JSONC, the pnpm YAML subset, globs and `exportsTargets`.
+  - **The soundness property:** on 400 random repositories × 13 specifiers, adding any file that isn't recorded evidence, or removing any file that isn't a target, config or under a recorded directory, never changes the result.
+  - 10 hand mutants of the safety-critical choices, all caught.
+- **Cost, still to measure.** Probe edges will dominate the edge count, at about 10 per extensionless import. If SMAP size or graph build time demands it, shared per-directory "probe group" nodes can cut that.

@@ -1,0 +1,115 @@
+[
+  {
+    "from": "packages/app/src/main.ts",
+    "specifier": "@acme/core",
+    "expect": {
+      "kind": "file",
+      "targets": [
+        "packages/core/src/index.ts"
+      ],
+      "absentIncludes": [
+        "packages/core/src/index.cjs"
+      ],
+      "absentExcludes": [
+        "packages/core/dist/index.d.ts"
+      ],
+      "configsIncludes": [
+        "package.json",
+        "packages/core/package.json"
+      ],
+      "globs": [
+        {
+          "key": "workspaces",
+          "matches": [
+            "@acme/app=packages/app",
+            "@acme/core=packages/core",
+            "npm-root="
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "from": "packages/app/src/main.ts",
+    "specifier": "@acme/core/feature/x",
+    "expect": {
+      "kind": "file",
+      "targets": [
+        "packages/core/src/feature/x.ts"
+      ]
+    }
+  },
+  {
+    "from": "packages/app/src/main.ts",
+    "specifier": "@acme/core/feature/internal/secret",
+    "expect": {
+      "kind": "unresolved",
+      "targets": [],
+      "reason": "not exported"
+    }
+  },
+  {
+    "from": "packages/app/src/main.ts",
+    "specifier": "@acme/core/nope",
+    "expect": {
+      "kind": "unresolved",
+      "targets": [],
+      "reason": "not exported"
+    }
+  },
+  {
+    "from": "packages/app/src/main.ts",
+    "specifier": "@acme/core/package.json",
+    "expect": {
+      "kind": "file",
+      "targets": [
+        "packages/core/package.json"
+      ]
+    }
+  },
+  {
+    "from": "packages/app/src/main.ts",
+    "specifier": "#cfg",
+    "expect": {
+      "kind": "file",
+      "targets": [
+        "packages/app/src/config.ts"
+      ],
+      "configsIncludes": [
+        "packages/app/package.json"
+      ]
+    }
+  },
+  {
+    "from": "packages/app/src/main.ts",
+    "specifier": "#internal/a",
+    "expect": {
+      "kind": "file",
+      "targets": [
+        "packages/app/src/internal/a.ts"
+      ]
+    }
+  },
+  {
+    "from": "packages/app/src/main.ts",
+    "specifier": "#dep",
+    "expect": {
+      "kind": "external",
+      "targets": [],
+      "packageName": "lodash"
+    }
+  },
+  {
+    "from": "packages/app/src/main.ts",
+    "specifier": "lodash",
+    "expect": {
+      "kind": "external",
+      "targets": [],
+      "packageName": "lodash",
+      "dirsIncludes": [
+        "__mocks__",
+        "packages/app/__mocks__"
+      ]
+    }
+  }
+]

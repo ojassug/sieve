@@ -1,0 +1,181 @@
+[
+  {
+    "from": "src/index.ts",
+    "specifier": "./util",
+    "expect": {
+      "kind": "file",
+      "targets": [
+        "src/util.js",
+        "src/util.ts"
+      ],
+      "absentIncludes": [
+        "src/util",
+        "src/util.tsx",
+        "src/util.mjs",
+        "src/util.json"
+      ],
+      "dirsIncludes": [
+        "src/util"
+      ]
+    }
+  },
+  {
+    "from": "src/index.ts",
+    "specifier": "./lib",
+    "expect": {
+      "kind": "file",
+      "targets": [
+        "src/lib/index.ts"
+      ],
+      "dirsIncludes": [
+        "src/lib"
+      ],
+      "absentIncludes": [
+        "src/lib.ts",
+        "src/lib/index.js",
+        "src/lib/package.json"
+      ]
+    }
+  },
+  {
+    "from": "src/index.ts",
+    "specifier": "./data.json",
+    "expect": {
+      "kind": "file",
+      "targets": [
+        "src/data.json"
+      ],
+      "absentExcludes": [
+        "src/data.json.ts"
+      ]
+    }
+  },
+  {
+    "from": "src/index.ts",
+    "specifier": "./esm.js",
+    "expect": {
+      "kind": "file",
+      "targets": [
+        "src/esm.ts"
+      ],
+      "absentIncludes": [
+        "src/esm.js"
+      ]
+    }
+  },
+  {
+    "from": "src/index.ts",
+    "specifier": "../outside",
+    "expect": {
+      "kind": "file",
+      "targets": [
+        "outside.ts"
+      ]
+    }
+  },
+  {
+    "from": "src/index.ts",
+    "specifier": "../../escape",
+    "expect": {
+      "kind": "unresolved",
+      "targets": [],
+      "reason": "outside repository"
+    }
+  },
+  {
+    "from": "src/index.ts",
+    "specifier": "./assets/logo.svg?url",
+    "expect": {
+      "kind": "file",
+      "targets": [
+        "src/assets/logo.svg"
+      ]
+    }
+  },
+  {
+    "from": "src/index.ts",
+    "specifier": "./missing",
+    "expect": {
+      "kind": "unresolved",
+      "targets": [],
+      "reason": "not found",
+      "absentIncludes": [
+        "src/missing",
+        "src/missing.ts"
+      ],
+      "dirsIncludes": [
+        "src/missing"
+      ]
+    }
+  },
+  {
+    "from": "src/index.ts",
+    "specifier": null,
+    "expect": {
+      "kind": "unresolved",
+      "targets": [],
+      "reason": "non-literal"
+    }
+  },
+  {
+    "from": "src/index.ts",
+    "specifier": "node:fs",
+    "expect": {
+      "kind": "builtin",
+      "targets": []
+    }
+  },
+  {
+    "from": "src/index.ts",
+    "specifier": "fs/promises",
+    "expect": {
+      "kind": "builtin",
+      "targets": []
+    }
+  },
+  {
+    "from": "src/index.ts",
+    "specifier": "path",
+    "expect": {
+      "kind": "builtin",
+      "targets": []
+    }
+  },
+  {
+    "from": "src/index.ts",
+    "specifier": "data:text/javascript,export default 1",
+    "expect": {
+      "kind": "ignored",
+      "targets": []
+    }
+  },
+  {
+    "from": "src/index.ts",
+    "specifier": "virtual:pwa-register",
+    "expect": {
+      "kind": "unresolved",
+      "targets": [],
+      "reason": "virtual module"
+    }
+  },
+  {
+    "from": "src/index.ts",
+    "specifier": "https://esm.sh/x",
+    "expect": {
+      "kind": "unresolved",
+      "targets": [],
+      "reason": "remote module"
+    }
+  },
+  {
+    "from": "src/index.ts",
+    "specifier": "/src/util",
+    "expect": {
+      "kind": "file",
+      "targets": [
+        "src/util.js",
+        "src/util.ts"
+      ]
+    }
+  }
+]

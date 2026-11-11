@@ -1,0 +1,10 @@
+{
+  // shared options
+  "compilerOptions": {
+    "baseUrl": "./src",
+    "paths": {
+      "@/*": ["./*", "../generated/*"],
+      "~utils": ["./utils/index.ts"], // exact alias
+    },
+  },
+}

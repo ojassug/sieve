@@ -1,0 +1,8 @@
+{
+  "name": "@acme/app",
+  "imports": {
+    "#cfg": "./src/config.ts",
+    "#dep": "lodash",
+    "#internal/*": "./src/internal/*.ts"
+  }
+}
