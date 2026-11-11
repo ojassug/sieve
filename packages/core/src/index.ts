@@ -8,3 +8,4 @@ export { globToRegExp } from './resolve/glob.ts';
 export { parseJsonc } from './resolve/jsonc.ts';
 export { dirname, exportsTargets, joinPath, MemoryVfs, Resolver, type EntryKind, type GlobEvidence, type Resolution, type ResolutionKind, type ResolveRequest, type Vfs } from './resolve/resolver.ts';
 export { parsePnpmWorkspace } from './resolve/yaml.ts';
+export { detectLockfile, diffLockfiles, NpmLockfile, parseNpmLockfile, type DetectedLockfile, type LockedPackage, type Unparseable } from './lockfile/npm.ts';
