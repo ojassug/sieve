@@ -25,6 +25,7 @@
     "skipLibCheck": true
   },
   "include": [
+    "bench",
     "packages/*/src",
     "packages/*/test",
     "tools/*/src",
