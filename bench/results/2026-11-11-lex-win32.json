@@ -1,0 +1,22 @@
+{
+  "benchmark": "lex",
+  "diagnosticsByCode": {},
+  "environment": {
+    "cpu": "AMD Ryzen AI 7 350 w/ Radeon 860M",
+    "node": "v26.4.0",
+    "os": "win32 10.0.26200"
+  },
+  "files": 2699,
+  "imports": 6862,
+  "medianSeconds": 1.388,
+  "megabytes": 43.72,
+  "megabytesPerSecond": 32,
+  "nonLiteralImports": 60,
+  "roots": [
+    "node_modules"
+  ],
+  "runs": 5,
+  "uncertainFiles": 0,
+  "uncertainSample": [],
+  "uncertainShare": 0
+}
