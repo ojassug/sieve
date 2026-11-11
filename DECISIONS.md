@@ -101,4 +101,30 @@ Implementation decisions too small or too local for an ADR, plus session hand-ov
   - Raw NDJSON (`.tar.gz`) and mirrored artifacts (`.tar`, per repository) are uploaded as daily release assets, which have no retention limit.
   - The collector is pinned by commit in `collector.ref`.
   - Mirroring is limited to permissively licensed repositories; the rest contribute metadata only (bench/CORPUS.md).
-- **Status.** Creating the repository needs Ojas's approval.
+- **Status.** Approved on 2026-11-11 and created as [ojassug/sieve-corpus](https://github.com/ojassug/sieve-corpus), with the collector pinned to `4d28a10`. The first run started the same day (workflow run 43026895799).
+
+## 12. Snapshot diff semantics (`core/git`)
+
+- **Context.** Architecture §3.1 defines `f:` hashes as blob ids and `d:` hashes as a digest of a directory's entry names. It leaves several cases open: mode changes, symlinks, submodules, paths that are not valid UTF-8, and the order of output.
+- **Decision.**
+  - **Change kinds.** A blob, symlink or gitlink whose oid *or mode* changes is `modified`, so an executable-bit flip counts as a change, which is conservative. A path that turns from file into directory, or the reverse, is a `deleted` plus `added`s.
+  - **Listings.** A directory's listing is the set of its entry names *and kinds*: file, symlink, submodule or directory. A file that becomes a symlink therefore changes its directory's listing, as `readdir` with file types would show. A directory that appears or vanishes counts as a listing change too, because its `d:` node goes to or from absent.
+  - **Path order.** Every path list is sorted by UTF-16 code units, the order canonical JSON uses for keys, and never by git's tree order. Both diffs therefore yield byte-identical results on every OS.
+  - **Undecodable paths.** A path whose bytes are not valid UTF-8 is kept, with a lossy rendering and an `undecodable` flag. `TreeIndex` counts these paths, so callers can escalate (L3). Duplicate paths throw.
+  - **Reading from git.** `lsTree` reads `git ls-tree -r -t -z --full-tree <root tree>` as a stream. It never hashes working-tree bytes, because those differ across OSes when line endings are converted.
+- **Evidence.**
+  - P10 (`packages/core/test/git/diff.test.ts`): the descent equals the naive diff on 10,000 seeded random tree pairs. It also visits exactly the directories that exist on both sides with different ids.
+  - A differential test against `git diff-tree -r --no-renames` on SHA-1 and SHA-256 repositories built with plumbing.
+  - Five hand mutants of the descent, all caught.
+
+## 13. `git ls-tree` cost at 10,000 files
+
+- **Context.** Open item: measure `git ls-tree` on a 10,000-file repository. Architecture §3.1 expected about 100 ms.
+- **Evidence.** On the synthetic 10,000-file repository (`node bench/ls-tree.ts`), medians of 15 runs on Windows 11 with Node 26.4 and git 2.55:
+  - `git ls-tree` alone: 31.5 ms;
+  - the full snapshot read (`lsTree`): 57.6 ms;
+  - `TreeIndex.build`: 3 ms;
+  - the descent: under 0.5 ms for 1 or 100 changed files.
+
+  The details are in [bench/README.md](bench/README.md).
+- **Decision.** The CLI lists the whole head tree locally. The two-round-trip protocol in §3.1 matters for the server's bandwidth, not for the CLI's latency.

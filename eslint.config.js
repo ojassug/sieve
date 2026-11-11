@@ -19,6 +19,8 @@ export default defineConfig([
       // Hot loops over typed arrays index with `!` under noUncheckedIndexedAccess.
       '@typescript-eslint/no-non-null-assertion': 'off',
       '@typescript-eslint/restrict-template-expressions': ['error', { allowNumber: true }],
+      // `const { omitted: _x, ...rest } = value` is the idiom for dropping a key.
+      '@typescript-eslint/no-unused-vars': ['error', { ignoreRestSiblings: true }],
     },
   },
 ]);
