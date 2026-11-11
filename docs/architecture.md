@@ -379,7 +379,7 @@ Each spec covers input, output, algorithm, complexity, the safety or correctness
 ### 3.1 Snapshot hashing and Merkle diff
 - **Node kinds (v1, file-level).**
   - `f:path`: hash = git blob OID (from `git ls-tree -r -z`; `git hash-object` for declared untracked files). An **absent** file is a node with hash ⊥.
-  - `d:dir`: hash = SHA-256 of the sorted entry *names* (catches resolution shadowing and `readdir`).
+  - `d:dir`: hash = SHA-256 of the sorted entry *names and kinds*, where the kind is file, symlink, submodule or directory. A missing directory hashes to ⊥. The node catches resolution shadowing and `readdir` ([DECISIONS.md](../DECISIONS.md) entry 12).
   - `p:eco:location`: an external package. Hash = the lockfile's integrity/version for that install location (npm `packages["node_modules/x"]`, pnpm `name@version(peer)`, yarn berry descriptor).
   - `g:glob@base`: hash of the sorted matched paths (`import.meta.glob`, declared globs).
   - `e:name`: an env component (OS/arch, runtime major.minor, declared env vars, matrix cell, TZ/locale).
