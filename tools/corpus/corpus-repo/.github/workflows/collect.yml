@@ -12,6 +12,7 @@ on:
         default: '320'
 
 permissions:
+  actions: read
   contents: write
 
 concurrency:
