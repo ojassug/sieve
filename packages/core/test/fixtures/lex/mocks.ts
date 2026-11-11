@@ -1,0 +1,12 @@
+vi.mock('./a');
+vi.mock('./b', () => ({ default: 1 }));
+vi.mock(import('./c'), async (importOriginal) => ({ ...(await importOriginal()) }));
+jest.mock('../d');
+jest.doMock('./e', () => ({}));
+jest.unmock('./f');
+const g = await vi.importActual('./g');
+const h = jest.requireActual('./h');
+const i = vi.importMock('./i');
+const j = jest.requireMock('./j');
+jest.mock(dynamicPath);
+other.mock('./not-a-mock');

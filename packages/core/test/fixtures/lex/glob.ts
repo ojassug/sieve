@@ -1,0 +1,11 @@
+const modules = import.meta.glob('./modules/*.ts');
+const raws = import.meta.glob(['./docs/*.md', '!./docs/draft-*.md'], { query: '?raw', import: 'default' });
+const eager = import.meta.globEager('./legacy/*.js');
+const based = import.meta.glob('./*.ts', { base: './src' });
+const dyn = import.meta.glob(pattern);
+const tpl = import.meta.glob(`./tpl/*.ts`);
+const resolved = import.meta.resolve('./worker.ts');
+const img = new URL('./logo.png', import.meta.url);
+const icon = new URL(`./icons/${name}.svg`, import.meta.url);
+const remote = new URL('https://example.com/x', base);
+const url = import.meta.url;

@@ -1,0 +1,8 @@
+{
+  "imports": [
+    { "kind": "dynamic", "line": 7, "specifier": "./after-signatures" },
+    { "kind": "dynamic", "line": 8, "specifier": null }
+  ],
+  "diagnostics": [],
+  "uncertain": false
+}

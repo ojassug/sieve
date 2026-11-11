@@ -1,0 +1,16 @@
+{
+  "imports": [
+    {
+      "kind": "import-equals",
+      "line": 1,
+      "specifier": "fs"
+    },
+    {
+      "kind": "import-equals",
+      "line": 2,
+      "specifier": "./util"
+    }
+  ],
+  "diagnostics": [],
+  "uncertain": false
+}

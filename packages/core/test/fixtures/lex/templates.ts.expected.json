@@ -1,0 +1,21 @@
+{
+  "imports": [
+    {
+      "kind": "dynamic",
+      "line": 4,
+      "specifier": "./in-interpolation"
+    },
+    {
+      "kind": "dynamic",
+      "line": 5,
+      "specifier": "./after-templates"
+    },
+    {
+      "kind": "dynamic",
+      "line": 10,
+      "specifier": "./after-all-templates"
+    }
+  ],
+  "diagnostics": [],
+  "uncertain": false
+}

@@ -128,3 +128,48 @@ Implementation decisions too small or too local for an ADR, plus session hand-ov
 
   The details are in [bench/README.md](bench/README.md).
 - **Decision.** The CLI lists the whole head tree locally. The two-round-trip protocol in §3.1 matters for the server's bandwidth, not for the CLI's latency.
+
+## 14. The TypeScript/JavaScript import lexer (`core/lex/ts`)
+
+- **Context.** Architecture §3.2 and ADR-0002 call for a hand-written, zero-dependency state machine. The kickoff found gap 2: `import type` semantics, plus import forms the docs don't list.
+- **Decision.**
+  - **Origin.** The lexer was written fresh. TokenDamper's `ts-validator.ts` was read for reference only, and no code was ported, so it needs no provenance line.
+  - **Two stages.** A scanner produces tokens. A recognizer then reads import forms off the token stream.
+  - **Twelve record kinds:**
+    - `static`, `side-effect`, `reexport`, `dynamic`;
+    - `require` (including `module.require`), `require-resolve`;
+    - `import-equals` (`import x = require()`);
+    - `glob`: `import.meta.glob`/`globEager`, with patterns and the `query` and `base` options;
+    - `meta-resolve`;
+    - `url` (`new URL('…', import.meta.url)`);
+    - `mock`: `vi` or `jest` mock, `doMock`, `unmock` and similar; `vi.mock(import('./x'))` is recognised;
+    - `actual`: `importActual` and `requireActual`.
+
+    Specifier queries such as `?raw` are kept verbatim for the resolver.
+  - **Type-only imports.** Statement-level `import type` and `export type` are marked `typeOnly`. When every named specifier carries an inline `type`, the record is marked `inlineTypeOnly`, but it stays an edge, because `verbatimModuleSyntax` keeps it as `import {}`. That resolves kickoff gap 2.
+  - **Uncertainty is never silent.**
+    - A non-literal specifier yields `specifier: null`, or `patterns: null` for a glob.
+    - Diagnostics mark the whole file uncertain: unterminated strings, templates, comments or JSX; unbalanced brackets; an `import` or `export … from` that can't be parsed; template or JSX nesting deeper than 256; invalid UTF-8.
+  - **Regex versus division** is decided by the previous significant token:
+    - a keyword after `.` or `?.` is a property name;
+    - the `)` closing `if`, `while`, `for` or `with` lets a regex follow;
+    - `++` and `--` are operands;
+    - a would-be regex that reaches the end of its line is reinterpreted as division.
+  - **JSX.** It is on for `.tsx`, `.js` and `.jsx`, and off for `.ts`, where `<T>x` is a type assertion. `<` opens JSX only where an expression can start. In `.tsx`, `<T,>` and `<T extends …>` are type parameters. JSX text and attribute strings are not code.
+  - **Definitions are not calls.** These are treated as definitions or signatures:
+    - `import(` or `require(` with no arguments, or with `{` after the matching `)`;
+    - a first argument written `name:` or `name?:`;
+    - `import<` in any form.
+
+    `typeof import('x')` in a type position is recorded as a dynamic import, which is conservative.
+- **Evidence.**
+  - 19 golden fixtures with hand-derived expectations.
+  - A generative test: 2,000 seeded programs bury real imports among adversarial strings, comments, templates, regexes and divisions, under LF and CRLF, and every one must come out in order with no diagnostics.
+  - 3,000 arbitrary inputs: no throw, and identical output on repeat.
+  - 10 hand mutants of key decisions, all caught.
+  - On the 2,699 files under `node_modules` (43.7 MB), **0 files are marked uncertain**. Before the signature fix, two files were wrongly flagged, both Vite and Vitest `.d.ts` output with `import<T>(…)` method signatures.
+
+## 15. Lexer throughput
+
+- **Evidence.** `node bench/lex.ts` runs at 32–34 MB/s (median of 5 passes over 43.7 MB) on Windows 11 with Node 26.4.
+- **Implication.** A cold lex of a 10,000-file repository that averages 10 KB per file (100 MB) takes about 3 s. That is a tenth of T6's 30-second budget for the whole static graph. Extraction is cached by (blob oid, extractor version), so incremental runs only re-lex changed blobs.

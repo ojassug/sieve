@@ -1,0 +1,46 @@
+{
+  "imports": [
+    {
+      "kind": "require",
+      "line": 1,
+      "specifier": "./a"
+    },
+    {
+      "kind": "require",
+      "line": 2,
+      "specifier": "./b"
+    },
+    {
+      "kind": "require",
+      "line": 3,
+      "specifier": null
+    },
+    {
+      "kind": "require-resolve",
+      "line": 4,
+      "specifier": "./d"
+    },
+    {
+      "kind": "require",
+      "line": 5,
+      "specifier": "./e"
+    },
+    {
+      "kind": "require",
+      "line": 7,
+      "specifier": "./g"
+    },
+    {
+      "kind": "require",
+      "line": 8,
+      "specifier": "./h"
+    },
+    {
+      "kind": "require",
+      "line": 10,
+      "specifier": null
+    }
+  ],
+  "diagnostics": [],
+  "uncertain": false
+}

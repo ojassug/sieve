@@ -1,0 +1,12 @@
+import type { A } from './a';
+import type B from './b';
+import type * as C from './c';
+import { type D, type E as F } from './inline-all';
+import { type G, H } from './inline-some';
+import type from './binding-named-type';
+import type, { I } from './binding-named-type-and-named';
+export type { J } from './export-type';
+export type * from './export-type-star';
+export { type K } from './export-inline';
+export type L = string;
+import type M = require('./import-equals-type');

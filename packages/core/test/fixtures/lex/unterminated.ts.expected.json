@@ -1,0 +1,21 @@
+{
+  "imports": [
+    {
+      "kind": "static",
+      "line": 1,
+      "specifier": "./before-the-problem"
+    },
+    {
+      "kind": "static",
+      "line": 3,
+      "specifier": "./after-the-problem"
+    }
+  ],
+  "diagnostics": [
+    {
+      "code": "unterminated-string",
+      "line": 2
+    }
+  ],
+  "uncertain": true
+}

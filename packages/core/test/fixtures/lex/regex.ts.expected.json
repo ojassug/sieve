@@ -1,0 +1,86 @@
+{
+  "imports": [
+    {
+      "kind": "dynamic",
+      "line": 1,
+      "specifier": "./r1"
+    },
+    {
+      "kind": "dynamic",
+      "line": 2,
+      "specifier": "./r2"
+    },
+    {
+      "kind": "dynamic",
+      "line": 3,
+      "specifier": "./r3"
+    },
+    {
+      "kind": "dynamic",
+      "line": 4,
+      "specifier": "./r4"
+    },
+    {
+      "kind": "dynamic",
+      "line": 5,
+      "specifier": "./r5"
+    },
+    {
+      "kind": "dynamic",
+      "line": 6,
+      "specifier": "./r6"
+    },
+    {
+      "kind": "dynamic",
+      "line": 7,
+      "specifier": "./r7"
+    },
+    {
+      "kind": "dynamic",
+      "line": 8,
+      "specifier": "./r8"
+    },
+    {
+      "kind": "dynamic",
+      "line": 9,
+      "specifier": "./r9"
+    },
+    {
+      "kind": "dynamic",
+      "line": 10,
+      "specifier": "./r10"
+    },
+    {
+      "kind": "dynamic",
+      "line": 12,
+      "specifier": "./r11"
+    },
+    {
+      "kind": "dynamic",
+      "line": 13,
+      "specifier": "./r12"
+    },
+    {
+      "kind": "dynamic",
+      "line": 14,
+      "specifier": "./r13"
+    },
+    {
+      "kind": "dynamic",
+      "line": 15,
+      "specifier": "./r14"
+    },
+    {
+      "kind": "dynamic",
+      "line": 16,
+      "specifier": "./r15"
+    },
+    {
+      "kind": "dynamic",
+      "line": 17,
+      "specifier": "./r16"
+    }
+  ],
+  "diagnostics": [],
+  "uncertain": false
+}

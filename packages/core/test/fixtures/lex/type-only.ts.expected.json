@@ -1,0 +1,69 @@
+{
+  "imports": [
+    {
+      "kind": "static",
+      "line": 1,
+      "specifier": "./a",
+      "typeOnly": true
+    },
+    {
+      "kind": "static",
+      "line": 2,
+      "specifier": "./b",
+      "typeOnly": true
+    },
+    {
+      "kind": "static",
+      "line": 3,
+      "specifier": "./c",
+      "typeOnly": true
+    },
+    {
+      "kind": "static",
+      "line": 4,
+      "specifier": "./inline-all",
+      "inlineTypeOnly": true
+    },
+    {
+      "kind": "static",
+      "line": 5,
+      "specifier": "./inline-some"
+    },
+    {
+      "kind": "static",
+      "line": 6,
+      "specifier": "./binding-named-type"
+    },
+    {
+      "kind": "static",
+      "line": 7,
+      "specifier": "./binding-named-type-and-named"
+    },
+    {
+      "kind": "reexport",
+      "line": 8,
+      "specifier": "./export-type",
+      "typeOnly": true
+    },
+    {
+      "kind": "reexport",
+      "line": 9,
+      "specifier": "./export-type-star",
+      "typeOnly": true
+    },
+    {
+      "kind": "reexport",
+      "line": 10,
+      "specifier": "./export-inline",
+      "inlineTypeOnly": true
+    },
+    {
+      "kind": "import-equals",
+      "line": 12,
+      "specifier": "./import-equals-type",
+      "typeOnly": true
+    }
+  ],
+  "diagnostics": [],
+  "uncertain": false
+}

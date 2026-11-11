@@ -1,0 +1,36 @@
+{
+  "imports": [
+    {
+      "kind": "dynamic",
+      "line": 1,
+      "specifier": "./g1"
+    },
+    {
+      "kind": "dynamic",
+      "line": 2,
+      "specifier": "./g2"
+    },
+    {
+      "kind": "dynamic",
+      "line": 3,
+      "specifier": "./g3"
+    },
+    {
+      "kind": "dynamic",
+      "line": 4,
+      "specifier": "./g4"
+    },
+    {
+      "kind": "dynamic",
+      "line": 5,
+      "specifier": "./g5"
+    },
+    {
+      "kind": "dynamic",
+      "line": 6,
+      "specifier": "./g6"
+    }
+  ],
+  "diagnostics": [],
+  "uncertain": false
+}
