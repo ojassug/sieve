@@ -239,3 +239,42 @@ Implementation decisions too small or too local for an ADR, plus session hand-ov
   - **The soundness property:** on 400 random repositories × 13 specifiers, adding any file that isn't recorded evidence, or removing any file that isn't a target, config or under a recorded directory, never changes the result.
   - 10 hand mutants of the safety-critical choices, all caught.
 - **Cost, still to measure.** Probe edges will dominate the edge count, at about 10 per extensionless import. If SMAP size or graph build time demands it, shared per-directory "probe group" nodes can cut that.
+
+## 18. npm lockfiles (`core/lockfile/npm`)
+
+- **Decision.**
+  - Every `node_modules/…` entry in a v2 or v3 `packages` map becomes `p:npm:<install location>`. Its hash is the `integrity`; without one, `version|resolved`; for a workspace link, `link:<dir>`. The root entry and workspace declarations are skipped, because they are package.json files that are already `f:` nodes.
+  - `locate(name, dir)` follows Node's walk up the `node_modules` directories, never through `node_modules/node_modules`.
+  - A package depends on what its dependencies, optional dependencies and peers resolve to from its own location; unresolvable names are reported as missing.
+  - v1 lockfiles, invalid JSON, pnpm, yarn, bun, or more than one lockfile kind are reported as `unparseable`, which escalates to L3 (§3.5).
+- **Evidence.** 16 tests, including a parse of this repository's own lockfile. pnpm and yarn parsing is due in M1's week 3; bench/CORPUS.md shows it is a prerequisite for the replay corpus.
+
+## 19. Session hand-over (2026-11-11): days 1–8 done, 9–10 next
+
+- **Done.** All changes are on stacked branches, one pull request per roadmap day:
+
+  | Day | Pull request | State |
+  |---|---|---|
+  | 1, skeleton and CI | #1 | merged |
+  | 1–2, corpus collector | #2 | open |
+  | 2–3, `core/git` and P10 | #3 | open |
+  | 3–4, import lexer | #4 | open |
+  | 5, graph with P1 and P3 | #5 | open |
+  | 6–7, resolver | #6 | open |
+  | 8, npm lockfile | #7 | open |
+
+  At the time of writing, 239 tests pass locally. #2–#5 were green in CI; #6 and #7 were pending.
+- **Corpus.** [ojassug/sieve-corpus](https://github.com/ojassug/sieve-corpus) was created with approval. Its first collection run, 43026895799, was still running.
+- **Open item: day 1–2's "done when".** It is met once that run publishes `manifests/2026/2026-11-11-1.json`. If the run failed, read its log, fix the collector on #2, update `collector.ref` and re-run the workflow.
+- **Next: day 9, CLI v0.**
+  - `core/git`: read blob contents with `git cat-file --batch`, and add a `GitVfs` over `TreeIndex` plus blobs.
+  - A static graph builder:
+    - lex every source file;
+    - resolve every record;
+    - add edges to targets, absent paths, `d:`, configs and `g:` nodes;
+    - add each importer's tsconfig chain and nearest package.json;
+    - add `p:` nodes through `locate` and lockfile package edges;
+    - mark `u:` nodes and uncertain files.
+  - The CLI: an argument parser, a `sieve.config.json` loader, and `sieve graph`, `diff` and `plan --static --shadow --map <dir>`, all emitting canonical JSON. Would-skips must be labelled unproven (kickoff gap 1).
+- **Next: day 10.** The walking skeleton workflow (plan → matrix → shards → `sieve-gate`), with the map in `actions/cache` (roadmap §5).
+- **How to verify.** Run `npm ci`, then `npm test`, `npm run lint` and `npm run typecheck`. `node bench/ls-tree.ts`, `node bench/lex.ts` and `node bench/graph.ts` reproduce the recorded numbers.
