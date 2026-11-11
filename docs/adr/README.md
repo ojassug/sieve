@@ -1,7 +1,7 @@
 # Architecture decision records
 
 All 21 ADRs below were accepted on 2026-11-11 in the planning session.
-- A change to a decision is a new ADR that supersedes the old one; accepted ADRs are never edited.
+- Until implementation starts on 2026-11-16, ADRs may be corrected in place. After that, a change to a decision is a new ADR that supersedes the old one.
 - "Decided by Ojas" marks product calls made directly in that session.
 
 | # | Decision |

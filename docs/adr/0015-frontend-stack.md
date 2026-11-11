@@ -5,7 +5,7 @@
 - Related: [roadmap.md](../roadmap.md) M9
 
 ## Context
-The UI has to make the algorithms visible: impact graphs with 10k+ nodes, why-paths, live shard progress, flake heatmaps and statistical traces. The goal is a polished interactive product, scaling SeamCraft's visual feedback and TokenDamper's diff dashboard up to a web product.
+The UI has to make the algorithms visible: impact graphs with 10k+ nodes, why-paths, live shard progress, flake heatmaps and statistical traces. The goal is a polished interactive product, scaling SeamCraft's visual feedback up to a web product.
 
 ## Decision
 - A React + Vite single-page app, served by the API.

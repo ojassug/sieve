@@ -27,10 +27,11 @@
 
 **What the research changed in the starting hypothesis**
 1. **The safety criterion is content-addressed closure equality, not a commit diff.** A test is skipped only if every node it depends on has the same content hash as in a trusted passing record (Ekstazi-style, extended). Soundness then no longer depends on which base commit is chosen; the base affects only precision. Rebases, force-pushes, merge commits and shallow clones are handled by construction.
-2. **Dynamic capture is the backbone. The static graph is one of three sources, not the source.** Static analysis covers what runtime capture cannot see: transform-time inputs in the Vite server process, cold start before any record exists, and the UI explorer. TokenDamper's undirected BFS has to become a directed reverse BFS.
+2. **Dynamic capture is the backbone. The static graph is one of three sources, not the source.** Static analysis covers what runtime capture cannot see: transform-time inputs in the Vite server process, cold start before any record exists, and the UI explorer.
 3. **GitHub now caps history at 90 days.** From 2026-10-01, checks, workflow runs and statuses follow the Actions retention setting: default 90 days, maximum 90 for public repos. So the replay corpus is **re-executed** at historical commits, and an artifact collector starts in week 1.
 4. **The baselines got stronger.** Vitest 5.1 shipped `experimental.recordDependencies` (local dynamic module records). Datadog TIA already skips when "covered + tracked files" match a passing run, and any tracked-file change runs everything. SIEVE's edge narrows to: self-hosting, CI-shareable content-addressed maps, non-code inputs at per-package and per-directory precision instead of "run all", proofs, and flake detection without reruns.
 5. **Merge queue availability is limited.** It works only on org-owned public repos and Enterprise Cloud private repos, so dogfooding needs a GitHub org. MinIO is in maintenance and archived, so the compose file ships no MinIO. coverage.py's `sysmon` core cannot record per-test contexts. 59% of Python flaky tests are order-dependent (FlaPy). GitHub limits content-creating requests to 500 per hour. Sources are in §9.
+6. **SIEVE does not depend on TokenDamper.** The research report presents TokenDamper reuse as a strength. Planning found the only real head start is a lexer worth porting, and even that is optional (§3.2).
 
 **Glossary.**
 - **Snapshot** `S`: a repo tree OID plus an environment fingerprint.
@@ -359,7 +360,7 @@ Notes:
 - Self-host runs the same image with every role in one process. Postgres is the only required dependency.
 
 ### 2.9 Ops and packaging
-- **Image.** Multi-arch (amd64/arm64), Node 24 LTS, non-root.
+- **Image.** Multi-arch (amd64/arm64), Node 26 LTS (supported until 2029-04-30), non-root.
 - **Configuration.** Environment variables plus an optional JSON file; secrets come from files or env.
 - **Migrations.** They run on start under `pg_advisory_lock`, with expand/contract style for zero-downtime hosted upgrades. Server and CLI protocols stay compatible N/N−1.
 - **Backups.**
@@ -406,7 +407,8 @@ Each spec covers input, output, algorithm, complexity, the safety or correctness
   - Runner-reported resolution config (Vite `resolve.alias`, Jest `moduleNameMapper`), exported by the plugin at record time so the static resolver never evaluates config JavaScript.
 - **Output.** G_S = (V, E) in CSR form with forward and reverse adjacency. Each edge carries a provenance bitmask: static, dynamic, declared.
 - **Static edges (CLI, zero-dep lexers).**
-  - Import extraction covers `import`/`export … from`, `import()`, `require`, side-effect imports, `import.meta.glob` (→ `g:` node) and `?raw`/`?url` assets. It uses a state-machine lexer ported from TokenDamper's TS validator (strings, templates with interpolation stack, regex vs division, comments).
+  - Import extraction covers `import`/`export … from`, `import()`, `require`, side-effect imports, `import.meta.glob` (→ `g:` node) and `?raw`/`?url` assets. It uses a hand-written state-machine lexer that tracks strings, template literals (with an interpolation stack), regex vs division, and comments.
+  - *Optional head start.* TokenDamper's `src/core/validation/ast/ts-validator.ts` and `python-validator.ts` implement this kind of state machine, and `src/core/elision/regions.ts` finds function-body spans (§3.11). Porting them is optional and saves an estimated 3–5 days in M1. Every TokenDamper commit is Ojas's, so the code can be relicensed to Apache-2.0.
   - Resolver:
     - relative imports, extension order, index files;
     - tsconfig `paths`/`baseUrl`/`extends`;
@@ -426,7 +428,7 @@ Each spec covers input, output, algorithm, complexity, the safety or correctness
   - `generated` output→inputs rules.
 - **Granularity: file-level** ([ADR-0003](adr/0003-file-level-graph-granularity.md)). Barrels are correct at file level, because ESM evaluates every re-exported module and so they are real runtime dependencies, but imprecise. The symbol-level refinement (§3.11) is the measured lever.
 - **Complexity.**
-  - Extraction is linear in bytes; TokenDamper's lexers validate in under 5 ms per file.
+  - Extraction is one linear pass over the bytes; throughput is measured in M1.
   - Resolution is O(imports × probes), cached per (importer dir, specifier, config hash).
   - Target: 10k-file repo cold in under 30 s (goal under 10 s), incremental in under 3 s.
 - **Failure modes and handling.**
@@ -456,7 +458,7 @@ Each spec covers input, output, algorithm, complexity, the safety or correctness
 **Algorithm.**
 1. Compute Δ (§3.1).
 2. Seed escalations (§3.5).
-3. Run a multi-source reverse BFS over E from Δ ∪ seeds. A visited bitset and parent pointers give why-paths. Affected A = reached test nodes. This adapts TokenDamper's `computeAllDistances`, made directed and reverse-only.
+3. Run a multi-source reverse BFS over E from Δ ∪ seeds. A visited bitset and parent pointers give why-paths. Affected A = reached test nodes.
 4. Mark tests at H that are new, have no valid record (never passed, failing, env mismatch, untrusted-only, stale) or are on `alwaysRun` as run.
 5. Pick an audit sample: rate r (default 2%) of the would-skip set, seeded by run id so it is reproducible.
 6. Skip set K = the rest, each with a proof.
@@ -485,7 +487,6 @@ Each spec covers input, output, algorithm, complexity, the safety or correctness
 - **Solver:**
   - exact bitset DP when n·W ≤ 2·10⁷ (W = B in 1 s units; for example n = 2,000 and W = 600 gives 1.2M cells);
   - otherwise greedy by density plus a best-single-item guard (½-approximation).
-  - This generalises TokenDamper's `solve01Knapsack` (which gates on N ≤ 100 and W ≤ 10,000; its `isPinned` maps to the safety set).
 - **Estimating p_i (deterministic, explainable, never used by safe mode).** A fixed logistic score, logit p = β₀ + Σ βₖfₖ, over Beta-smoothed history counts:
   - f1: failure rate when affected;
   - f2: max co-failure rate P(t fails | c changed) over changed c in C(t);
@@ -520,7 +521,7 @@ Every escalation appears in the plan summary with its cause. L0 is file-precise.
   - Only **trusted-lane** observations update shared state (anti-poisoning, [threat-model.md](threat-model.md) §1.3).
 - **Estimation: decayed Beta-Binomial.**
   - Prior Beta(0.5, 50).
-  - On each observation at time t, decay (α−α₀, β−β₀) by 2^(−Δt/14d), then add x or 1−x. O(1) per observation; this is the same shape as TokenDamper's turn-decay confidence ledger.
+  - On each observation at time t, decay (α−α₀, β−β₀) by 2^(−Δt/14d), then add x or 1−x. O(1) per observation.
   - The UI shows the posterior mean and a 90% credible interval.
 - **Detection: Wald SPRT, one fresh test per Suspect episode,** so Wald's bounds hold per decision.
   - Hypotheses: H₀ p = p₀ = 0.002 (noise floor) vs H₁ p = p₁ = 0.02. α = 0.01 (false quarantine), β = 0.05 (missed flake).
@@ -579,7 +580,7 @@ Every escalation appears in the plan summary with its cause. L0 is file-precise.
 
 ### 3.11 Symbol-level refinement (measured lever, not in v1 by default)
 - **Mechanism.**
-  - Split each file node into `skeleton(f)` (file minus function bodies) plus `body(f, fn)`. Spans come from TokenDamper's region scanners (`scanBraceSpans`, `scanPythonDefBodies`).
+  - Split each file node into `skeleton(f)` (file minus function bodies) plus `body(f, fn)`. Spans come from a function-body scanner built on the import lexer's state machine.
   - Dynamic edges point to the skeletons of evaluated modules and to the bodies of *executed* functions. V8 function ranges are remapped through source maps.
   - A change confined to the bodies of unexecuted functions does not affect a test. Barrels stop blowing up closures.
 - **Soundness.** Module evaluation only defines the function objects; an unexecuted body cannot influence the test, except through `fn.toString()`/`length`, which are flagged by a lexer rule.
@@ -658,7 +659,8 @@ Every escalation appears in the plan summary with its cause. L0 is file-precise.
 
 ## 5. Interfaces
 
-### 5.1 CLI (`sieve`; zero runtime dependencies; Node `^20.19 || ^22.13 || >=24`, the same engines as TokenDamper; npm scope TBD because `sieve` is taken)
+### 5.1 CLI (`sieve`; zero runtime dependencies; Node `>=22`, tested on 22, 24 and 26; npm scope TBD because `sieve` is taken)
+Node 20 reached end of life on 2026-04-30, and Node 22 does on 2027-04-30, so the floor rises to Node 24 at launch ([release schedule](https://github.com/nodejs/Release)).
 | Command | Purpose |
 |---|---|
 | `sieve init` | Detect runners and workspaces; write `sieve.config.json` and the workflow (plan → matrix → gate) |
@@ -815,7 +817,7 @@ The full model and the adversarial review are in [threat-model.md](threat-model.
 - **P3 monotonicity:** Δ₁ ⊆ Δ₂ ⇒ A₁ ⊆ A₂.
 - **P4 proof validity:** every emitted proof passes an **independent naive verifier** (forward DFS per test; no shared code).
 - **P5 escalation:** any non-ignorable unknown changed node triggers ≥ L1.
-- **P6 determinism:** byte-identical canonical plans across runs and OSes (TokenDamper's "same input, same bytes").
+- **P6 determinism:** byte-identical canonical plans across runs and OSes.
 - **P7 knapsack:** DP equals brute force for n ≤ 15; greedy ≥ ½·OPT; safety set always included; Σw ≤ B.
 - **P8 LPT:** for small n, makespan ≤ (4/3 − 1/(3m))·OPT against a brute-force optimum. For any n, makespan ≤ Σw/m + max w (the list-scheduling bound). Ties are deterministic.
 - **P9 SPRT:** simulated Bernoulli streams at p₀ and p₁ give an empirical false-quarantine rate ≤ α and missed rate ≤ β (within Monte Carlo error); release SPRT likewise.
@@ -830,7 +832,7 @@ A generator produces small TS repos with:
 A mutator flips conditionals, constants and calls in changed functions; ground truth is a full run. **Gate: zero unsafe skips over ≥10k mutants** before any release that changes the selector.
 
 ### 7.3 Golden graphs, the replay harness and the benchmark protocol
-- **Golden graphs.** Pinned commits of TokenDamper (a dogfood fork, never the original) and 5 OSS TS repos. Graph statistics and sampled edges are committed; diffs are reviewed like snapshots.
+- **Golden graphs.** Pinned commits of 6 OSS TS repos chosen by the corpus criteria, plus SIEVE's own repo once its suite is big enough. Graph statistics and sampled edges are committed; diffs are reviewed like snapshots.
 - **Replay harness (`tools/replay`, re-execution because of the 90-day retention).** For each repo, ≥200 historical commits or PRs in a pinned container:
   1. record at c₀;
   2. for each cᵢ, plan against the latest mapped snapshot, then run the full suite as ground truth (failures rerun 3× to separate flaky from real);
@@ -845,7 +847,7 @@ A mutator flips conditionals, constants and calls in changed functions; ground t
   - coverage-only plus "tracked files → run all" (Datadog-like);
   - SIEVE static-only, dynamic-only and union.
 - **Compute.** Standard GitHub-hosted runners are free for public repos, so replay matrices can run in a public `sieve-replay` repo, within fair use, or locally.
-- **Discipline carried over from TokenDamper's corpus harness:**
+- **Measurement discipline:**
   - frozen corpus manifests (hashes), pinned engine (dist hash, `dirty` flag);
   - refuse to report on a mismatch, an empty sample or an unattributed stage;
   - assert counts;
@@ -863,8 +865,8 @@ A mutator flips conditionals, constants and calls in changed functions; ground t
 
 ### 7.5 How to verify the first deliverables end to end
 1. `npm test` (unit + property + toy-repo seeded faults) is green.
-2. `sieve graph` on the TokenDamper dogfood fork matches its golden graph.
-3. A PR on the dogfood fork shows the shadow summary with why-paths, and the gate job is green.
+2. `sieve graph` on each golden-graph repo matches its pinned graph.
+3. A PR on SIEVE's own repo shows the shadow summary with why-paths, and the gate job is green.
 4. Stopping the server (from M5) still gives a green PR with "ran all tests" (degraded mode).
 5. The corpus collector's daily run commits new manifests.
 
@@ -895,8 +897,8 @@ A mutator flips conditionals, constants and calls in changed functions; ground t
 ### 8.3 Open questions
 1. Who the 3 non-author M9 testers are.
 2. The final name and npm scope.
-3. The dogfood org name.
-4. Minimum Vitest and Jest versions. TokenDamper is on Vitest ^3.2.4 and the verified provider interface is v5's.
+3. Whether to move the repo into a GitHub org before M6, since GitHub's merge queue needs an org-owned repo.
+4. Minimum Vitest and Jest versions. The provider interface verified in this session is Vitest 5's; whether it holds for Vitest 3 and 4 is unchecked.
 5. Measured V8 record overhead, binary vs count mode.
 6. The job-outputs size limit (not on the limits page).
 7. Primary-source confirmation that OIDC is withheld from fork PRs.
@@ -930,11 +932,10 @@ A mutator flips conditionals, constants and calls in changed functions; ground t
      - `runtime/coverage.ClearCounters` requires atomic mode and `-cover` ([pkg.go.dev](https://pkg.go.dev/runtime/coverage)).
      - Go's test cache matches on files and env consulted, and `go list -json` exposes `TestGoFiles`, `EmbedFiles` and `Deps` ([cmd/go](https://pkg.go.dev/cmd/go)).
      - So Go fits package-level selection, post-launch.
-2. **tree-sitter in Node** (read from TokenDamper):
-   - `packages/deep` uses `web-tree-sitter ^0.27` WASM with grammar packages that ship `.wasm`, resolved via `require.resolve`.
-   - It does async init at construction and sync parsing after, and calls `tree.delete()` because WASM memory isn't garbage-collected.
-   - Measured init for 4 grammars is about 22 ms/process (TokenDamper DECISIONS §81).
-   - Core stays zero-dep: no runtime `dependencies`, and tree-sitter lives in a separate workspace package behind the `ParserAdapter` seam.
+2. **tree-sitter in Node** (measured earlier in TokenDamper, whose source was read in this session):
+   - `web-tree-sitter` (WASM), with grammar packages that ship `.wasm` files, works without native builds. Trees must be freed with `tree.delete()` because WASM memory isn't garbage-collected.
+   - Initializing the runtime plus 4 grammars costs about 22 ms per process (TokenDamper DECISIONS §81).
+   - SIEVE's CLI doesn't need tree-sitter: import extraction uses a hand-written lexer ([ADR-0002](adr/0002-zero-dependency-cli.md)).
 3. **GitHub mechanics.**
    - Check conclusions: action_required, cancelled, failure, neutral, success, skipped, stale (GitHub-only), timed_out. 50 annotations per request; 65,535-char summary. Only GitHub Apps can create check runs ([checks/runs](https://docs.github.com/en/rest/checks/runs)).
    - Skipped jobs report Success and don't block required checks ([conditions](https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution)).
@@ -986,19 +987,3 @@ A mutator flips conditionals, constants and calls in changed functions; ground t
    - SIEVE is an NSDI'24 cache eviction algorithm ([USENIX](https://www.usenix.org/conference/nsdi24/presentation/zhang-yazhuo));
    - RFC 5228 is "Sieve: An Email Filtering Language" (Proposed Standard, 2008) ([RFC](https://www.rfc-editor.org/rfc/rfc5228)).
 
----
-
-## 10. TokenDamper reuse map (read-only source: `C:\Users\ojass\Projects\TokenDamper`)
-| TokenDamper file | Reuse in SIEVE | Change needed |
-|---|---|---|
-| `src/core/validation/ast/ts-validator.ts` (string, template-interpolation, regex-vs-division, comment state machine; `REGEX_MAY_FOLLOW_*`) | Base of `core/lex/ts` import extractor | Emit import tokens instead of bracket issues |
-| `src/core/topology/dependency-graph.ts` `computeAllDistances` (multi-source BFS, head-index queue) | `core/graph` reverse BFS | **Make it directed, reverse-only, with parent pointers.** The original walks both edge directions. Its regex `parseTsJsImports` and naive resolver are *not* reused |
-| `src/core/planner/knapsack.ts` `solve01Knapsack` (bitset DP; greedy density + best-single-item ½-approx; `isPinned`) | Budget-mode solver | Gate on n·W; value = −ln(1−p); pinned = safety set |
-| `src/core/ledger/confidence-ledger.ts` (exponential decay^Δt; minimum-not-mean gate) | Decayed Beta update pattern; "one unsafe item fails the whole" gate philosophy | Bayesian counts instead of a score |
-| `src/core/elision/regions.ts` (`scanBraceSpans`, `scanPythonDefBodies`) | Function-body spans for symbol-level refinement (§3.11) | Map V8 function ranges onto spans |
-| `src/core/validation/ast/python-validator.ts` | Python import lexer (M8) | Same port as TS |
-| `src/core/utils/myers-diff.ts` | Plan/proof diffs between runs in the UI and CLI | None |
-| `src/cli/html-reporter.ts`, `src/cli/diff-renderer.ts` | `sieve report --html` (Lite mode), replay report, UI design tokens | New panels |
-| `tools/corpus-harness/*` (`collect.js` freeze + hash manifest, `measure.js` pinned engine + refuse on mismatch, `timing-run.js` cold/warm/fixed) | `tools/replay`, `bench/` discipline | Re-execution instead of file corpora |
-| `packages/deep/src/{index,grammars}.ts` + `src/core/parser/{types,registry}.ts` | Optional `packages/deep` + `LanguageAdapter` seam | Later (C++ for SeamCraft, symbol mode) |
-| `DECISIONS.md` culture, audits, "determinism per configuration", explicit fallback | `DECISIONS.md` in SIEVE; fallback = run-all | — |

@@ -18,7 +18,7 @@ Self-hosters need standard telemetry. Anthropic's 2026-09-14 post stresses instr
   - map-build time;
   - escapes;
   - webhook processing delay.
-- The CLI writes a local JSON timing trace (TokenDamper's explainability-trace precedent) and annotates the CI run whenever it degrades to run-all.
+- The CLI writes a local JSON timing trace and annotates the CI run whenever it degrades to run-all.
 - Tenant ids in telemetry are hashed. Payloads never go into spans.
 
 ## Alternatives considered

@@ -19,7 +19,7 @@
   - absent paths (hash ⊥);
   - unresolved specifiers (`u:`).
 - Edges carry their provenance: static, dynamic or declared.
-- **Symbol-level refinement is a measured lever.** It means file skeleton plus executed function bodies, using TokenDamper's region scanners. It is built only if the M4 replay shows at least 10 points of savings lost to barrel blowup.
+- **Symbol-level refinement is a measured lever.** It means file skeleton plus executed function bodies, using a function-body scanner built on the import lexer. It is built only if the M4 replay shows at least 10 points of savings lost to barrel blowup.
 
 ## Alternatives considered
 - **Symbol-level from day 1:** rejected for now. Much more mapping code before the kill test, and the soundness argument has to handle `fn.toString()` and `length`.

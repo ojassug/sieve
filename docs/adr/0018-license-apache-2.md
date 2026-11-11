@@ -14,7 +14,7 @@ Self-hosting in regulated organizations is SIEVE's wedge, and their legal teams 
 ## Alternatives considered
 - **AGPL-3.0 server + Apache CLI:** stops closed SaaS forks, but some companies ban AGPL even for internal use.
 - **Functional Source License for the server:** fair source that converts to Apache after two years, but not OSI-approved.
-- **MPL-2.0 (TokenDamper's license):** file-level copyleft.
+- **MPL-2.0:** file-level copyleft.
 
 ## Consequences
 - Maximum adoption.

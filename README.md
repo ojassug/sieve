@@ -13,7 +13,7 @@ Every skip carries a machine-checkable proof, and uncertainty always means the t
 
 | Document | What it holds |
 |---|---|
-| [docs/architecture.md](docs/architecture.md) | Product definition, architecture diagrams, algorithm specs, data model, interfaces, verification strategy, risks, research spike results, TokenDamper reuse map |
+| [docs/architecture.md](docs/architecture.md) | Product definition, architecture diagrams, algorithm specs, data model, interfaces, verification strategy, risks, research spike results |
 | [docs/threat-model.md](docs/threat-model.md) | Security model (tenancy, auth, trust lanes, privacy) and the adversarial review |
 | [docs/roadmap.md](docs/roadmap.md) | 10 milestones (about 640 commits over 26 weeks), the first two weeks in detail, walking skeleton, cut list, pivot plan |
 | [docs/adr/](docs/adr/README.md) | 21 architecture decision records |

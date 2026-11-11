@@ -5,7 +5,7 @@
 - Related: [architecture.md](../architecture.md) §2, [ADR-0002](0002-zero-dependency-cli.md)
 
 ## Context
-SIEVE is built by one developer over 6 months at about 25 commits/week. TokenDamper (TypeScript, zero runtime dependencies) supplies reusable parts: state-machine lexers, multi-source BFS, a knapsack DP, decay ledgers, HTML reporting and a corpus benchmark harness.
+SIEVE is built by one developer over 6 months at about 25 commits/week. Several parts have to be JavaScript or TypeScript whatever else is chosen: the Vitest and Jest plugins run inside those runners, the CLI runs in Node-based CI jobs, and the UI runs in browsers.
 
 The hot paths are:
 - listing and hashing in the CLI (git already computes blob OIDs; SIEVE hashes the rest with SHA-256);
@@ -17,7 +17,7 @@ The same selector must run in two places: in the CLI (Lite mode, `sieve verify`)
 
 ## Decision
 - TypeScript on Node for the CLI, runner plugins, server, workers and UI build.
-- CLI engines `^20.19.0 || ^22.13.0 || >=24` (the same as TokenDamper). The server image uses Node 24 LTS.
+- CLI engines `>=22`, tested on Node 22, 24 and 26. Node 20 reached end of life on 2026-04-30, and Node 22 does on 2027-04-30, so the floor rises to 24 at launch ([release schedule](https://github.com/nodejs/Release)). The server image uses Node 26 LTS (supported until 2029-04-30).
 - CPU-heavy selection runs in `worker_threads` over typed-array CSR graphs.
 - A WASM module is allowed only for a hot path that profiling shows misses its target, and only with a pure-TypeScript fallback.
 
