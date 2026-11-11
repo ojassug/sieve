@@ -1,0 +1,28 @@
+{
+  "benchmark": "graph",
+  "buildMs": 1621,
+  "edges": 999950,
+  "environment": {
+    "cpu": "AMD Ryzen AI 7 350 w/ Radeon 860M",
+    "node": "v26.4.0",
+    "os": "win32 10.0.26200"
+  },
+  "nodes": 100000,
+  "reverseReachMedian": [
+    {
+      "changed": 1,
+      "ms": 8.5,
+      "reached": 100000
+    },
+    {
+      "changed": 10,
+      "ms": 7.6,
+      "reached": 100000
+    },
+    {
+      "changed": 100,
+      "ms": 8.3,
+      "reached": 100000
+    }
+  ]
+}
