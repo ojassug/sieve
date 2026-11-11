@@ -34,3 +34,15 @@ The script also counts the files the lexer marks **uncertain**. Every uncertain 
 
 The raw output is in [results/2026-11-11-lex-win32.json](results/2026-11-11-lex-win32.json).
 - The first run flagged 2 files in Vite and Vitest `.d.ts` output. Both contain method signatures named `import`, such as `import<T>(id: string): Promise<T>`. The fix and its fixture are `signatures.d.ts`.
+
+## Graph: `node bench/graph.ts [nodes] [edgesPerNode]`
+
+This builds a graph of deterministic pseudo-random edges, then times the multi-source reverse BFS (median of 7 runs) for 1, 10 and 100 changed nodes. The default is 100,000 nodes with 10 edges each, the scale in architecture §3.3.
+
+| Date | Platform | Nodes | Edges | Build | Reverse BFS (all 100,000 nodes reached) |
+|---|---|---|---|---|---|
+| 2026-11-11 | Windows 11, Ryzen AI 7 350, Node 26.4 | 100,000 | 999,950 | 1.6 s | 7.6–8.5 ms |
+
+The raw output is in [results/2026-11-11-graph-win32.json](results/2026-11-11-graph-win32.json).
+- A random graph reaches every node, so these timings are the worst case for the BFS.
+- The build merges edges through a `Map` and sorts its keys. In M3 the build will be replaced by decoding the stored map.
