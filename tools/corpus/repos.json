@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "repos": [
+    { "repo": "vuejs/core", "workflows": ["ci.yml", "test.yml"], "mirror": true, "tier": 1, "why": "replay candidate: Vitest, MIT, pnpm" },
+    { "repo": "colinhacks/zod", "workflows": ["test.yml"], "mirror": true, "tier": 1, "why": "replay candidate: Vitest, MIT, pnpm" },
+    { "repo": "honojs/hono", "workflows": ["ci.yml"], "mirror": true, "tier": 1, "why": "replay candidate: Vitest, MIT, pnpm" },
+    { "repo": "vitejs/vite", "workflows": ["ci.yml"], "mirror": true, "tier": 1, "why": "replay candidate: Vitest, MIT, pnpm" },
+    { "repo": "TanStack/query", "workflows": ["pr.yml"], "mirror": true, "tier": 1, "why": "replay candidate: Vitest, MIT, pnpm" },
+    { "repo": "trpc/trpc", "workflows": ["main.yml"], "mirror": true, "tier": 1, "why": "replay candidate: Vitest, MIT, pnpm" },
+    { "repo": "toss/es-toolkit", "workflows": ["ci.yml"], "mirror": true, "tier": 1, "why": "replay candidate: Vitest, MIT, yarn" },
+    { "repo": "sveltejs/svelte", "workflows": ["ci.yml"], "mirror": true, "tier": 1, "why": "replay candidate: Vitest, MIT, pnpm" },
+    { "repo": "unjs/h3", "workflows": ["ci.yml"], "mirror": true, "tier": 1, "why": "replay candidate: Vitest, MIT, pnpm" },
+    { "repo": "typescript-eslint/typescript-eslint", "workflows": ["ci.yml"], "mirror": true, "tier": 1, "why": "replay candidate: Vitest, MIT, pnpm" },
+    { "repo": "facebook/lexical", "workflows": ["tests.yml"], "mirror": true, "tier": 1, "why": "replay candidate: Vitest, MIT, pnpm" },
+    { "repo": "excalidraw/excalidraw", "workflows": ["test.yml"], "mirror": true, "tier": 1, "why": "replay candidate: Vitest, MIT, yarn" },
+    { "repo": "vueuse/vueuse", "workflows": ["ci.yml"], "mirror": true, "tier": 1, "why": "replay candidate: Vitest, MIT, pnpm" },
+    { "repo": "prettier/prettier", "workflows": ["dev-test.yml", "prod-test.yml"], "mirror": true, "tier": 1, "why": "replay candidate: Jest, MIT, yarn" },
+    { "repo": "babel/babel", "workflows": ["ci.yml"], "mirror": true, "tier": 1, "why": "replay candidate: Jest, MIT, yarn" },
+    { "repo": "baserow/baserow", "workflows": ["ci.yml"], "mirror": false, "tier": 1, "why": "architecture §9.8: Jest, pytest and Playwright JUnit shards with reruns; license NOASSERTION, so metadata only until reviewed" },
+    { "repo": "Azure/azure-iot-sdk-python", "workflows": ["ci.yml"], "mirror": true, "tier": 1, "why": "architecture §9.8: pytest JUnit per Python version, MIT" },
+    { "repo": "electron/forge", "workflows": ["ci.yml"], "mirror": true, "tier": 2, "why": "architecture §9.8, MIT" },
+    { "repo": "PostHog/posthog", "workflows": ["ci-frontend.yml"], "mirror": false, "tier": 2, "why": "architecture §9.8; license NOASSERTION" },
+    { "repo": "visgl/luma.gl", "workflows": ["test.yml"], "mirror": false, "tier": 2, "why": "architecture §9.8; license NOASSERTION" },
+    { "repo": "Significant-Gravitas/AutoGPT", "workflows": ["platform-frontend-ci.yml"], "mirror": false, "tier": 2, "why": "architecture §9.8; license NOASSERTION" },
+    { "repo": "mariadb-corporation/mariadb-connector-nodejs", "workflows": ["ci.yml"], "mirror": false, "tier": 2, "why": "architecture §9.8; LGPL-2.1" },
+    { "repo": "meshery/meshery", "workflows": ["build-and-test.yml"], "mirror": true, "tier": 2, "why": "architecture §9.8, Apache-2.0" },
+    { "repo": "mozilla-conduit/review", "workflows": "*", "mirror": false, "tier": 2, "why": "architecture §9.8 (Python); license not yet checked" },
+    { "repo": "NatLabRockies/buildstockbatch", "workflows": "*", "mirror": false, "tier": 2, "why": "architecture §9.8 (Python); license not yet checked" },
+    { "repo": "jborean93/ansibug", "workflows": "*", "mirror": false, "tier": 2, "why": "architecture §9.8 (Python); license not yet checked" }
+  ]
+}

@@ -66,3 +66,39 @@ Implementation decisions too small or too local for an ADR, plus session hand-ov
 
 - **Context.** Property tests must be deterministic in CI and still able to explore.
 - **Decision.** fast-check uses the global seed `20261116`, set in `vitest.setup.ts`. `SIEVE_FC_SEED` overrides it, and failures print the seed and path needed to replay them.
+
+## 9. The corpus collector uses `GITHUB_TOKEN`, not a personal token
+
+- **Context.** The collector reads Actions data and downloads artifacts from other public repositories. It was not known whether a workflow's `GITHUB_TOKEN` is allowed to do that, or whether it is limited to 1,000 requests per hour as the docs say.
+- **Evidence.** A one-off probe workflow (run 43022083834 on a temporary `probe/artifact-access` branch, since deleted) called the API with `GITHUB_TOKEN`:
+  - against electron/forge and baserow/baserow, listing runs, listing a run attempt's jobs, listing a commit's check runs and listing artifacts all returned 200;
+  - downloading electron/forge's newest artifact returned **302**, then 200 with a 436,043-byte zip archive;
+  - `/rate_limit` reported a core **limit of 5,000** for the token;
+  - baserow's repository-wide `GET /actions/artifacts` returned **500**. It also failed for meshery and AutoGPT in a survey with a user token, so listings of large repositories fail on GitHub's side.
+- **Decision.**
+  - The collector authenticates with its own workflow `GITHUB_TOKEN`, so no secret is needed.
+  - It lists artifacts per run, never per repository.
+  - It retries 5xx responses with backoff, honours `retry-after` and the reset time, and reads the rate limit from response headers instead of assuming one.
+
+## 10. Collector design
+
+- **Context.** History older than 90 days is gone. A daily job gets at most 6 hours, and on 2026-11-11 the candidates created anywhere from 1 to more than 2,500 runs a day. A live metadata-only test against vuejs/core took about 3.2 requests and about 38 KB of raw JSON per run.
+- **Decision.**
+  - **Work order.** The last 7 days are re-collected on every run, to catch new attempts and short-lived artifacts. The backfill then goes oldest day first, back to 89 days ago, tier 1 repositories before tier 2.
+  - **Run listing.** Runs are listed per workflow, by `created` day. A range whose `total_count` exceeds GitHub's 1,000-result cap is split in halves.
+  - **Per run.** The collector fetches each new attempt and its jobs, the check runs of the check suite, and the artifact listing, and mirrors matching test reports.
+  - **Resumable state.** State records, per run, the attempt seen and the artifacts mirrored. It is updated run by run, so an interrupted day resumes where it stopped.
+  - **Budgets.** The request and time budgets end a run cleanly. The manifest records what is pending and the coverage of the retention window.
+  - **Raw objects.** Records are raw API objects written as canonical NDJSON. Consumers deduplicate.
+- **Evidence.** Tests in `tools/corpus/test`, mutation-checked by hand against the fake API. Metadata-only live runs on 2026-11-11 against colinhacks/zod and vuejs/core.
+
+## 11. Corpus storage (proposed; awaiting approval)
+
+- **Context.** The data has to outlive GitHub's 90 days, be publicly reproducible (TARGETS.md, "Publication"), and cost nothing to run.
+- **Decision (proposed).**
+  - A separate public repository, `ojassug/sieve-corpus`, built from the template in `tools/corpus/corpus-repo/`.
+  - Manifests and collector state are committed to git.
+  - Raw NDJSON (`.tar.gz`) and mirrored artifacts (`.tar`, per repository) are uploaded as daily release assets, which have no retention limit.
+  - The collector is pinned by commit in `collector.ref`.
+  - Mirroring is limited to permissively licensed repositories; the rest contribute metadata only (bench/CORPUS.md).
+- **Status.** Creating the repository needs Ojas's approval.

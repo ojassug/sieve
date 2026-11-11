@@ -1,0 +1,90 @@
+# Daily corpus collection. This file is the template for the ojassug/sieve-corpus repository;
+# GitHub ignores workflows outside a repository's root .github/workflows, so it is inert here.
+name: collect
+
+on:
+  schedule:
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+    inputs:
+      max_minutes:
+        description: Time budget for collection, in minutes
+        default: '320'
+
+permissions:
+  actions: read
+  contents: write
+
+concurrency:
+  group: collect
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Read the pinned collector commit
+        id: ref
+        run: echo "sha=$(tr -d '[:space:]' < collector.ref)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v7
+        with:
+          repository: ojassug/sieve
+          ref: ${{ steps.ref.outputs.sha }}
+          path: sieve
+          persist-credentials: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+
+      - name: Link the workspace (installs no third-party packages)
+        working-directory: sieve
+        run: npm ci --omit=dev --ignore-scripts --no-audit --no-fund
+
+      - name: Collect
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          MAX_MINUTES: ${{ inputs.max_minutes || '320' }}
+          REF: ${{ steps.ref.outputs.sha }}
+        run: |
+          day=$(date -u +%F)
+          echo "DAY=$day" >> "$GITHUB_ENV"
+          node sieve/tools/corpus/src/main.ts \
+            --config sieve/tools/corpus/repos.json \
+            --state state/collector-state.json \
+            --out out \
+            --today "$day" \
+            --max-minutes "$MAX_MINUTES" \
+            --ref "$REF"
+
+      - name: Publish the release assets, manifest and state
+        if: always() && hashFiles('out/manifest.json') != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          run="$DAY-$GITHUB_RUN_NUMBER"
+          mkdir -p assets
+          cp out/manifest.json "assets/manifest-$run.json"
+          if [ -d out/raw ]; then tar -C out -czf "assets/raw-$run.tar.gz" raw; fi
+          if [ -d out/artifacts ]; then
+            for dir in out/artifacts/*/; do
+              slug=$(basename "$dir")
+              tar -C out/artifacts -cf "assets/artifacts-$run-$slug.tar" "$slug"
+            done
+          fi
+          (cd assets && sha256sum -- * > "SHA256SUMS-$run")
+          gh release create "corpus-$run" assets/* \
+            --title "Corpus $DAY (run $GITHUB_RUN_NUMBER)" \
+            --notes "Collected by ojassug/sieve@$(cat collector.ref). Manifest: manifests/${DAY:0:4}/$run.json"
+          mkdir -p "manifests/${DAY:0:4}"
+          cp out/manifest.json "manifests/${DAY:0:4}/$run.json"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add manifests state
+          git commit -m "corpus: $run"
+          git push

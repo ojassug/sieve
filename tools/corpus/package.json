@@ -10,5 +10,8 @@
   },
   "exports": {
     ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@sieve-ci/core": "0.0.0"
   }
 }
