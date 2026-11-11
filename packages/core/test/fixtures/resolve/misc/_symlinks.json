@@ -1,0 +1,4 @@
+{
+  "src/link.ts": "api.ts",
+  "src/dirlink": "pages"
+}

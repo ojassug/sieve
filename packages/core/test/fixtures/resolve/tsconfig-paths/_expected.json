@@ -1,0 +1,56 @@
+[
+  {
+    "from": "src/feature/a.ts",
+    "specifier": "@/components/Button",
+    "expect": {
+      "kind": "file",
+      "targets": [
+        "src/components/Button.tsx"
+      ],
+      "absentIncludes": [
+        "generated/components/Button.ts",
+        "src/components/Button.ts",
+        "src/feature/tsconfig.json",
+        "src/tsconfig.json",
+        "tsconfig.base"
+      ],
+      "configsIncludes": [
+        "tsconfig.base.json",
+        "tsconfig.json"
+      ]
+    }
+  },
+  {
+    "from": "src/feature/a.ts",
+    "specifier": "~utils",
+    "expect": {
+      "kind": "file",
+      "targets": [
+        "src/utils/index.ts"
+      ]
+    }
+  },
+  {
+    "from": "src/feature/a.ts",
+    "specifier": "utils",
+    "expect": {
+      "kind": "file",
+      "targets": [
+        "src/utils/index.ts"
+      ],
+      "packageName": "utils"
+    }
+  },
+  {
+    "from": "src/feature/a.ts",
+    "specifier": "react",
+    "expect": {
+      "kind": "external",
+      "targets": [],
+      "packageName": "react",
+      "absentIncludes": [
+        "src/react.ts"
+      ]
+    }
+  }
+]

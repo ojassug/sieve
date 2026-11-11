@@ -1,0 +1,1 @@
+{ "name": "ui", "main": "./lib/main.js", "module": "./src/index.ts" }

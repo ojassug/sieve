@@ -1,0 +1,152 @@
+[
+  {
+    "from": "test/api.test.ts",
+    "kind": "mock",
+    "specifier": "../src/api",
+    "expect": {
+      "kind": "file",
+      "targets": [
+        "src/__mocks__/api.ts",
+        "src/api.ts"
+      ],
+      "dirsIncludes": [
+        "src/__mocks__"
+      ]
+    }
+  },
+  {
+    "from": "test/api.test.ts",
+    "kind": "mock",
+    "specifier": "axios",
+    "expect": {
+      "kind": "file",
+      "targets": [
+        "__mocks__/axios.js"
+      ],
+      "packageName": "axios",
+      "dirsIncludes": [
+        "__mocks__"
+      ]
+    }
+  },
+  {
+    "from": "src/api.ts",
+    "specifier": "axios",
+    "expect": {
+      "kind": "file",
+      "targets": [
+        "__mocks__/axios.js"
+      ],
+      "packageName": "axios"
+    }
+  },
+  {
+    "from": "src/api.ts",
+    "specifier": "lodash",
+    "expect": {
+      "kind": "external",
+      "targets": [],
+      "packageName": "lodash",
+      "dirsIncludes": [
+        "__mocks__"
+      ]
+    }
+  },
+  {
+    "from": "src/router.ts",
+    "kind": "glob",
+    "specifier": null,
+    "patterns": [
+      "./pages/*.ts",
+      "!./pages/_*.ts"
+    ],
+    "expect": {
+      "kind": "file",
+      "targets": [
+        "src/pages/about.ts",
+        "src/pages/home.ts"
+      ],
+      "globs": [
+        {
+          "key": "src/pages/*.ts|!src/pages/_*.ts",
+          "matches": [
+            "src/pages/about.ts",
+            "src/pages/home.ts"
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "from": "src/router.ts",
+    "kind": "glob",
+    "specifier": null,
+    "patterns": [
+      "/src/pages/**/*.ts"
+    ],
+    "expect": {
+      "kind": "file",
+      "targets": [
+        "src/pages/_draft.ts",
+        "src/pages/about.ts",
+        "src/pages/home.ts",
+        "src/pages/nested/deep.ts"
+      ]
+    }
+  },
+  {
+    "from": "src/router.ts",
+    "kind": "glob",
+    "specifier": null,
+    "patterns": null,
+    "expect": {
+      "kind": "unresolved",
+      "targets": [],
+      "reason": "non-literal"
+    }
+  },
+  {
+    "from": "src/router.ts",
+    "specifier": "./link",
+    "expect": {
+      "kind": "file",
+      "targets": [
+        "src/api.ts",
+        "src/link.ts"
+      ]
+    }
+  },
+  {
+    "from": "src/router.ts",
+    "specifier": "./dirlink/home",
+    "expect": {
+      "kind": "unresolved",
+      "targets": [],
+      "reason": "symlinked directory"
+    }
+  },
+  {
+    "from": "src/router.ts",
+    "kind": "url",
+    "specifier": "./pages/home.ts",
+    "expect": {
+      "kind": "file",
+      "targets": [
+        "src/pages/home.ts"
+      ]
+    }
+  },
+  {
+    "from": "src/router.ts",
+    "kind": "url",
+    "specifier": "./pages/nope.png",
+    "expect": {
+      "kind": "unresolved",
+      "targets": [],
+      "reason": "not found",
+      "absentIncludes": [
+        "src/pages/nope.png"
+      ]
+    }
+  }
+]

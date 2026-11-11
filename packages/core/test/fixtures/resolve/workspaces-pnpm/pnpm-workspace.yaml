@@ -1,0 +1,7 @@
+# workspace layout
+packages:
+  - 'apps/*'
+  - "libs/**"
+  - '!libs/**/test-fixtures/**'
+catalog:
+  react: ^19.0.0
