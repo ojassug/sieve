@@ -278,3 +278,23 @@ Implementation decisions too small or too local for an ADR, plus session hand-ov
   - The CLI: an argument parser, a `sieve.config.json` loader, and `sieve graph`, `diff` and `plan --static --shadow --map <dir>`, all emitting canonical JSON. Would-skips must be labelled unproven (kickoff gap 1).
 - **Next: day 10.** The walking skeleton workflow (plan → matrix → shards → `sieve-gate`), with the map in `actions/cache` (roadmap §5).
 - **How to verify.** Run `npm ci`, then `npm test`, `npm run lint` and `npm run typecheck`. `node bench/ls-tree.ts`, `node bench/lex.ts` and `node bench/graph.ts` reproduce the recorded numbers.
+
+## 20. Hand-off document (2026-11-11)
+
+- **Context.** After entry 19 was written, Ojas approved merging #2–#7. They were merged into `main` in order, with merge commits, and `main` is green at `00fea91`. Ojas then asked for a hand-off detailed enough for someone else to continue.
+- **Decision.**
+  - [HANDOFF.md](HANDOFF.md) at the repository root is the single place to start. It covers:
+    - status;
+    - ground rules;
+    - setup and verification;
+    - a module map with entry points;
+    - how to operate the corpus collector;
+    - detailed plans for days 9 and 10;
+    - the rest of M1;
+    - recorded numbers;
+    - decisions waiting on Ojas;
+    - known limits;
+    - environment notes.
+  - Entry 19's PR states are superseded: every one of #1–#7 is merged.
+  - Architecture §3.1 now defines `d:` hashes as names *and kinds*, matching entry 12 and the code. Whoever builds the graph on day 9 should implement against that.
+- **Evidence.** `gh pr view` shows #1–#7 merged; CI on `main` passes.
