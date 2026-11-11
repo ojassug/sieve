@@ -7,3 +7,6 @@ coverage/
 
 # Local SIEVE state (maps, plans) written by the CLI.
 .sieve/
+
+# Vitest reporter output.
+.vitest/
