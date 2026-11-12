@@ -11,7 +11,7 @@
 | Roadmap day | What it delivered | PR | Its "done when" |
 |---|---|---|---|
 | 1 | Monorepo skeleton, Apache-2.0 `LICENSE`, CI, `CONTRIBUTING.md` with the DCO, `DECISIONS.md` | [#1](https://github.com/ojassug/sieve/pull/1) | Met: CI green |
-| 1–2 | Corpus collector (`tools/corpus`), the [ojassug/sieve-corpus](https://github.com/ojassug/sieve-corpus) data repo, [bench/CORPUS.md](bench/CORPUS.md) | [#2](https://github.com/ojassug/sieve/pull/2) | **Pending:** needs the first daily manifest (§5) |
+| 1–2 | Corpus collector (`tools/corpus`), the [ojassug/sieve-corpus](https://github.com/ojassug/sieve-corpus) data repo, [bench/CORPUS.md](bench/CORPUS.md) | [#2](https://github.com/ojassug/sieve/pull/2) | Met: the first manifest was published on 2026-11-11 (§5.3) |
 | 2–3 | `core/git`: streaming `ls-tree -z` parser, object format, Merkle descent, naive diff, P10 | [#3](https://github.com/ojassug/sieve/pull/3) | Met: P10 passes on 10,000 random trees |
 | 3–4 | `core/lex/ts`: state-machine import lexer, 19 golden fixtures, MB/s benchmark | [#4](https://github.com/ojassug/sieve/pull/4) | Met |
 | 5 | `core/graph`: interning, CSR, reverse BFS, why-paths, P1 and P3 | [#5](https://github.com/ojassug/sieve/pull/5) | Met |
@@ -27,7 +27,7 @@
 - **Not runnable yet:** there is no `sieve` command (`packages/cli/src/main.ts` is a stub) and no graph builder. Day 9 builds both.
 
 **First three things to do:**
-1. Check the first corpus run (§5.3) and finish day 1–2.
+1. Check that the collector is making progress (§5.3): coverage should grow with each daily run.
 2. Read §2, then build day 9 (§6).
 3. Build day 10 (§7). It needs at least one merge to `main` and two PRs to demonstrate.
 
@@ -114,7 +114,7 @@ Expect `239 passed` from `npm test`, and no output from lint or typecheck. To re
 
 ### 5.1 What it is
 
-GitHub deletes workflow runs, check runs and artifacts after at most 90 days. The collector archives, for 26 repositories:
+GitHub deletes workflow runs, check runs and artifacts after at most 90 days. The collector archives, for 25 repositories:
 - runs, with every attempt;
 - jobs for each attempt;
 - check runs;
@@ -124,31 +124,41 @@ GitHub deletes workflow runs, check runs and artifacts after at most 90 days. Th
 The data is the flake ground truth (T3) and the durations for the replay corpus.
 - **Data repository:** [ojassug/sieve-corpus](https://github.com/ojassug/sieve-corpus), public, created on 2026-11-11 with Ojas's approval.
 - **Template:** the workflow and README there come from `tools/corpus/corpus-repo/` in this repository.
-- **Pinned code:** the collector code is pinned by commit in `collector.ref`, currently `4d28a10`, which is reachable from `main`.
+- **Pinned code:** the collector code is pinned by commit in `collector.ref` in sieve-corpus. The commit must be reachable from `main` here.
 - **No secrets.** The workflow uses its own `GITHUB_TOKEN`. A probe showed that token can read other public repos' Actions data and download their artifacts, and `/rate_limit` reported 5,000 per hour (DECISIONS 9).
 - **Schedule:** daily at 03:17 UTC, plus `workflow_dispatch` with a `max_minutes` input (default 320). The job timeout is 350 minutes.
 - **Each run:**
-  1. Re-collects the last 7 days, to catch new attempts and short-lived artifacts.
-  2. Backfills the oldest uncollected days first, back to 89 days ago, tier 1 repositories first.
+  1. Collects the oldest uncollected days first, back to 89 days ago, tier 1 repositories first within each day. Then it re-collects the last 2 days for new attempts.
+  2. Splits its requests fairly. Each repository may spend 1,000 (`--repo-share`) before any repository gets more; leftover time then goes to whatever is still open (DECISIONS 21).
   3. Publishes a release `corpus-YYYY-MM-DD-N`. Its assets are `raw-….tar.gz` (canonical NDJSON of the raw API objects), `artifacts-…-<owner>__<repo>.tar`, the manifest and `SHA256SUMS-…`.
   4. Commits `manifests/YYYY/YYYY-MM-DD-N.json` and `state/collector-state.json`.
-- **Design and evidence:** DECISIONS 9–11. **Selection criteria and vetting:** [bench/CORPUS.md](bench/CORPUS.md).
+- **Design and evidence:** DECISIONS 9–11 and 21. **Selection criteria and vetting:** [bench/CORPUS.md](bench/CORPUS.md).
 
 ### 5.2 Mirroring policy (a decision for Ojas)
 
 - **Default rule.** Test-report archives are mirrored only from permissively licensed repositories (`mirror: true` in `tools/corpus/repos.json`).
 - **Metadata only, until Ojas decides:**
-  - baserow, PostHog, luma.gl and AutoGPT report a NOASSERTION license;
+  - baserow, luma.gl and AutoGPT report a NOASSERTION license;
   - mariadb-connector-nodejs is LGPL-2.1.
 - **Why baserow matters.** It is the best JUnit source: Jest, pytest and Playwright shards with reruns.
 - **To change the policy:** edit `repos.json`, merge, then bump `collector.ref`.
 
-### 5.3 The first run: check it first
+### 5.3 Runs so far, and how to check progress
 
-The first run, [43026895799](https://github.com/ojassug/sieve-corpus/actions/runs/43026895799), started at 13:11 UTC on 2026-11-11.
-- At hand-off it was still in its `Collect` step, after setup, checkout and the workspace link had all succeeded.
-- With the 320-minute budget, it should publish around 18:30–19:00 UTC that day.
-- Day 1–2's "done when" is met once `manifests/2026/2026-11-11-1.json` exists.
+**First run.** [43026895799](https://github.com/ojassug/sieve-corpus/actions/runs/43026895799) succeeded on 2026-11-11, 13:11–18:32 UTC. It published release `corpus-2026-11-11-1` and `manifests/2026/2026-11-11-1.json`, which meets day 1–2's "done when". Its numbers, before the fix:
+- 24,581 requests, 6,208 runs, 6,258 attempts, 83,523 jobs and no errors. That is 660 MB of raw NDJSON, 30 MB gzipped.
+- It covered only Nov 4 (all repositories) and part of Nov 5. That was 1.7 of the 7 recent days it re-collected first, and no backfill at all.
+- PostHog's `ci-frontend.yml` took 4,183 runs of one day, two-thirds of everything collected.
+- Only 68 artifacts matched the test-report pattern, all from meshery.
+
+**The fix**, in DECISIONS 21, has three parts: oldest days first, per-repository shares, and PostHog dropped. It takes effect once `collector.ref` points at a commit that contains it; check the next run's manifest the same way.
+
+**Scheduled runs.** The 03:17 UTC run for 2026-11-12 fired eight hours late, as run 43207509015 at 11:15 UTC, still on the old collector. GitHub can delay or drop scheduled runs. If they go missing, start runs by hand with `gh workflow run collect.yml --repo ojassug/sieve-corpus`.
+
+**Never push to sieve-corpus while a run is in progress.**
+- In the first two runs, the publish step committed and pushed without pulling first. A concurrent push (a `collector.ref` bump, for instance) would make its push fail, and that run's manifest and state would be lost. The release assets would still be published.
+- The template now rebases before pushing, with up to three tries. The copy in sieve-corpus picks that up when it is next updated from `tools/corpus/corpus-repo/`.
+- Until then, check `gh run list --repo ojassug/sieve-corpus` before any push there.
 
 ```bash
 gh run view 43026895799 --repo ojassug/sieve-corpus
@@ -165,15 +175,15 @@ gh api repos/ojassug/sieve-corpus/contents/manifests/2026 --jq '.[].name'
 **What to look at in the manifest:**
 - `stoppedEarly`: expect the time budget on the first run.
 - `pending`.
-- `items[].status`: `complete`, `error` or `stopped`, and per-item `error` text.
+- `items[].status`: `complete`, `error`, `capped` (the share ran out and no time was left) or `stopped`, and per-item `error` text.
+- `requestsByRepo`: what each repository cost.
 - `coverage`: backfill days complete per repository, out of the 82 days between 89 and 8 days ago.
 
-**Expected coverage.** This is an estimate, not a measurement:
-- The 26 repositories produce roughly 1,000 collected runs a day, at about 3.2 requests per run (measured on vuejs/core).
-- A full 89-day backfill therefore needs roughly 300,000 requests.
-- One daily run can make about 26,000 requests: 320 minutes at 5,000 per hour.
-
-So expect about two weeks to catch up, while the oldest day expires each day. The manifest's `coverage` makes those losses visible. Record the real numbers in `bench/CORPUS.md`, or in a DECISIONS entry, once you have them.
+**Expected coverage.** This is an estimate, from the first run's counts:
+- Without PostHog, the repositories produce roughly 1,300 runs a day, at about 3 requests per run: roughly 4,000 requests a day.
+- One daily run can make about 25,000 requests.
+- So each run should cover about 6 days of history, and the coverage should net about 5 days a day while the oldest day expires.
+- Expect the backlog to clear within 2–3 weeks. The manifest's `coverage` makes those losses visible. Record the real numbers in `bench/CORPUS.md`, or in a DECISIONS entry, once you have them.
 
 **If the run failed or published nothing:**
 1. Read the log: `gh run view 43026895799 --repo ojassug/sieve-corpus --log-failed`.
@@ -193,7 +203,8 @@ GH_TOKEN="$(gh auth token)" node tools/corpus/src/main.ts --config tools/corpus/
 
 **Flags:**
 - `--only` (repeatable);
-- `--recent-days` (default 7);
+- `--recent-days` (default 2);
+- `--repo-share` (default 1000);
 - `--horizon-days` (default 89);
 - `--max-minutes` (default 320);
 - `--max-requests`;
@@ -202,7 +213,7 @@ GH_TOKEN="$(gh auth token)" node tools/corpus/src/main.ts --config tools/corpus/
 - `--ref`.
 
 **Known limits:**
-- Reruns started more than 7 days after the run was created are missed.
+- Once caught up, a day is collected a final time when it is 3 days old, so reruns started later than that are missed.
 - Repository-wide artifact listings return 500 on large repos, so artifacts are listed per run.
 - Records can repeat across runs; consumers deduplicate by id, or by (id, `run_attempt`) for runs.
 

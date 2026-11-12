@@ -298,3 +298,17 @@ Implementation decisions too small or too local for an ADR, plus session hand-ov
   - Entry 19's PR states are superseded: every one of #1–#7 is merged.
   - Architecture §3.1 now defines `d:` hashes as names *and kinds*, matching entry 12 and the code. Whoever builds the graph on day 9 should implement against that.
 - **Evidence.** `gh pr view` shows #1–#7 merged; CI on `main` passes.
+
+## 21. Collector budget: oldest days first, per-repository shares, PostHog dropped
+
+- **Context.** The first collection run (43026895799, 2026-11-11) succeeded but could not keep up:
+  - 24,581 requests over 320 minutes collected 6,208 runs, 6,258 attempts and 83,523 jobs, with no errors.
+  - That covered only 1.7 of the 7 recent days it re-collected first (Nov 4, and Nov 5 for 19 of 26 repositories), and none of the backfill.
+  - PostHog's `ci-frontend.yml` was 4,183 of those runs, all from one day.
+  - Only 68 artifacts (0.2 MB, meshery) matched the test-report pattern.
+- **Decision.**
+  - **Oldest days first.** Days are collected oldest first: the backfill, then a recent window that shrinks from 7 to 2 days. GitHub deletes the oldest days first, and a recent day not reached in time is collected later as a backfill day.
+  - **Per-repository shares.** In phase 1, each repository may spend `repoShare` requests (default 1,000; 25 repositories × 1,000 is about one run's capacity). A repository that hits its share stops for the phase; the client throws `ShareExhausted`, distinct from `BudgetExhausted`. In phase 2, the remaining time goes to the open work in plan order. State is saved run by run, so an interrupted day resumes without refetching.
+  - **The manifest** now records `requestsByRepo`, `options.repoShare`, and a `capped` item status.
+  - **PostHog/posthog is removed** from `repos.json`. It is tier 2 and metadata-only (NOASSERTION), and most of its runs are bots.
+- **Evidence.** Tests in `tools/corpus/test` cover the share limit in the client, the new plan order, and the two phases: a capped repository yields to the others, then finishes from the leftover time. Two hand mutants are caught: dropping phase 2, and ignoring the share. The first run's numbers are in its manifest, `manifests/2026/2026-11-11-1.json` in sieve-corpus.

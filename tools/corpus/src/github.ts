@@ -16,6 +16,9 @@ export class HttpError extends Error {
 /** The run's request or time budget is spent; the caller saves what it has and stops. */
 export class BudgetExhausted extends Error {}
 
+/** One repository's share of the run is spent; other repositories may carry on. */
+export class ShareExhausted extends Error {}
+
 export interface ClientOptions {
   readonly token: string;
   readonly baseUrl?: string;
@@ -43,6 +46,7 @@ export class GitHubClient {
   requests = 0;
   private remaining: number | null = null;
   private resetAtMs = 0;
+  private shareLimit: number | null = null;
   private readonly baseUrl: string;
   private readonly headers: Record<string, string>;
   private readonly maxRetries: number;
@@ -62,6 +66,11 @@ export class GitHubClient {
       'user-agent': options.userAgent ?? 'sieve-corpus-collector',
       'x-github-api-version': '2022-11-28',
     };
+  }
+
+  /** Refuse requests once `requests` reaches `limit` (throwing ShareExhausted) until cleared with null. */
+  setShareLimit(limit: number | null): void {
+    this.shareLimit = limit;
   }
 
   async getJson(path: string, query?: Query): Promise<unknown> {
@@ -164,6 +173,9 @@ export class GitHubClient {
     }
     if (deadline !== undefined && this.now() >= deadline) {
       throw new BudgetExhausted('time budget spent');
+    }
+    if (this.shareLimit !== null && this.requests >= this.shareLimit) {
+      throw new ShareExhausted('repository share spent');
     }
     if (this.remaining === 0 && this.now() < this.resetAtMs) {
       await this.waitFor(this.resetAtMs - this.now() + 1000, 'rate limit reset');
