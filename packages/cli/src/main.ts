@@ -1,4 +1,10 @@
 #!/usr/bin/env node
-// Entry point for the `sieve` binary. Commands land on roadmap day 9.
-process.stderr.write('sieve: no commands yet\n');
-process.exitCode = 2;
+// Entry point for the `sieve` binary; runs from source through Node's type stripping (DECISIONS 3).
+import { run } from './cli.ts';
+
+process.exitCode = await run(process.argv.slice(2), {
+  cwd: process.cwd(),
+  env: process.env,
+  stdout: (text) => process.stdout.write(text),
+  stderr: (text) => process.stderr.write(text),
+});
