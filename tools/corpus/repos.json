@@ -19,7 +19,6 @@
     { "repo": "baserow/baserow", "workflows": ["ci.yml"], "mirror": false, "tier": 1, "why": "architecture §9.8: Jest, pytest and Playwright JUnit shards with reruns; license NOASSERTION, so metadata only until reviewed" },
     { "repo": "Azure/azure-iot-sdk-python", "workflows": ["ci.yml"], "mirror": true, "tier": 1, "why": "architecture §9.8: pytest JUnit per Python version, MIT" },
     { "repo": "electron/forge", "workflows": ["ci.yml"], "mirror": true, "tier": 2, "why": "architecture §9.8, MIT" },
-    { "repo": "PostHog/posthog", "workflows": ["ci-frontend.yml"], "mirror": false, "tier": 2, "why": "architecture §9.8; license NOASSERTION" },
     { "repo": "visgl/luma.gl", "workflows": ["test.yml"], "mirror": false, "tier": 2, "why": "architecture §9.8; license NOASSERTION" },
     { "repo": "Significant-Gravitas/AutoGPT", "workflows": ["platform-frontend-ci.yml"], "mirror": false, "tier": 2, "why": "architecture §9.8; license NOASSERTION" },
     { "repo": "mariadb-corporation/mariadb-connector-nodejs", "workflows": ["ci.yml"], "mirror": false, "tier": 2, "why": "architecture §9.8; LGPL-2.1" },
