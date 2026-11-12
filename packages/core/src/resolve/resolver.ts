@@ -207,6 +207,28 @@ export class Resolver {
     return finish(ev, false);
   }
 
+  /**
+   * Config files that govern `path` itself, whatever it imports: its tsconfig chain and the nearest
+   * package.json (whose `type` decides how Node loads it), plus every miss found on the way up.
+   */
+  fileConfigs(path: string): { configs: string[]; absent: string[] } {
+    const tsconfig = this.findTsconfig(dirname(path));
+    const configs = new Set(tsconfig.files);
+    const absent = new Set(tsconfig.absent);
+    for (let dir = dirname(path); ; dir = dirname(dir)) {
+      const packageJson = joinPath(dir, 'package.json')!;
+      if (this.vfs.kind(packageJson) === 'file') {
+        configs.add(packageJson);
+        break;
+      }
+      absent.add(packageJson);
+      if (dir === '') {
+        break;
+      }
+    }
+    return { configs: [...configs].sort(compareStrings), absent: [...absent].sort(compareStrings) };
+  }
+
   /** The directory of the nearest package.json above `path` ('' when only the root has one, or none). */
   ownerDir(path: string): string {
     for (let dir = dirname(path); ; dir = dirname(dir)) {
