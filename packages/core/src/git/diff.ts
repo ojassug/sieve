@@ -79,6 +79,22 @@ export class TreeIndex {
     const slash = path.lastIndexOf('/');
     return this.children(slash === -1 ? '' : path.slice(0, slash)).get(path.slice(slash + 1));
   }
+
+  /** Every entry, trees included, sorted by path. */
+  entries(): LsTreeEntry[] {
+    return [...this.dirs.values()].flatMap((children) => [...children.values()]).sort((a, b) => compareStrings(a.path, b.path));
+  }
+
+  /**
+   * A directory's listing as `readdir` with file types sees it: [name, kind] pairs sorted by name,
+   * with kinds as in `kindOf`. Null when the directory does not exist (a file is not one).
+   */
+  listing(dir: string): [string, string][] | null {
+    if (dir !== '' && this.entry(dir)?.type !== 'tree') {
+      return null;
+    }
+    return [...this.children(dir)].map(([name, entry]): [string, string] => [name, kindOf(entry)]).sort(([a], [b]) => compareStrings(a, b));
+  }
 }
 
 const EMPTY: ReadonlyMap<string, LsTreeEntry> = new Map();

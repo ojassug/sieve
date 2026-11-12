@@ -10,4 +10,6 @@ export { globToRegExp, matchGlobs } from './resolve/glob.ts';
 export { parseJsonc } from './resolve/jsonc.ts';
 export { dirname, exportsTargets, joinPath, MemoryVfs, Resolver, type EntryKind, type GlobEvidence, type Resolution, type ResolutionKind, type ResolveRequest, type Vfs } from './resolve/resolver.ts';
 export { parsePnpmWorkspace } from './resolve/yaml.ts';
-export { detectLockfile, diffLockfiles, NpmLockfile, parseNpmLockfile, type DetectedLockfile, type LockedPackage, type Unparseable } from './lockfile/npm.ts';
+export { detectLockfile, diffLockfiles, LOCKFILE_PATHS, NpmLockfile, parseNpmLockfile, type DetectedLockfile, type LockedPackage, type Unparseable } from './lockfile/npm.ts';
+export { buildStaticMap, ENGINE, environment, envHash, fileHash, globHash, isLexed, isModule, listingHash, MAP_VERSION, readLockfile, sha256, type DeclaredRule, type LockfileState, type MapLockfile, type SieveMap, type StaticInput } from './graph/static.ts';
+export { MapError, mapGraph, parseMap } from './graph/map.ts';
