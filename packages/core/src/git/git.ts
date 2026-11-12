@@ -16,6 +16,11 @@ export async function readObjectFormat(cwd: string): Promise<ObjectFormat> {
   return format;
 }
 
+/** The top-level directory of the working tree that contains `cwd`. */
+export async function repoRoot(cwd: string): Promise<string> {
+  return new TextDecoder().decode(await git(cwd, ['rev-parse', '--show-toplevel'])).trim();
+}
+
 /** Every blob, gitlink and tree under `treeish`, parsed as git streams it, plus the root tree id. */
 export async function lsTree(cwd: string, treeish: string): Promise<Snapshot> {
   const rootOid = new TextDecoder().decode(await git(cwd, ['rev-parse', '--verify', '--end-of-options', `${treeish}^{tree}`])).trim();

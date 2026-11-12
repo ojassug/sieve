@@ -1,12 +1,12 @@
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, realpathSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { afterAll, describe, expect, it } from 'vitest';
 
 import { merkleDiff, TreeIndex } from '../../src/git/diff.ts';
-import { lsTree, readBlobs, readObjectFormat } from '../../src/git/git.ts';
+import { lsTree, readBlobs, readObjectFormat, repoRoot } from '../../src/git/git.ts';
 
 interface PlumbingFile {
   readonly mode: '100644' | '100755' | '120000' | '160000';
@@ -128,6 +128,13 @@ describe('git snapshots', () => {
     expect(text('crlf.txt')).toBe(crlf);
     expect(text('empty.txt')).toBe('');
     expect(text('link.ts')).toBe('a.ts');
+  });
+
+  it('finds the top of the working tree from a subdirectory', async () => {
+    const repo = plumbingRepo('sha1');
+    repos.push(repo.dir);
+    mkdirSync(join(repo.dir, 'a', 'b'), { recursive: true });
+    expect(realpathSync(await repoRoot(join(repo.dir, 'a', 'b')))).toBe(realpathSync(repo.dir));
   });
 
   it('reads nothing, and spawns nothing, for no oids', async () => {
