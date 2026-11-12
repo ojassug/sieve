@@ -1,0 +1,108 @@
+# The corpus collector, as a reusable workflow. ojassug/sieve-corpus calls this on a schedule; its
+# own file is a stub that only says when to run. Everything a run does lives here, so changing how
+# collection works is a merge to this repository and never a hand push to the data repository
+# (DECISIONS 22).
+#
+# The collector code is checked out from the commit of this very file, so a run is pinned to the
+# workflow that started it, and the manifest records that commit.
+name: corpus-collect
+
+on:
+  workflow_call:
+    inputs:
+      max_minutes:
+        description: Time budget for collection, in minutes
+        type: string
+        default: '320'
+
+jobs:
+  templates:
+    name: data repository matches its templates
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/checkout@v7
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: collector
+          persist-credentials: false
+
+      # This job failing turns the run red without stopping the collect job below: a stale README
+      # must never cost a day of history that GitHub is about to delete.
+      - name: Compare against tools/corpus/corpus-repo
+        env:
+          SOURCE: ${{ job.workflow_repository }}@${{ job.workflow_sha }}
+        run: |
+          set -uo pipefail
+          status=0
+          for file in .github/workflows/collect.yml README.md; do
+            if ! diff -u "collector/tools/corpus/corpus-repo/$file" "$file"; then
+              echo "::error file=$file::$file differs from tools/corpus/corpus-repo/$file in $SOURCE"
+              status=1
+            fi
+          done
+          exit "$status"
+
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    permissions:
+      actions: read
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/checkout@v7
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: collector
+          persist-credentials: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+
+      - name: Link the workspace (installs no third-party packages)
+        working-directory: collector
+        run: npm ci --omit=dev --ignore-scripts --no-audit --no-fund
+
+      - name: Collect
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          MAX_MINUTES: ${{ inputs.max_minutes }}
+          REF: ${{ job.workflow_sha }}
+        run: |
+          day=$(date -u +%F)
+          echo "DAY=$day" >> "$GITHUB_ENV"
+          node collector/tools/corpus/src/main.ts \
+            --config collector/tools/corpus/repos.json \
+            --state state/collector-state.json \
+            --out out \
+            --today "$day" \
+            --max-minutes "$MAX_MINUTES" \
+            --ref "$REF"
+
+      - name: Publish the release, then the manifest and state
+        if: always() && hashFiles('out/manifest.json') != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          COLLECTOR_REPO: ${{ job.workflow_repository }}
+          COLLECTOR_SHA: ${{ job.workflow_sha }}
+        run: |
+          node collector/tools/corpus/src/publish-main.ts \
+            --repo-dir . \
+            --out out \
+            --assets assets \
+            --state state/collector-state.json \
+            --day "$DAY" \
+            --run-number "$GITHUB_RUN_NUMBER" \
+            --repo "$GITHUB_REPOSITORY" \
+            --collector-repo "$COLLECTOR_REPO" \
+            --collector-sha "$COLLECTOR_SHA"
