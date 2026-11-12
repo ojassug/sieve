@@ -82,20 +82,26 @@ The list lives in [`tools/corpus/repos.json`](../tools/corpus/repos.json). For e
 - Only **baserow** (`ci.yml`: Jest frontend, pytest backend and Playwright shards, with reruns) and **Azure/azure-iot-sdk-python** (`test-results-python-3.x`) actually upload JUnit reports.
 - electron/forge uploads build output, and luma.gl uploads coverage (lcov).
 - mozilla-conduit/review and jborean93/ansibug had no runs in the sample.
-- **PostHog** created at least 2,500 runs a day, mostly bots and housekeeping. Only `ci-frontend.yml` is collected.
+- **PostHog** created at least 2,500 runs a day, mostly bots and housekeeping. The first collection run took only `ci-frontend.yml`, and still got 4,183 runs for 2026-11-04 alone: two-thirds of everything that run collected. PostHog has been dropped since (DECISIONS.md 21).
 
 **Mirroring policy.**
 - Test-report archives are mirrored only from repositories with a permissive license (R4).
-- baserow, PostHog, luma.gl and AutoGPT report NOASSERTION, and mariadb-connector-nodejs is LGPL-2.1. Until their licenses are reviewed, these contribute metadata only.
+- baserow, luma.gl and AutoGPT report NOASSERTION, and mariadb-connector-nodejs is LGPL-2.1. Until their licenses are reviewed, these contribute metadata only.
 - Artifact names must match `junit|test[-_ ]?(results?|reports?)` and must not match `coverage|screenshot|video|trace`. Each artifact is capped at 100 MiB, and a collection run mirrors at most 1,500 MiB.
 
 **How it runs.**
 - One scheduled workflow a day, with a time budget of 320 minutes.
-- It first re-collects the last 7 days for new attempts and short-lived artifacts.
-- It then backfills the oldest uncollected days first, back to 89 days ago, because the oldest days disappear first.
-- Each manifest reports coverage of that window per repository, so lost days stay visible.
+- **Oldest days first.** It works through the oldest uncollected days first, back to 89 days ago, because GitHub deletes the oldest days first. Then it re-collects the last 2 days for new attempts.
+- **Shares.** Every repository may spend 1,000 requests before any repository gets more. Time left after that goes to whatever is still open, in plan order. One busy repository therefore cannot starve the others.
+- Each manifest reports coverage of the window and the requests spent per repository, so lost days stay visible.
 
-**Where the data lives.** It goes in a separate public repository, `ojassug/sieve-corpus`, which is proposed and awaiting approval. Its template is in [`tools/corpus/corpus-repo/`](../tools/corpus/corpus-repo/README.md).
+**First run (2026-11-11, before the shares).**
+- The run spent 24,581 requests over 320 minutes and collected 6,208 runs, 6,258 attempts and 83,523 jobs, with no errors.
+- It still covered only 1.7 of the 7 recent days it re-collected first, and none of the backfill.
+- PostHog alone was two-thirds of the runs.
+- Only 68 artifacts (0.2 MB, all meshery) matched the test-report pattern: the replay candidates upload no JUnit. Their value is the run, attempt and job history.
+
+**Where the data lives.** It goes in a separate public repository, [ojassug/sieve-corpus](https://github.com/ojassug/sieve-corpus), created on 2026-11-11. Its template is in [`tools/corpus/corpus-repo/`](../tools/corpus/corpus-repo/README.md).
 - Daily manifests and the collector state are committed to git.
 - Raw NDJSON and artifact archives are uploaded as release assets. Releases have no retention limit, and keeping the data out of git keeps the repository small.
 - The workflow writes with its own `GITHUB_TOKEN`, so no secret is needed (DECISIONS.md entry 9).
