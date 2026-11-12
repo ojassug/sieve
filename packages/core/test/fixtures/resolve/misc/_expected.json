@@ -72,6 +72,10 @@
           "matches": [
             "src/pages/about.ts",
             "src/pages/home.ts"
+          ],
+          "patterns": [
+            "src/pages/*.ts",
+            "!src/pages/_*.ts"
           ]
         }
       ]

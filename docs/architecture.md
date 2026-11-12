@@ -665,7 +665,7 @@ Node 20 reached end of life on 2026-04-30, and Node 22 does on 2027-04-30, so th
 |---|---|
 | `sieve init` | Detect runners and workspaces; write `sieve.config.json` and the workflow (plan → matrix → gate) |
 | `sieve record -- <cmd>` | Recorded run (plugins inject coverage and fs hooks); upload results plus dynamic deps plus graph segments (trusted lanes) |
-| `sieve plan [--mode safe\|shadow\|budget] [--budget 10m] [--shards auto\|N] [--map dir]` | Compute selection. Writes `$GITHUB_OUTPUT` (plan_id, matrix, count) and the job summary. `--map` = Lite mode, fully local |
+| `sieve plan [--mode safe\|shadow\|budget] [--shadow] [--static] [--budget 10m] [--shards auto\|N] [--map dir]` | Compute selection. Writes `$GITHUB_OUTPUT` (plan_id, matrix, count) and the job summary. `--map` = Lite mode, fully local. `--shadow` is short for `--mode shadow`. `--static` selects from the static graph alone (M1): with no records no skip can be proven safe, so it runs in shadow mode only, refuses `--mode safe` and `budget`, and labels every would-skip **unproven static reachability** ([DECISIONS.md](../DECISIONS.md) entries 1 and 24) |
 | `sieve run [--shard k] -- <cmd>` | Run the shard's exact file list (plan file read by the runner plugin, no CLI filters); apply quarantine exit semantics; upload, or spool `sieve-results.tgz` |
 | `sieve gate` | The single required check: aggregates `needs` results and the plan; fails only on real failures |
 | `sieve upload <files…>` | Results-only ingest (Playwright, any JUnit) |
@@ -693,6 +693,11 @@ Node 20 reached end of life on 2026-04-30, and Node 22 does on 2027-04-30, so th
   "sharding": { "max": 16, "targetMinutes": 10 }
 }
 ```
+Notes on the schema, as the M1 CLI implements it ([DECISIONS.md](../DECISIONS.md) entry 24):
+- Unknown keys are errors, and every problem is reported with its path (`projects[0].runner: …`).
+- A project may also give `include` and `exclude`, test-file globs relative to its `root`. Without them, Vitest projects use Vitest's default include and Jest projects Jest's default `testMatch`, both without `**/node_modules/**` and `**/fixtures/**`. SIEVE plans Vitest and Jest projects; the others (and `results-only` ones) are listed in the summary as not planned.
+- `inputs.global` adds to the conventional global inputs (root `package.json`, `.env*`, Vite, Vitest and Jest configs, and `vitest.setup.*`/`jest.setup.*`); `inputs.ignore` replaces the default ignore list of §3.5.
+- In M1 the CLI validates `server`, `generated`, `quarantine`, `auditRate` and `trustPullRequestsFrom` (only `writers` is defined), but does not use them yet.
 
 ### 5.2 CLI ↔ server API v1
 Versioning:

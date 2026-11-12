@@ -46,3 +46,27 @@ This builds a graph of deterministic pseudo-random edges, then times the multi-s
 The raw output is in [results/2026-11-11-graph-win32.json](results/2026-11-11-graph-win32.json).
 - A random graph reaches every node, so these timings are the worst case for the BFS.
 - The build merges edges through a `Map` and sorts its keys. In M3 the build will be replaced by decoding the stored map.
+
+## Static graph: `node bench/static-graph.ts [repo [rev]]`
+
+This times what `sieve graph` and `sieve plan` do, against T6 (a 10,000-file TypeScript repository in under 30 s cold).
+- **CLI cold** is `sieve graph --out` in a fresh Node process: listing, blob reads, lexing, resolution, the map, serialization and the write. That is what CI pays.
+- **Stages** come from one more build in the same process: `lsTree`, `GitVfs.load` (config blobs), `readBlobs` (every source), `buildStaticMap` (lexing, resolution and edges) and canonical JSON.
+- **Plan** (synthetic repository only) times `parseMap`, the CSR build and `selectStatic` against a head commit that changes one file.
+
+Without an argument, the script builds a synthetic npm-workspaces monorepo with `git fast-import`: 20 packages × 25 modules × (19 sources + 1 test), 10,000 module files of about 4 KB each.
+- Each source file imports three siblings (extensionless, so every import probes), a file in the next module, the next workspace package and lodash, and has an `import type`.
+- Its body mixes comments, strings, templates and regexes, as real code does.
+- The imports chain every module and package together, so one change reaches all 500 tests: the worst case for the plan.
+
+| Date | Repository | Files | Source MB | Nodes | Edges | Map | CLI cold | `buildStaticMap` | Plan: parse + select |
+|---|---|---|---|---|---|---|---|---|---|
+| 2026-11-12 | synthetic | 10,023 | 42.1 | 106,390 | 684,501 | 26.7 MB | **2.5 s** | 2.5 s | 0.2 s + 0.57 s |
+| 2026-11-12 | SIEVE at day 9 | 222 | 0.4 | 1,457 | 2,739 | 0.26 MB | 0.36 s | 0.06 s | — |
+| 2026-11-12 | honojs/hono at `f6fbaf02` (4.13.18) | 585 | 3.0 | 3,288 | 13,543 | 0.64 MB | 0.44 s | 0.10 s | — |
+
+All on Windows 11, Ryzen AI 7 350, Node 26.4 and git 2.55. The raw output is in [results/2026-11-12-static-graph-win32.json](results/2026-11-12-static-graph-win32.json), [results/2026-11-12-static-graph-sieve-win32.json](results/2026-11-12-static-graph-sieve-win32.json) and [results/2026-11-12-static-graph-hono-win32.json](results/2026-11-12-static-graph-hono-win32.json).
+- **hono** was cloned with `--filter=blob:none`. At HEAD every blob is local. Building an older revision fetched its missing blobs one by one and took 18.7 s, which is network time, not SIEVE's.
+- **T6 is met:** 2.5 s cold against 30 s, and against the 10 s goal. Incremental builds (under 3 s) are not measured yet; extraction is not cached across runs.
+- **Probe edges dominate,** as DECISIONS 17 expected: about 10 edges per extensionless import. They make the JSON map 26.7 MB at 10,000 files. SMAP (week 3) and per-directory probe groups are the levers.
+- **The plan** takes about 0.8 s on this map: 0.2 s to parse the JSON, then 0.57 s to select, of which rebuilding the CSR arrays is 0.46 s (timed separately as `graphMs`). M3's target is a plan p95 under 1 s at 10,000 files; SMAP decoding replaces both the parse and the rebuild.

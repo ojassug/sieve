@@ -1,12 +1,12 @@
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, realpathSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { afterAll, describe, expect, it } from 'vitest';
 
 import { merkleDiff, TreeIndex } from '../../src/git/diff.ts';
-import { lsTree, readObjectFormat } from '../../src/git/git.ts';
+import { lsTree, readBlobs, readObjectFormat, repoRoot } from '../../src/git/git.ts';
 
 interface PlumbingFile {
   readonly mode: '100644' | '100755' | '120000' | '160000';
@@ -105,5 +105,58 @@ describe('git snapshots', () => {
     const repo = plumbingRepo('sha1');
     repos.push(repo.dir);
     await expect(lsTree(repo.dir, 'no-such-ref')).rejects.toThrow(/git/);
+  });
+
+  it.each(['sha1', 'sha256'] as const)('reads %s blobs byte-exact through one cat-file process', async (format) => {
+    const repo = plumbingRepo(format);
+    repos.push(repo.dir);
+    const crlf = 'line one\r\nline two\r\n';
+    const commit = repo.commit({
+      'a.ts': { mode: '100644', content: 'export const a = 1;\n' },
+      'crlf.txt': { mode: '100644', content: crlf },
+      'empty.txt': { mode: '100644', content: '' },
+      'link.ts': { mode: '120000', content: 'a.ts' },
+      'copy.ts': { mode: '100644', content: 'export const a = 1;\n' },
+    });
+    const entries = (await lsTree(repo.dir, commit)).entries;
+    const oid = (path: string) => entries.find((entry) => entry.path === path)!.oid;
+
+    const blobs = await readBlobs(repo.dir, ['a.ts', 'crlf.txt', 'empty.txt', 'link.ts', 'copy.ts'].map(oid));
+    const text = (path: string) => new TextDecoder().decode(blobs.get(oid(path)));
+    expect(blobs.size).toBe(4); // a.ts and copy.ts share one blob
+    expect(text('a.ts')).toBe('export const a = 1;\n');
+    expect(text('crlf.txt')).toBe(crlf);
+    expect(text('empty.txt')).toBe('');
+    expect(text('link.ts')).toBe('a.ts');
+  });
+
+  it('finds the top of the working tree from a subdirectory', async () => {
+    const repo = plumbingRepo('sha1');
+    repos.push(repo.dir);
+    mkdirSync(join(repo.dir, 'a', 'b'), { recursive: true });
+    // Native realpath expands Windows 8.3 short names (RUNNER~1), as git does; the JS one does not.
+    expect(realpathSync.native(await repoRoot(join(repo.dir, 'a', 'b')))).toBe(realpathSync.native(repo.dir));
+  });
+
+  it("reports git's own error when git exits without reading its input", async () => {
+    // Several megabytes of oids into a git that fails at once: writing to its closed stdin gets
+    // EPIPE, which must not hide why git failed.
+    const dir = mkdtempSync(join(tmpdir(), 'sieve-not-a-repo-'));
+    repos.push(dir);
+    const oids = Array.from({ length: 200_000 }, (_, i) => i.toString(16).padStart(40, '0'));
+    await expect(readBlobs(dir, oids)).rejects.toThrow(/not a git repository/i);
+  });
+
+  it('reads nothing, and spawns nothing, for no oids', async () => {
+    expect((await readBlobs('/no/such/dir', [])).size).toBe(0);
+  });
+
+  it('fails loudly on a missing object or one that is not a blob', async () => {
+    const repo = plumbingRepo('sha1');
+    repos.push(repo.dir);
+    const commit = repo.commit({ 'dir/a.ts': { mode: '100644', content: 'a\n' } });
+    const tree = (await lsTree(repo.dir, commit)).entries.find((entry) => entry.path === 'dir')!.oid;
+    await expect(readBlobs(repo.dir, ['0123456789'.repeat(4)])).rejects.toThrow(/missing/);
+    await expect(readBlobs(repo.dir, [tree])).rejects.toThrow(/not a blob/);
   });
 });

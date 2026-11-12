@@ -150,3 +150,60 @@ describe('evidence completeness (property)', () => {
     );
   });
 });
+
+// A file's own config dependencies: the tsconfig chain that governs it and the nearest
+// package.json, whose `type` decides how Node loads it.
+describe('fileConfigs', () => {
+  it('records the tsconfig chain, the nearest package.json and every miss on the way up', () => {
+    const resolver = new Resolver(
+      new MemoryVfs({
+        'package.json': '{}',
+        'a/tsconfig.json': '{ "extends": "../tsconfig.base" }',
+        'tsconfig.base.json': '{}',
+        'a/b/f.ts': '',
+      }),
+    );
+    expect(resolver.fileConfigs('a/b/f.ts')).toEqual({
+      configs: ['a/tsconfig.json', 'package.json', 'tsconfig.base.json'],
+      absent: ['a/b/package.json', 'a/b/tsconfig.json', 'a/package.json', 'tsconfig.base'],
+    });
+  });
+
+  it('stops at the nearest package.json, even one without a type field', () => {
+    const resolver = new Resolver(new MemoryVfs({ 'package.json': '{"type":"module"}', 'a/package.json': '{}', 'a/f.js': '' }));
+    expect(resolver.fileConfigs('a/f.js')).toEqual({ configs: ['a/package.json'], absent: ['a/tsconfig.json', 'tsconfig.json'] });
+  });
+
+  it('records the root package.json and tsconfig.json as absent when nothing exists', () => {
+    expect(new Resolver(new MemoryVfs({ 'f.ts': '' })).fileConfigs('f.ts')).toEqual({ configs: [], absent: ['package.json', 'tsconfig.json'] });
+  });
+
+  // Soundness, as for resolve(): the result may only depend on what it recorded.
+  describe('evidence completeness (property)', () => {
+    const DIRS = ['', 'a', 'a/b'];
+    const NAMES = ['package.json', 'tsconfig.json', 'tsconfig.base.json', 'base', 'base.json', 'x.ts'];
+    const UNIVERSE = DIRS.flatMap((dir) => NAMES.map((name) => (dir === '' ? name : `${dir}/${name}`)));
+    const CONTENTS = ['{}', '{"extends":"./tsconfig.base.json"}', '{"extends":"../tsconfig.json"}', '{"extends":"./base"}', '{"extends":"../base.json"}', '{"extends":["./base.json","../tsconfig.base.json"]}', '{"extends":"@tsconfig/node22"}', 'not json'];
+    const IMPORTER = 'a/b/f.ts';
+    const configsOf = (files: Record<string, string>) => new Resolver(new MemoryVfs({ ...files, [IMPORTER]: '' })).fileConfigs(IMPORTER);
+
+    it('adding, removing or editing an unrecorded file never changes the result', () => {
+      fc.assert(
+        fc.property(fc.dictionary(fc.constantFrom(...UNIVERSE), fc.constantFrom(...CONTENTS), { maxKeys: 10 }), fc.constantFrom(...CONTENTS), (files, other) => {
+          const before = configsOf(files);
+          const recorded = new Set([...before.configs, ...before.absent]);
+          for (const path of UNIVERSE) {
+            if (!recorded.has(path)) {
+              const changed = path in files ? Object.fromEntries(Object.entries(files).filter(([p]) => p !== path)) : { ...files, [path]: other };
+              expect(configsOf(changed), `toggling ${path}`).toEqual(before);
+            }
+            if (path in files && !before.configs.includes(path)) {
+              expect(configsOf({ ...files, [path]: other }), `editing ${path}`).toEqual(before);
+            }
+          }
+        }),
+        { numRuns: 400 },
+      );
+    });
+  });
+});

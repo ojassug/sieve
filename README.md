@@ -7,10 +7,10 @@ SIEVE is a self-hostable test-intelligence service for CI. On every run it:
 
 Every skip carries a machine-checkable proof, and uncertainty always means the test runs.
 
-**Status:** implementation of milestone M1 started on 2026-11-11, and roadmap days 1–8 are merged.
-- `packages/core` has the snapshot diff, import lexer, module resolver, impact graph and npm lockfile reader.
+**Status:** implementation of milestone M1 started on 2026-11-11. Roadmap days 1–8 are merged, and day 9 (CLI v0) is in review.
+- `packages/core` has the snapshot diff, import lexer, module resolver, impact graph, npm lockfile reader, static graph builder and static selection.
+- `packages/cli` runs from source: `node packages/cli/src/main.ts graph`, `diff` and `plan --mode shadow --static`. Without test records no skip is proven safe, so plans run every test and report the would-skips as unproven static reachability.
 - `tools/corpus` archives CI history into [ojassug/sieve-corpus](https://github.com/ojassug/sieve-corpus).
-- There is no runnable `sieve` command yet; that is roadmap day 9.
 
 To continue the work, start with [HANDOFF.md](HANDOFF.md).
 

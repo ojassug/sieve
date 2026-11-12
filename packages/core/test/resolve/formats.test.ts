@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { globToRegExp } from '../../src/resolve/glob.ts';
+import { globToRegExp, matchGlobs } from '../../src/resolve/glob.ts';
 import { parseJsonc } from '../../src/resolve/jsonc.ts';
 import { parsePnpmWorkspace } from '../../src/resolve/yaml.ts';
 
@@ -74,5 +74,15 @@ describe('globToRegExp', () => {
     ['*.ts', '.hidden.ts', true],
   ])('%s matches %s: %s', (glob, path, expected) => {
     expect(globToRegExp(glob).test(path)).toBe(expected);
+  });
+});
+
+describe('matchGlobs', () => {
+  const files = ['src/a.ts', 'src/_b.ts', 'src/c.js', 'lib/d.ts'];
+  it('keeps files that match an include and no exclude, in input order', () => {
+    expect(matchGlobs(files, ['src/*.ts', '!src/_*', 'lib/**'])).toEqual(['src/a.ts', 'lib/d.ts']);
+  });
+  it('matches nothing without an include', () => {
+    expect(matchGlobs(files, ['!src/_*'])).toEqual([]);
   });
 });

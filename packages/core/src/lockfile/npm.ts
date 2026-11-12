@@ -127,6 +127,9 @@ const LOCKFILES: readonly (readonly [string, Unparseable['format']])[] = [
   ['bun.lockb', 'bun'],
 ];
 
+/** Every root lockfile name `detectLockfile` knows. */
+export const LOCKFILE_PATHS: readonly string[] = LOCKFILES.map(([path]) => path);
+
 export type DetectedLockfile = { readonly kind: 'npm'; readonly path: string } | (Unparseable & { readonly path: string }) | { readonly kind: 'none' };
 
 /** Which root lockfile the install uses. Only npm's is parsed; others, or several kinds at once, are unparseable. */
