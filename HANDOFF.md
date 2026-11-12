@@ -123,16 +123,16 @@ GitHub deletes workflow runs, check runs and artifacts after at most 90 days. Th
 
 The data is the flake ground truth (T3) and the durations for the replay corpus.
 - **Data repository:** [ojassug/sieve-corpus](https://github.com/ojassug/sieve-corpus), public, created on 2026-11-11 with Ojas's approval.
-- **Template:** the workflow and README there come from `tools/corpus/corpus-repo/` in this repository.
-- **Pinned code:** the collector code is pinned by commit in `collector.ref` in sieve-corpus. The commit must be reachable from `main` here.
+- **Where the run lives:** in this repository, as the reusable workflow [.github/workflows/corpus-collect.yml](.github/workflows/corpus-collect.yml). sieve-corpus's own `collect.yml` is a stub that sets the schedule and calls it at `@main`; its source copy is `tools/corpus/corpus-repo/.github/workflows/collect.yml`, alongside the data repository's README. A `templates` job in each run fails if those two copies have drifted, without stopping collection.
+- **Pinned code:** a run collects with the collector from the commit of the workflow file it is running (`job.workflow_sha`), and records it in the manifest. There is no `collector.ref` any more: merging to `main` here is what changes the next run (DECISIONS 22).
 - **No secrets.** The workflow uses its own `GITHUB_TOKEN`. A probe showed that token can read other public repos' Actions data and download their artifacts, and `/rate_limit` reported 5,000 per hour (DECISIONS 9).
 - **Schedule:** daily at 03:17 UTC, plus `workflow_dispatch` with a `max_minutes` input (default 320). The job timeout is 350 minutes.
 - **Each run:**
   1. Collects the oldest uncollected days first, back to 89 days ago, tier 1 repositories first within each day. Then it re-collects the last 2 days for new attempts.
   2. Splits its requests fairly. Each repository may spend 1,000 (`--repo-share`) before any repository gets more; leftover time then goes to whatever is still open (DECISIONS 21).
-  3. Publishes a release `corpus-YYYY-MM-DD-N`. Its assets are `raw-….tar.gz` (canonical NDJSON of the raw API objects), `artifacts-…-<owner>__<repo>.tar`, the manifest and `SHA256SUMS-…`.
-  4. Commits `manifests/YYYY/YYYY-MM-DD-N.json` and `state/collector-state.json`.
-- **Design and evidence:** DECISIONS 9–11 and 21. **Selection criteria and vetting:** [bench/CORPUS.md](bench/CORPUS.md).
+  3. Publishes a release `corpus-YYYY-MM-DD-N`, as a draft until every asset is uploaded. Its assets are `raw-….tar.gz` (canonical NDJSON of the raw API objects), `artifacts-…-<owner>__<repo>.tar`, `SHA256SUMS-…`, and copies of the manifest and the collector state as a backup.
+  4. Then commits `manifests/YYYY/YYYY-MM-DD-N.json` and `state/collector-state.json`, re-applying onto the latest `main` if something else landed there meanwhile. Both steps are `tools/corpus/src/publish.ts` (DECISIONS 22).
+- **Design and evidence:** DECISIONS 9–11, 21 and 22. **Selection criteria and vetting:** [bench/CORPUS.md](bench/CORPUS.md).
 
 ### 5.2 Mirroring policy (a decision for Ojas)
 
@@ -141,7 +141,7 @@ The data is the flake ground truth (T3) and the durations for the replay corpus.
   - baserow, luma.gl and AutoGPT report a NOASSERTION license;
   - mariadb-connector-nodejs is LGPL-2.1.
 - **Why baserow matters.** It is the best JUnit source: Jest, pytest and Playwright shards with reruns.
-- **To change the policy:** edit `repos.json`, merge, then bump `collector.ref`.
+- **To change the policy:** edit `repos.json` and merge it here. The next run picks it up.
 
 ### 5.3 Runs so far, and how to check progress
 
@@ -151,14 +151,14 @@ The data is the flake ground truth (T3) and the durations for the replay corpus.
 - PostHog's `ci-frontend.yml` took 4,183 runs of one day, two-thirds of everything collected.
 - Only 68 artifacts matched the test-report pattern, all from meshery.
 
-**The fix**, in DECISIONS 21, has three parts: oldest days first, per-repository shares, and PostHog dropped. It takes effect once `collector.ref` points at a commit that contains it; check the next run's manifest the same way.
+**The fix**, in DECISIONS 21, has three parts: oldest days first, per-repository shares, and PostHog dropped. It takes effect on the first run that starts after it reached `main` here; check that run's manifest the same way.
 
 **Scheduled runs.** The 03:17 UTC run for 2026-11-12 fired eight hours late, as run 43207509015 at 11:15 UTC, still on the old collector. GitHub can delay or drop scheduled runs. If they go missing, start runs by hand with `gh workflow run collect.yml --repo ojassug/sieve-corpus`.
 
-**Never push to sieve-corpus while a run is in progress.**
-- In the first two runs, the publish step committed and pushed without pulling first. A concurrent push (a `collector.ref` bump, for instance) would make its push fail, and that run's manifest and state would be lost. The release assets would still be published.
-- The template now rebases before pushing, with up to three tries. The copy in sieve-corpus picks that up when it is next updated from `tools/corpus/corpus-repo/`.
-- Until then, check `gh run list --repo ojassug/sieve-corpus` before any push there.
+**Pushing to sieve-corpus during a run no longer loses it.**
+- In the first two runs, the publish step committed and pushed without pulling first. A concurrent push (a `collector.ref` bump, for instance) made its push fail, and that run's manifest and state were lost; the release assets were published regardless.
+- The publish step now re-applies onto the latest `main` and retries, and fails loudly rather than quietly if it still cannot push (DECISIONS 22).
+- Better still, normal operation no longer pushes there: the collector version follows `main` in this repository. The remaining reasons to push to sieve-corpus are updating the caller stub or the README from `tools/corpus/corpus-repo/`, which the `templates` job in each run will tell you about. Those are safe during a run, but check `gh run list --repo ojassug/sieve-corpus` first anyway if you want the run's log to stay easy to read.
 
 ```bash
 gh run view 43026895799 --repo ojassug/sieve-corpus
@@ -188,8 +188,7 @@ gh api repos/ojassug/sieve-corpus/contents/manifests/2026 --jq '.[].name'
 **If the run failed or published nothing:**
 1. Read the log: `gh run view 43026895799 --repo ojassug/sieve-corpus --log-failed`.
 2. Fix the collector on a branch in this repository and merge it (with approval).
-3. Write the new `main` commit into `collector.ref` in sieve-corpus (approval needed: it's a push).
-4. Re-run with `gh workflow run collect.yml --repo ojassug/sieve-corpus`.
+3. Re-run with `gh workflow run collect.yml --repo ojassug/sieve-corpus`. It picks up `main` as it now stands; nothing needs pushing to sieve-corpus.
 
 Watch for one risk: if publishing runs past the 350-minute job timeout, the whole run's output is lost. If that happens, lower `max_minutes`.
 
