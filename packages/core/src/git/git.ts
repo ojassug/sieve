@@ -65,23 +65,27 @@ export async function readBlobs(cwd: string, oids: Iterable<string>): Promise<Ma
 
 /**
  * Runs git, streaming stdout to `onChunk` when given (and returning nothing), else returning it.
- * `input`, when given, is written to stdin; stdin is then closed.
+ * `input`, when given, is written to stdin, which is then closed; otherwise git gets no stdin.
  */
-function git(cwd: string, args: readonly string[], onChunk?: (chunk: Uint8Array) => void, input = ''): Promise<Uint8Array> {
+function git(cwd: string, args: readonly string[], onChunk?: (chunk: Uint8Array) => void, input?: string): Promise<Uint8Array> {
   return new Promise((resolve, reject) => {
-    const child = spawn('git', args, { cwd, stdio: ['pipe', 'pipe', 'pipe'] });
-    child.stdin.on('error', reject);
-    child.stdin.end(input);
+    const child = spawn('git', args, { cwd, stdio: [input === undefined ? 'ignore' : 'pipe', 'pipe', 'pipe'] });
+    if (input !== undefined) {
+      // A git that exits without reading all its input closes the pipe, and the write fails with
+      // EPIPE (EOF on Windows). Git's exit status and stderr, handled below, say what went wrong.
+      child.stdin!.on('error', () => undefined);
+      child.stdin!.end(input);
+    }
     const out: Uint8Array[] = [];
     const err: Uint8Array[] = [];
-    child.stdout.on('data', (chunk: Uint8Array) => {
+    child.stdout!.on('data', (chunk: Uint8Array) => {
       if (onChunk) {
         onChunk(chunk);
       } else {
         out.push(chunk);
       }
     });
-    child.stderr.on('data', (chunk: Uint8Array) => err.push(chunk));
+    child.stderr!.on('data', (chunk: Uint8Array) => err.push(chunk));
     child.on('error', reject);
     child.on('close', (code) => {
       if (code === 0) {
