@@ -17,14 +17,14 @@
 | 5 | `core/graph`: interning, CSR, reverse BFS, why-paths, P1 and P3 | [#5](https://github.com/ojassug/sieve/pull/5) | Met |
 | 6–7 | `core/resolve`: resolver with recorded probes, JSONC, YAML subset, globs | [#6](https://github.com/ojassug/sieve/pull/6) | Met: 5 fixture repos pass |
 | 8 | `core/lockfile/npm`: `p:` nodes, lookup, diff; other formats reported as L3 | [#7](https://github.com/ojassug/sieve/pull/7) | Met |
-| 9 | CLI v0: `sieve graph`, `sieve diff`, `sieve plan --static --shadow --map` | — | **Not started** (§6) |
+| 9 | CLI v0: `sieve graph`, `sieve diff`, `sieve plan --static --shadow --map` | branch `m1/d09-cli` | Runs on this repository (§6); the corpus run awaits approval to clone |
 | 10 | Walking skeleton in CI on this repo | — | **Not started** (§7) |
 
 **Health at hand-off.**
 - **Tests:** 239 in 18 files, all passing on Windows 11 with Node 26.4.
 - **CI:** green on `main` (`00fea91`): static checks; Ubuntu on Node 22, 24 and 26; Windows on Node 22. The DCO job runs on pull requests only.
 - **Static checks:** lint, typecheck and the zero-dependency check are clean.
-- **Not runnable yet:** there is no `sieve` command (`packages/cli/src/main.ts` is a stub) and no graph builder. Day 9 builds both.
+- **Day 9 update (2026-11-12, branch `m1/d09-cli`):** `sieve graph`, `sieve diff` and `sieve plan --mode shadow --static --map` run from source with `node packages/cli/src/main.ts`. 381 tests pass in 27 files. See §6 and DECISIONS 22–23.
 
 **First three things to do:**
 1. Check that the collector is making progress (§5.3): coverage should grow with each daily run.
@@ -86,7 +86,17 @@ npm run typecheck
 npm run check:deps
 ```
 
-Expect `239 passed` from `npm test`, and no output from lint or typecheck. To reproduce the recorded benchmarks (§9), run `node bench/ls-tree.ts`, `node bench/lex.ts` and `node bench/graph.ts`.
+Expect `381 passed` from `npm test` (on branch `m1/d09-cli`), and no output from lint or typecheck. To reproduce the recorded benchmarks (§9), run `node bench/ls-tree.ts`, `node bench/lex.ts`, `node bench/graph.ts` and `node bench/static-graph.ts`.
+
+To try the CLI on this repository:
+
+```bash
+node packages/cli/src/main.ts graph --out .sieve/map/map.json
+```
+
+```bash
+node packages/cli/src/main.ts plan --mode shadow --static --map .sieve/map
+```
 
 ## 4. Repository map
 
@@ -102,7 +112,10 @@ Expect `239 passed` from `npm test`, and no output from lint or typecheck. To re
 | `packages/core/src/resolve/{jsonc,yaml,glob}.ts` | JSONC (tsconfig), the pnpm-workspace YAML subset, globs | `parseJsonc`, `parsePnpmWorkspace`, `globToRegExp` | `test/resolve/formats.test.ts` (24) |
 | `packages/core/src/lockfile/npm.ts` | package-lock v2/v3 → `p:npm:<install location>`. Node-style `locate`, package-to-package dependencies, diff, lockfile detection; other formats are `unparseable` (L3) | `parseNpmLockfile`, `NpmLockfile.locate/dependencies`, `diffLockfiles`, `detectLockfile` | `test/lockfile/npm.test.ts` (16) |
 | `packages/core/src/index.ts` | The package's public exports. Workspace packages export `./src/*.ts` directly (DECISIONS 3) | — | — |
-| `packages/cli/src/main.ts` | **A stub.** Prints "no commands yet". `bin: sieve` | — | — |
+| `packages/core/src/git/{cat-file,vfs}.ts` | `git cat-file --batch` parser; `GitVfs`, the resolver's `Vfs` over a `TreeIndex` with blobs from git | `readBlobs(cwd, oids)`, `CatFileParser`, `GitVfs.load`, `repoRoot` | `test/git/cat-file.test.ts`, `test/git/vfs.test.ts`, `test/git/git.test.ts` |
+| `packages/core/src/graph/{static,map}.ts` | The static graph builder and the M1 map (canonical JSON): node keys and hashes, edges, `u:` nodes (DECISIONS 22) | `buildStaticMap`, `parseMap`, `mapGraph`, `readLockfile`, `environment`, `isModule`/`isLexed` | `test/graph/static.test.ts`, `test/graph/map.test.ts` |
+| `packages/core/src/select/plan.ts` | Δ(S,H) from a map to a head snapshot, escalations L1/L3, reverse BFS with why-paths (DECISIONS 23) | `selectStatic`, `runAll` | `test/select/plan.test.ts` (examples plus the 2,000-run soundness property) |
+| `packages/cli/src/` | `sieve graph`, `diff`, `plan`: `args.ts` (parseArgs, kickoff gap 1), `config.ts` (§5.1 validation, test discovery), `report.ts` (plan JSON, matrix, summary), `cli.ts`, `main.ts`. `bin: sieve` | `node packages/cli/src/main.ts --help` | `test/{args,config,report,cli}.test.ts` (`cli.test.ts` is end to end) |
 | `packages/vitest`, `packages/jest` | Placeholders for M2 | — | — |
 | `tools/corpus/` | The corpus collector (§5). `repos.json` lists the repositories; `corpus-repo/` is the template for the data repo | `node tools/corpus/src/main.ts …` | `tools/corpus/test/*` (35) |
 | `tools/replay`, `tools/toyrepo` | Placeholders for M4 and M3 | — | — |
@@ -217,7 +230,9 @@ GH_TOKEN="$(gh auth token)" node tools/corpus/src/main.ts --config tools/corpus/
 - Repository-wide artifact listings return 500 on large repos, so artifacts are listed per run.
 - Records can repeat across runs; consumers deduplicate by id, or by (id, `run_attempt`) for runs.
 
-## 6. Next: day 9, CLI v0
+## 6. Day 9, CLI v0
+
+**Status (2026-11-12):** built on branch `m1/d09-cli`, following the plan below; DECISIONS 22 and 23 record where it chose or deviated. It runs on this repository. Two readings to confirm with Ojas: an unparseable lockfile escalates to L3 only when it changes (architecture §3.5), and every `u:` node is always changed (the recommendation in item 4.5).
 
 **Done when:** it runs on this repository and on one corpus repository. Cloning a corpus repository is a download, so ask first.
 
@@ -326,6 +341,9 @@ These come from the M1 row of [roadmap §1](docs/roadmap.md):
 | Lexer, generative | 2,000 programs plus 3,000 arbitrary inputs | `packages/core/test/lex/lexer.test.ts` |
 | P1, P3 and why-paths | 2,000 / 2,000 / 1,000 random graphs | `packages/core/test/graph/graph.test.ts` |
 | Resolver evidence completeness | 400 repositories × 13 specifiers | `packages/core/test/resolve/resolver.test.ts` |
+| T6: `sieve graph` cold, synthetic 10,000-file TS monorepo (42 MB) | **2.5 s** (target 30 s); 106,390 nodes, 684,501 edges, 26.7 MB JSON map; plan from it 0.8 s | `bench/results/2026-11-12-static-graph-win32.json` |
+| `sieve graph` cold on this repository | 0.36 s; 1,457 nodes, 2,739 edges | `bench/results/2026-11-12-static-graph-sieve-win32.json` |
+| Static selection soundness | 2,000 random repository pairs; 20 hand mutants caught | `packages/core/test/select/plan.test.ts` |
 
 All measured on Windows 11, Ryzen AI 7 350, Node 26.4 and git 2.55. There are no Linux numbers yet.
 
@@ -348,9 +366,15 @@ These are honest limits, not bugs. Each one errs towards running more tests.
   - **Symlinks.** A path below a symlinked directory is `unresolved`.
   - **Workspaces.** The root package counts as a workspace member in the `workspaces` name map, for self-reference.
 - **Graph.** The build merges edges through a `Map` (1.6 s at 1M edges). The M3 map decode replaces it.
+- **Static selection (day 9, DECISIONS 22–23).**
+  - Every would-skip is unproven: anything a test reads through `fs` (fixtures, snapshots) is invisible statically. A changed file outside the graph escalates its owning package (L1), which covers most of it.
+  - Every test that reaches an uncertain file always runs, whether or not anything changed.
+  - Global inputs are found by conventional names (`vitest.setup.*`, `jest.setup.*` and runner configs). A setup file with another name must be listed in `inputs.global`.
+  - `e:runtime` and `e:platform` describe the machine that runs `sieve plan`, not the test shards'.
+  - The JSON map is about 2.7 KB per file (26.7 MB at 10,000 files), and a plan re-parses it and rebuilds the CSR arrays (0.8 s at 10,000 files). SMAP fixes both. Extraction is not cached, so incremental builds are as slow as cold ones.
+  - Only npm lockfiles are parsed. With pnpm or yarn, every bare import depends on the lockfile file, and any change to it runs everything (L3).
 - **Collector.** See §5.4. The first run's coverage is still unknown.
 - **Docs that still owe updates:**
-  - architecture §5.1 CLI flags (day 9);
   - ADR-0009 provenance width (week 3);
   - architecture §9.3 says `GITHUB_TOKEN` gets 1,000 requests per hour; the probe measured 5,000 (DECISIONS 9).
 
@@ -368,6 +392,7 @@ These are honest limits, not bugs. Each one errs towards running more tests.
   - Name byte-exact fixtures `*.crlf.*`, so `.gitattributes` keeps their CRLF bytes.
   - Resolver fixtures declare symlinks in `_symlinks.json` and expectations in `_expected.json`.
 - **Line endings.** `* text=auto eol=lf` keeps the working tree LF even with `core.autocrlf=true`.
+- **Git worktrees.** A worktree under `.claude/worktrees/` has no `node_modules` of its own, so `@sieve-ci/core` resolves to the main checkout's sources, not the worktree's. Link the worktree's packages into its own `node_modules/@sieve-ci/` (directory junctions, no download) and delete `node_modules/.vitest-cache`, or tests and the CLI run stale code.
 - **Credentials.** `gh` is authenticated as `ojassug`.
 - **Scratch scripts are not in the repo:** the vetting and survey scripts behind CORPUS.md, and the hand-mutation helper.
   - The method is described in CORPUS.md and in the PR descriptions of #2 and #4–#7.
@@ -399,12 +424,15 @@ These are honest limits, not bugs. Each one errs towards running more tests.
 | 18 | npm lockfiles |
 | 19 | The first session hand-over |
 | 20 | This document |
+| 21 | Collector budget |
+| 22 | The static graph and the M1 map |
+| 23 | Static selection and CLI v0 |
 
 **Status of the kickoff doc gaps** (DECISIONS 1):
 
 | Gap | Status |
 |---|---|
-| 1. No safe skips in M1; CLI flags differ | **Open**, for day 9 (§6.2) |
+| 1. No safe skips in M1; CLI flags differ | Resolved on day 9 (23): `--static` is shadow only, would-skips are labelled unproven, `--shadow` is an alias |
 | 2. `import type` and missing import forms | Resolved by the lexer (14) |
 | 3. Where the resolver probes | Resolved: git's view (17) |
 | 4. Runners order candidates differently | Resolved: the union (17) |
