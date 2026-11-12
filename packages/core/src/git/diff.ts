@@ -73,6 +73,12 @@ export class TreeIndex {
   children(dir: string): ReadonlyMap<string, LsTreeEntry> {
     return this.dirs.get(dir) ?? EMPTY;
   }
+
+  /** The entry at `path`; undefined for '' (the root, which has no entry) and for missing paths. */
+  entry(path: string): LsTreeEntry | undefined {
+    const slash = path.lastIndexOf('/');
+    return this.children(slash === -1 ? '' : path.slice(0, slash)).get(path.slice(slash + 1));
+  }
 }
 
 const EMPTY: ReadonlyMap<string, LsTreeEntry> = new Map();

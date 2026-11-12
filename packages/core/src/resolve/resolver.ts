@@ -19,7 +19,7 @@ export interface Vfs {
   kind(path: string): EntryKind | null;
   /** File contents, or a symlink's target. */
   read(path: string): string | null;
-  /** Every file and symlink path, sorted. */
+  /** Every file, symlink and submodule path (never a directory), sorted by UTF-16 code units. */
   files(): readonly string[];
 }
 
