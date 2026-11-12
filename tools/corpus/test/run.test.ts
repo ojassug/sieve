@@ -27,6 +27,7 @@ describe('runCollection', () => {
       return { body: { total_count: inRange.length, workflow_runs: inRange } };
     });
     gh.route('/repos/o/a/actions/workflows/ci.yml/runs', () => ({ status: 500, body: { message: 'boom' } }));
+    gh.route('/repos/o/c/actions/workflows/ci.yml/runs', () => ({ body: { total_count: 0, workflow_runs: [] } }));
     for (const run of runsOfB) {
       gh.route(`/repos/o/b/actions/runs/${run.id}/attempts/1/jobs`, () => ({ body: { total_count: 1, jobs: [{ id: run.id * 100 }] } }));
       gh.route(`/repos/o/b/check-suites/${run.check_suite_id}/check-runs`, () => ({ body: { total_count: 0, check_runs: [] } }));
@@ -47,7 +48,7 @@ describe('runCollection', () => {
     ],
   };
 
-  function run(state: CollectorState, maxRequests?: number) {
+  function run(state: CollectorState, maxRequests?: number, repoShare = 1000, repos: CorpusConfig = config) {
     const clock = fakeClock();
     const client = new GitHubClient({
       token: 't',
@@ -58,7 +59,7 @@ describe('runCollection', () => {
       ...(maxRequests === undefined ? {} : { maxRequests }),
     });
     return runCollection({
-      config,
+      config: repos,
       state,
       client,
       outDir: out,
@@ -66,6 +67,7 @@ describe('runCollection', () => {
       recentDays: 1,
       horizonDays: 3,
       maxMirrorBytes: 1000,
+      repoShare,
       collector: { ref: 'abc123', configSha256: 'cfg' },
     });
   }
@@ -75,13 +77,15 @@ describe('runCollection', () => {
     const manifest = await run(state);
 
     expect(manifest.items.map((item) => `${item.kind} ${item.day} ${item.repo} ${item.status}`)).toEqual([
-      'recent 2026-11-10 o/b complete',
-      'recent 2026-11-10 o/a error',
       'backfill 2026-11-08 o/b complete',
       'backfill 2026-11-08 o/a error',
       'backfill 2026-11-09 o/b complete',
       'backfill 2026-11-09 o/a error',
+      'recent 2026-11-10 o/b complete',
+      'recent 2026-11-10 o/a error',
     ]);
+    // o/b: a listing per day, plus jobs, check runs and artifacts for each of its two runs.
+    expect(manifest.requestsByRepo).toEqual({ 'o/a': 3, 'o/b': 9 });
     expect(manifest.stoppedEarly).toBeNull();
     expect(manifest.pending).toBe(0);
     expect(manifest.coverage).toEqual({ 'o/a': { complete: 0, days: 2 }, 'o/b': { complete: 2, days: 2 } });
@@ -97,6 +101,32 @@ describe('runCollection', () => {
       sha256: createHash('sha256').update(bytes).digest('hex'),
     });
     expect(JSON.parse(readFileSync(join(out, 'manifest.json'), 'utf8'))).toEqual(JSON.parse(JSON.stringify(manifest)));
+  });
+
+  it('caps a repository at its share, lets the others finish, then spends what is left on it', async () => {
+    const twoHealthy: CorpusConfig = {
+      version: 1,
+      repos: [
+        { repo: 'o/b', workflows: ['ci.yml'], mirror: false, tier: 1, why: 'busy' },
+        { repo: 'o/c', workflows: ['ci.yml'], mirror: false, tier: 1, why: 'quiet' },
+      ],
+    };
+    const state: CollectorState = { startedOn: '2026-11-11', repos: {} };
+    const manifest = await run(state, undefined, 3, twoHealthy);
+
+    // o/b's first day needs 4 requests: its share of 3 runs out, and o/c goes next.
+    expect(gh.requests[3]!.path.startsWith("/repos/o/c/")).toBe(true);
+    expect(manifest.items.map((item) => `${item.day} ${item.repo} ${item.status}`)).toEqual([
+      '2026-11-08 o/b complete',
+      '2026-11-08 o/c complete',
+      '2026-11-09 o/b complete',
+      '2026-11-09 o/c complete',
+      '2026-11-10 o/b complete',
+      '2026-11-10 o/c complete',
+    ]);
+    expect(manifest.requestsByRepo).toEqual({ 'o/b': 12, 'o/c': 3 });
+    expect(manifest.options.repoShare).toBe(3);
+    expect(manifest.pending).toBe(0);
   });
 
   it('stops cleanly when the request budget runs out and reports what is left', async () => {

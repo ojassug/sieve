@@ -19,7 +19,7 @@ export interface CollectorState {
 export interface WorkItem {
   readonly repo: string;
   readonly day: string;
-  /** Recent days are re-listed every run to catch new attempts and short-lived artifacts. */
+  /** Recent days are re-listed every run to catch new attempts; backfill days are collected once. */
   readonly kind: 'recent' | 'backfill';
 }
 
@@ -32,22 +32,23 @@ export interface PlanOptions {
 }
 
 /**
- * Recent days first (they hold new attempts and artifacts that may expire quickly), then the
- * backfill oldest-first, because the oldest days disappear first. Repos keep their priority order.
+ * Oldest days first, because GitHub deletes the oldest days first: the backfill, then the recent
+ * window. A recent day not reached in time is collected later, once it has become a backfill day.
+ * Repos keep their priority order within a day.
  */
 export function planWork(repos: readonly string[], state: CollectorState, options: PlanOptions): WorkItem[] {
   const { today, recentDays, horizonDays } = options;
   const items: WorkItem[] = [];
-  for (const day of daysInRange(addDays(today, -recentDays), addDays(today, -1))) {
-    for (const repo of repos) {
-      items.push({ repo, day, kind: 'recent' });
-    }
-  }
   for (const day of daysInRange(addDays(today, -horizonDays), addDays(today, -recentDays - 1))) {
     for (const repo of repos) {
       if (state.repos[repo]?.days[day] !== 'complete') {
         items.push({ repo, day, kind: 'backfill' });
       }
+    }
+  }
+  for (const day of daysInRange(addDays(today, -recentDays), addDays(today, -1))) {
+    for (const repo of repos) {
+      items.push({ repo, day, kind: 'recent' });
     }
   }
   return items;

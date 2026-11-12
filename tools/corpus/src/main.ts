@@ -28,7 +28,8 @@ const { values } = parseArgs({
     'max-minutes': { type: 'string', default: '320' },
     'max-requests': { type: 'string' },
     'max-mirror-mb': { type: 'string', default: '1500' },
-    'recent-days': { type: 'string', default: '7' },
+    'repo-share': { type: 'string', default: '1000' },
+    'recent-days': { type: 'string', default: '2' },
     'horizon-days': { type: 'string', default: '89' },
     'metadata-only': { type: 'boolean', default: false },
   },
@@ -103,6 +104,7 @@ const manifest = await runCollection({
   recentDays: positiveInt('recent-days', values['recent-days']),
   horizonDays: positiveInt('horizon-days', values['horizon-days']),
   maxMirrorBytes: positiveInt('max-mirror-mb', values['max-mirror-mb']) * 1024 * 1024,
+  repoShare: positiveInt('repo-share', values['repo-share']),
   collector: { ref: values.ref, configSha256: createHash('sha256').update(configBytes).digest('hex') },
 });
 

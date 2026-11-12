@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { BudgetExhausted, GitHubClient, HttpError } from '../src/github.ts';
+import { BudgetExhausted, GitHubClient, HttpError, ShareExhausted } from '../src/github.ts';
 import { fakeClock, startFakeGitHub, type FakeGitHub } from './fake-github.ts';
 
 describe('GitHubClient', () => {
@@ -79,6 +79,22 @@ describe('GitHubClient', () => {
     await clock.sleep(6_000);
     await expect(c.getJson('/x')).rejects.toBeInstanceOf(BudgetExhausted);
     expect(gh.requests).toHaveLength(1);
+  });
+
+  it('caps requests at a share limit until it is cleared, apart from the run budget', async () => {
+    gh.route('/x', () => ({ body: {} }));
+    const c = client({ maxRequests: 4 });
+    c.setShareLimit(2);
+    await c.getJson('/x');
+    await c.getJson('/x');
+    const capped: unknown = await c.getJson('/x').catch((e: unknown) => e);
+    expect(capped).toBeInstanceOf(ShareExhausted);
+    expect(capped).not.toBeInstanceOf(BudgetExhausted);
+    c.setShareLimit(null);
+    await c.getJson('/x');
+    await c.getJson('/x');
+    await expect(c.getJson('/x')).rejects.toBeInstanceOf(BudgetExhausted);
+    expect(gh.requests).toHaveLength(4);
   });
 
   it('stops at the request budget', async () => {
