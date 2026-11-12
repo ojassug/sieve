@@ -87,4 +87,12 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add manifests state
           git commit -m "corpus: $run"
-          git push
+          # Another commit (a collector.ref bump, say) may have landed during the hours this run
+          # collected. Rebase onto it rather than lose this run's manifest and state.
+          for attempt in 1 2 3; do
+            if git pull --rebase origin main && git push; then
+              exit 0
+            fi
+            sleep 10
+          done
+          exit 1

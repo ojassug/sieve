@@ -151,9 +151,14 @@ The data is the flake ground truth (T3) and the durations for the replay corpus.
 - PostHog's `ci-frontend.yml` took 4,183 runs of one day, two-thirds of everything collected.
 - Only 68 artifacts matched the test-report pattern, all from meshery.
 
-**The fix**, in DECISIONS 21, has three parts: oldest days first, per-repository shares, and PostHog dropped. A manual run started right after the fix; check its manifest the same way.
+**The fix**, in DECISIONS 21, has three parts: oldest days first, per-repository shares, and PostHog dropped. It takes effect once `collector.ref` points at a commit that contains it; check the next run's manifest the same way.
 
-**Scheduled runs.** As of 08:30 UTC on 2026-11-12, the 03:17 UTC run had not fired, even though the workflow is active. GitHub can delay or drop scheduled runs. If they keep missing, start runs by hand with `gh workflow run collect.yml --repo ojassug/sieve-corpus`.
+**Scheduled runs.** The 03:17 UTC run for 2026-11-12 fired eight hours late, as run 43207509015 at 11:15 UTC, still on the old collector. GitHub can delay or drop scheduled runs. If they go missing, start runs by hand with `gh workflow run collect.yml --repo ojassug/sieve-corpus`.
+
+**Never push to sieve-corpus while a run is in progress.**
+- In the first two runs, the publish step committed and pushed without pulling first. A concurrent push (a `collector.ref` bump, for instance) would make its push fail, and that run's manifest and state would be lost. The release assets would still be published.
+- The template now rebases before pushing, with up to three tries. The copy in sieve-corpus picks that up when it is next updated from `tools/corpus/corpus-repo/`.
+- Until then, check `gh run list --repo ojassug/sieve-corpus` before any push there.
 
 ```bash
 gh run view 43026895799 --repo ojassug/sieve-corpus
