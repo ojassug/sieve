@@ -42,6 +42,13 @@ export function globToRegExp(glob: string): RegExp {
   return new RegExp(`^${re}$`);
 }
 
+/** Files matching any include pattern and no `!`-prefixed exclude pattern, in input order. */
+export function matchGlobs(files: readonly string[], patterns: readonly string[]): string[] {
+  const includes = patterns.filter((p) => !p.startsWith('!')).map((p) => globToRegExp(p));
+  const excludes = patterns.filter((p) => p.startsWith('!')).map((p) => globToRegExp(p.slice(1)));
+  return files.filter((file) => includes.some((re) => re.test(file)) && !excludes.some((re) => re.test(file)));
+}
+
 function escape(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&');
 }

@@ -8,7 +8,7 @@
 // result depends only on what it recorded. Anything it cannot decide is `unresolved`, never
 // silently dropped.
 import type { ImportKind } from '../lex/ts.ts';
-import { globToRegExp } from './glob.ts';
+import { globToRegExp, matchGlobs } from './glob.ts';
 import { parseJsonc } from './jsonc.ts';
 import { parsePnpmWorkspace } from './yaml.ts';
 
@@ -63,6 +63,8 @@ export type ResolutionKind = 'file' | 'external' | 'builtin' | 'ignored' | 'unre
 export interface GlobEvidence {
   readonly key: string;
   readonly matches: readonly string[];
+  /** For `import.meta.glob`: the repo-relative patterns (`!` excludes) that recompute `matches` over any snapshot. */
+  readonly patterns?: readonly string[];
 }
 
 export interface Resolution {
@@ -115,7 +117,7 @@ class Evidence {
   readonly absent = new Set<string>();
   readonly dirs = new Set<string>();
   readonly configs = new Set<string>();
-  readonly globs = new Map<string, readonly string[]>();
+  readonly globs = new Map<string, { readonly matches: readonly string[]; readonly patterns?: readonly string[] }>();
   packageName: string | undefined;
   reason: string | undefined;
   uncertain = false;
@@ -294,7 +296,7 @@ export class Resolver {
     for (const path of workspaces.absent) {
       ev.absent.add(path);
     }
-    ev.globs.set('workspaces', workspaces.names);
+    ev.globs.set('workspaces', { matches: workspaces.names });
     if (workspaces.uncertain) {
       ev.uncertain = true;
     }
@@ -606,13 +608,11 @@ export class Resolver {
       }
       absolute.push(negated ? `!${path}` : path);
     }
-    const includes = absolute.filter((p) => !p.startsWith('!')).map((p) => globToRegExp(p));
-    const excludes = absolute.filter((p) => p.startsWith('!')).map((p) => globToRegExp(p.slice(1)));
-    const matches = this.vfs.files().filter((file) => includes.some((re) => re.test(file)) && !excludes.some((re) => re.test(file)));
+    const matches = matchGlobs(this.vfs.files(), absolute);
     for (const match of matches) {
       ev.targets.add(match);
     }
-    ev.globs.set(absolute.join('|'), matches);
+    ev.globs.set(absolute.join('|'), { matches, patterns: absolute });
   }
 
   /** `__mocks__/<name>` next to each resolved module, as Jest and Vitest manual mocks are found. */
@@ -795,7 +795,7 @@ function finish(ev: Evidence, isGlob: boolean): Resolution {
     absent: [...ev.absent].filter((path) => !ev.targets.has(path)).sort(compareStrings),
     dirs: [...ev.dirs].sort(compareStrings),
     configs: [...ev.configs].sort(compareStrings),
-    globs: [...ev.globs].sort(([a], [b]) => compareStrings(a, b)).map(([key, matches]) => ({ key, matches })),
+    globs: [...ev.globs].sort(([a], [b]) => compareStrings(a, b)).map(([key, glob]) => ({ key, ...glob })),
     ...(ev.packageName === undefined ? {} : { packageName: ev.packageName }),
     ...(kind === 'unresolved' ? { reason: ev.reason ?? 'not found' } : {}),
     ...(ev.uncertain ? { uncertain: true as const } : {}),
