@@ -312,3 +312,70 @@ Implementation decisions too small or too local for an ADR, plus session hand-ov
   - **The manifest** now records `requestsByRepo`, `options.repoShare`, and a `capped` item status.
   - **PostHog/posthog is removed** from `repos.json`. It is tier 2 and metadata-only (NOASSERTION), and most of its runs are bots.
 - **Evidence.** Tests in `tools/corpus/test` cover the share limit in the client, the new plan order, and the two phases: a capped repository yields to the others, then finishes from the leftover time. Two hand mutants are caught: dropping phase 2, and ignoring the share. The first run's numbers are in its manifest, `manifests/2026/2026-11-11-1.json` in sieve-corpus.
+
+## 22. The static graph and the M1 map (`core/graph/static`)
+
+- **Context.** Day 9 builds the static impact graph (architecture §3.1, §3.2) and stores it for plans ([HANDOFF.md](HANDOFF.md) §6.1). Several choices were left open: declaration files, the rule for uncertain files, lockfiles that cannot be parsed, mode changes, and the map's format.
+- **Decision.**
+  - **Inputs come from git objects only.** `readBlobs` reads every blob through one `git cat-file --batch` process. `GitVfs` serves the resolver from a `TreeIndex`: modes `100644`/`100755` are files, `120000` symlinks, `160000` submodules, trees directories.
+  - **Module files** (`.ts .tsx .mts .cts .js .jsx .mjs .cjs`) are all nodes, imported or not. **Declaration files** (`.d.ts`, `.d.mts`, `.d.cts`, `.d.<ext>.ts`) are nodes but are never lexed: no runtime evaluates them. Type tests (Vitest typecheck) would need them; they are out of scope until records exist. Statement-level `import type` is skipped; inline `type` specifiers stay edges (entry 14).
+  - **Node keys and hashes.**
+    - `f:<path>`: the blob id, prefixed by the mode unless it is `100644` (`100755:<oid>`, `120000:<oid>`), so a mode change is a change, as in entry 12. A path that does not exist hashes to `null` (⊥).
+    - `d:<dir>`: SHA-256 of the canonical JSON of its sorted `[name, kind]` pairs, with entry 12's kinds; `null` if missing.
+    - `g:workspaces` (the resolver's name map), `g:glob:<patterns>` (`import.meta.glob`), `g:inputs.global` and `g:declared:<match>`: SHA-256 of the canonical JSON of the sorted matches. The map keeps each pattern-based node's patterns, so a plan can recompute it.
+    - `p:npm:<location>`: the lockfile hash (entry 18). Every package in the lockfile is a node.
+    - `e:runtime` (Node major.minor), `e:platform` (OS and architecture) and `e:env/<NAME>` for each tracked variable: SHA-256 of the value, so the map never holds environment values.
+    - `u:<path>`: an uncertain file.
+  - **Edges.**
+    - STATIC, from each lexed file: to everything each resolution recorded (targets, absent paths, directories, configs, globs); to its own config chain (`Resolver.fileConfigs`: the tsconfig chain and the nearest `package.json`); and, for a bare specifier, to `p:npm:` via `locate`, or to the ⊥ node `p:npm:node_modules/<name>` when the package is not installed.
+    - STATIC, from each package: to what its dependencies resolve to, or to that ⊥ node.
+    - DECLARED, from each test: to `g:inputs.global`, every `e:` node and the declared rules that match it.
+  - **The `u:` rule: an uncertain file's `u:` node is always changed, a seed of every plan.**
+    - A file is uncertain when the lexer raised a diagnostic, an import is unresolved (non-literal ones included), a resolution read a config it could not parse, or a bare import names a package missing from the lockfile (or there is no lockfile).
+    - Any test that reaches the file always runs.
+    - Architecture §3.5's narrower rule, L1 only when the uncertain file changed, relies on dynamic coverage that does not exist until M2/M3.
+  - **Lockfiles that cannot be parsed** (pnpm, yarn, bun, npm v1) **or more than one.**
+    - Bare imports depend on each lockfile's `f:` node, and a plan escalates to L3 when any of them changed or the set of lockfiles changed.
+    - This is §3.5's row "lockfile changed but unparseable". HANDOFF §6.1's "unparseable is L3" is read the same way, so an unchanged pnpm lockfile costs no precision.
+    - Both corpus candidates, hono and zod, use pnpm.
+  - **Default global inputs:** the root `package.json`, `.env*`, Vite and Vitest configs, `vitest.workspace.*`, `vitest.setup.*`, and Jest's config and setup, by their conventional names. `inputs.global` adds to them. Runner configs are module files, so their imports are followed too.
+  - **The map** is canonical JSON at `.sieve/map/map.json` until SMAP (week 3). It holds `version` 1, `engine` `sieve-static-1` (another engine's map is invalid), `objectFormat`, `rootTree`, `undecodable`, the config's blob id, the lockfile setup, `snapshot`, `nodes`, `edges`, `globs`, `tests` and `uncertain` (the causes per `u:` node).
+    - `snapshot` lists every `ls-tree` entry as `[mode, oid, path]`, so a plan diffs against it without the base commit, which a depth-1 checkout does not have.
+    - `edges` is an adjacency object, `{ from: { to: provenance } }`: the same content as `[from, to, provenance]` triples, in less space.
+    - `parseMap` checks every field and both ends of every edge. Anything wrong is a `MapError`, and the plan runs everything.
+- **Evidence.**
+  - Example tests for every node and edge kind (`static.test.ts`, `map.test.ts`), and determinism: identical bytes whatever order the sources arrive in, and byte-identical maps of one revision from the CLI.
+  - `Resolver.fileConfigs` passes the evidence-completeness property of entry 17 (400 runs). `GitVfs` and `MemoryVfs` give identical resolutions (500 runs).
+  - **T6:** `sieve graph` on a synthetic 10,000-file TypeScript monorepo (42.1 MB) takes **2.5 s cold**, against 30 s. On this repository it takes 0.36 s. See [bench/README.md](bench/README.md).
+  - **Probe-edge volume** (entry 17's open item): in the synthetic repository, 60,000 imports, mostly extensionless, give 684,501 edges, about 10 per import as estimated, and a 26.7 MB map. SMAP and per-directory probe groups are the levers if size matters.
+  - On this repository 18 files are uncertain, all lexer fixtures that nothing imports, so no test runs because of them.
+
+## 23. Static selection and CLI v0; kickoff gap 1 resolved
+
+- **Context.** Day 9's CLI: `sieve graph`, `sieve diff` and `sieve plan --static --shadow --map` ([HANDOFF.md](HANDOFF.md) §6.2). Kickoff gap 1 (entry 1) was still open: no skip can be safe without records, and the docs spelled the flags two ways.
+- **Decision.**
+  - **Δ(S,H).** Files and listings come from the Merkle descent against the map's snapshot; `g:`, `p:` and `e:` nodes are recomputed at H. Every `u:` node is a seed. A new install location of a package named `N` seeds every `p:` node named `N`, because it can shadow another copy for some importers.
+  - **Escalations** (§3.5), each listed with its cause:
+    - **L1**, every test under the owning package (the nearest `package.json` at H): a changed file that is not a graph node. Exempt are files matching `inputs.ignore` (default `**/*.md`, `docs/**`, `LICENSE*`), lockfiles and `sieve.config.json` (handled below), and newly added module files, whose effect already shows through the probes and listings they would satisfy.
+    - **L3**, every test: `sieve.config.json` changed; another object format; a path that is not UTF-8; the lockfile setup changed; a lockfile that cannot be parsed changed.
+    - **Run-all fallback, exit 0:** no map, an invalid map (version, engine or any malformed field), an invalid config, or an internal error. CI is never blocked.
+  - New test files and `alwaysRun` tests always run. Why-paths go from the test to the changed or uncertain node.
+  - **Kickoff gap 1.**
+    - `plan` needs `--static` until records exist (M2/M3).
+    - `--static` refuses `--mode safe`, whether from the flag or from `selection.mode` in the config, and `budget`, with exit code 2. Shadow mode runs every test.
+    - `--shadow` is an alias of `--mode shadow`.
+    - Every would-skip is labelled **unproven static reachability**: per test in the plan JSON, and in the summary.
+    - Architecture §5.1 is updated to match.
+  - **GitHub outputs.**
+    - `matrix` is `{"include":[{"shard":k,"files":[…]}]}`: the sorted run set split round-robin into `--shards` exact file lists (default `sharding.max`, else 1).
+    - `count` is the number of test files to run.
+    - The step summary has the would-run and would-skip counts, escalations, up to 20 why-paths and the would-skip list.
+  - **Config.** `sieve.config.json` is read from git at the planned revision and validated by hand against the §5.1 schema; without one, the defaults apply. Projects may add `include` and `exclude` globs; otherwise each runner's default applies, without `node_modules` and `fixtures`.
+  - **Exit codes:** 0 for success, fallbacks included; 1 for an error; 2 for a usage error.
+- **Evidence.**
+  - **Soundness property:** 2,000 seeded pairs of small repositories with shadowing probes, tsconfig paths, workspaces, nested package copies and global inputs.
+    - If what a test loads differs between S and H, or any of it is uncertain, the plan must select the test.
+    - The oracle follows resolutions, configs, lockfile packages and global inputs directly, and shares no graph code.
+    - 20 hand mutants of the builder and the selection were all caught. A first version that used the builder as its own oracle caught only 7.
+  - End-to-end CLI tests on a throwaway repository: graph, plan with `GITHUB_OUTPUT` and `GITHUB_STEP_SUMMARY`, each fallback, `--mode safe` refused, diff, byte-identical maps and absolute paths.
+  - On this repository, a map built at `2a4a4b7` and planned at the CLI commit selects 11 of 27 test files: 7 affected, with why-paths, and 4 new test files. The other 16 are unproven would-skips.
