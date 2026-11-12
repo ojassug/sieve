@@ -1,11 +1,11 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { publish, pushIndex, runCommand, type CommandResult, type IndexFile, type Run } from '../src/publish.ts';
+import { publish, pushIndex, runCommand, stageAssets, type CommandResult, type IndexFile, type Run } from '../src/publish.ts';
 
 /**
  * A bare "remote" plus two clones: `work` stands in for the collection run's checkout, `rival`
@@ -193,9 +193,10 @@ function recording(respond: (args: readonly string[]) => CommandResult | undefin
     }
     timeline.push([command, ...rest.slice(0, 2)].join(' '));
     if (command === 'tar') {
-      // Stand in for the archive so the checksums have something to hash.
+      // Stand in for the archive so the checksums have something to hash, resolving the name
+      // against the directory tar was given, exactly as tar itself would.
       const flag = rest.findIndex((arg) => arg === '-czf' || arg === '-cf');
-      writeFileSync(rest[flag + 1]!, `archive of ${rest.at(-1)!}\n`);
+      writeFileSync(resolve(cwd, rest[flag + 1]!), `archive of ${rest.at(-1)!}\n`);
       return Promise.resolve({ code: 0, stdout: '', stderr: '' });
     }
     if (command === 'gh') {
@@ -295,5 +296,63 @@ describe('publish', () => {
     await publish({ ...options(), run });
 
     expect(timeline.filter((entry) => entry.startsWith('gh '))).toEqual(['gh release view', 'gh release upload', 'gh release edit']);
+  });
+
+  it('works from the repository root with the relative paths the workflow passes', async () => {
+    mkdirSync(join(repo.work, 'out', 'raw', 'o__a'), { recursive: true });
+    writeFileSync(join(repo.work, 'out', 'manifest.json'), '{"requests":3}\n');
+    writeFileSync(join(repo.work, 'out', 'raw', 'o__a', 'runs.ndjson'), '{"id":2}\n');
+    const { run } = recording(() => undefined);
+    const previous = process.cwd();
+
+    try {
+      process.chdir(repo.work);
+      const result = await publish({ ...options(), repoDir: '.', outDir: 'out', assetsDir: 'assets', run });
+      expect(result.assets).toContain('raw-2026-11-12-7.tar.gz');
+    } finally {
+      process.chdir(previous);
+    }
+
+    expect(readFileSync(join(repo.work, 'assets', 'raw-2026-11-12-7.tar.gz'), 'utf8')).toBe('archive of raw\n');
+    expect(repo.tip('manifests/2026/2026-11-12-7.json')).toBe('{"requests":3}\n');
+  });
+});
+
+describe('stageAssets', () => {
+  let out: string;
+  let assets: string;
+  let statePath: string;
+
+  beforeEach(() => {
+    out = mkdtempSync(join(tmpdir(), 'sieve-stage-'));
+    assets = join(out, 'assets');
+    statePath = join(out, 'collector-state.json');
+    writeFileSync(statePath, '{"repos":{}}\n');
+    writeFileSync(join(out, 'manifest.json'), '{"requests":1}\n');
+    mkdirSync(join(out, 'raw', 'o__a'), { recursive: true });
+    writeFileSync(join(out, 'raw', 'o__a', 'runs.ndjson'), '{"id":1}\n');
+    mkdirSync(join(out, 'artifacts', 'o__a'), { recursive: true });
+    writeFileSync(join(out, 'artifacts', 'o__a', '1.zip'), 'zip\n');
+  });
+
+  afterEach(() => {
+    rmSync(out, { recursive: true, force: true });
+  });
+
+  it('gives tar absolute directories and a bare archive name, so no path depends on the caller', async () => {
+    const calls: { args: readonly string[]; cwd: string }[] = [];
+    const run: Run = (command, args, cwd) => {
+      calls.push({ args, cwd });
+      const flag = args.findIndex((arg) => arg === '-czf' || arg === '-cf');
+      writeFileSync(resolve(cwd, args[flag + 1]!), 'archive\n');
+      return Promise.resolve({ code: 0, stdout: '', stderr: '' });
+    };
+
+    await stageAssets({ outDir: out, assetsDir: assets, statePath, runId: '2026-11-12-7', run });
+
+    expect(calls).toEqual([
+      { args: ['-C', resolve(out), '-czf', 'raw-2026-11-12-7.tar.gz', 'raw'], cwd: resolve(assets) },
+      { args: ['-C', resolve(out, 'artifacts'), '-cf', 'artifacts-2026-11-12-7-o__a.tar', 'o__a'], cwd: resolve(assets) },
+    ]);
   });
 });

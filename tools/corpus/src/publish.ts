@@ -7,7 +7,7 @@
 import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 
 export interface CommandResult {
   readonly code: number;
@@ -121,7 +121,7 @@ async function attemptPush(options: PushOptions): Promise<Attempt> {
   }
 
   for (const file of files) {
-    const target = join(repoDir, file.path);
+    const target = resolve(repoDir, file.path);
     mkdirSync(dirname(target), { recursive: true });
     copyFileSync(file.source, target);
   }
@@ -186,17 +186,21 @@ async function mustRun(run: Run, command: string, args: readonly string[], cwd: 
  * release still holds everything needed to recover the run.
  */
 export async function stageAssets(options: StageOptions): Promise<StagedAssets> {
-  const { outDir, assetsDir, statePath, runId } = options;
+  const { runId } = options;
   const run = options.run ?? runCommand;
+  // The workflow passes relative paths, so resolve once: tar is then given an absolute directory to
+  // read and a bare archive name to write, and nothing depends on where this process was started.
+  const outDir = resolve(options.outDir);
+  const assetsDir = resolve(options.assetsDir);
   mkdirSync(assetsDir, { recursive: true });
 
   const manifest = join(assetsDir, `manifest-${runId}.json`);
   copyFileSync(join(outDir, 'manifest.json'), manifest);
   const state = join(assetsDir, `state-${runId}.json`);
-  copyFileSync(statePath, state);
+  copyFileSync(resolve(options.statePath), state);
 
   if (existsSync(join(outDir, 'raw'))) {
-    await mustRun(run, 'tar', ['-C', outDir, '-czf', join(assetsDir, `raw-${runId}.tar.gz`), 'raw'], outDir);
+    await mustRun(run, 'tar', ['-C', outDir, '-czf', `raw-${runId}.tar.gz`, 'raw'], assetsDir);
   }
   const artifactsDir = join(outDir, 'artifacts');
   if (existsSync(artifactsDir)) {
@@ -205,7 +209,7 @@ export async function stageAssets(options: StageOptions): Promise<StagedAssets> 
       .map((entry) => entry.name)
       .sort();
     for (const slug of slugs) {
-      await mustRun(run, 'tar', ['-C', artifactsDir, '-cf', join(assetsDir, `artifacts-${runId}-${slug}.tar`), slug], outDir);
+      await mustRun(run, 'tar', ['-C', artifactsDir, '-cf', `artifacts-${runId}-${slug}.tar`, slug], assetsDir);
     }
   }
 
@@ -279,7 +283,7 @@ export async function publish(options: PublishOptions): Promise<PublishResult> {
   const tag = `corpus-${runId}`;
   const manifestPath = `manifests/${day.slice(0, 4)}/${runId}.json`;
 
-  const staged = await stageAssets({ outDir, assetsDir, runId, statePath: join(repoDir, statePath), run: options.run });
+  const staged = await stageAssets({ outDir, assetsDir, runId, statePath: resolve(repoDir, statePath), run: options.run });
 
   await publishRelease({
     repo,
