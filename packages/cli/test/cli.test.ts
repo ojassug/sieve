@@ -97,6 +97,18 @@ describe('sieve graph, then plan', () => {
     expect(delta.packages).toEqual({ before: 'package-lock.json', after: 'package-lock.json', added: [], changed: [], removed: [] });
   });
 
+  it('takes absolute paths for --out and --map', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'sieve-cli-abs-'));
+    try {
+      expect(sieve(['graph', '--rev', base, '--out', join(dir, 'map.json')]).status).toBe(0);
+      const run = sieve(['plan', '--shadow', '--static', '--map', dir]);
+      expect(run.status).toBe(0);
+      expect((JSON.parse(run.stdout) as { fallback?: string }).fallback).toBeUndefined();
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it('builds byte-identical maps of the same revision', () => {
     const run = sieve(['graph', '--rev', base]);
     expect(run.status).toBe(0);

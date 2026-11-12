@@ -4,7 +4,7 @@
 // Exit codes: 0 success (a plan that fell back to running everything is a success: it must never
 // block CI), 1 an error, 2 a usage error.
 import { appendFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { dirname, resolve } from 'node:path';
 
 import {
   buildStaticMap,
@@ -129,7 +129,7 @@ async function graph(command: Extract<Command, { name: 'graph' }>, io: Io): Prom
   if (command.out === null) {
     io.stdout(text);
   } else {
-    const out = join(io.cwd, command.out);
+    const out = resolve(io.cwd, command.out);
     mkdirSync(dirname(out), { recursive: true });
     writeFileSync(out, text);
   }
@@ -187,7 +187,7 @@ async function plan(command: Extract<Command, { name: 'plan' }>, io: Io): Promis
   let map: SieveMap | null = null;
   if (fallback === undefined) {
     try {
-      map = parseMap(readFileSync(join(io.cwd, mapPath), 'utf8'));
+      map = parseMap(readFileSync(resolve(io.cwd, mapPath), 'utf8'));
     } catch (error) {
       if (error instanceof MapError) {
         fallback = `the map at ${mapPath} is invalid: ${error.message}`;
