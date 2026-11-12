@@ -3,7 +3,7 @@
 // every import resolved, and everything a resolution recorded becomes an edge, so a test depends
 // on every file, absent path, directory listing, glob, config and package that could change what
 // it loads. What cannot be decided is not dropped: it becomes a `u:` node, always treated as changed
-// (DECISIONS 22).
+// (DECISIONS 23).
 import { createHash } from 'node:crypto';
 
 import { canonicalJson } from '../canonical-json.ts';
@@ -29,7 +29,7 @@ export function isModule(path: string): boolean {
   return MODULE.test(path);
 }
 
-/** A module that runs, so its imports are edges. Declaration files never run (DECISIONS 22). */
+/** A module that runs, so its imports are edges. Declaration files never run (DECISIONS 23). */
 export function isLexed(path: string): boolean {
   return MODULE.test(path) && !DECLARATION.test(path);
 }

@@ -24,7 +24,7 @@
 - **Tests:** 239 in 18 files, all passing on Windows 11 with Node 26.4.
 - **CI:** green on `main` (`00fea91`): static checks; Ubuntu on Node 22, 24 and 26; Windows on Node 22. The DCO job runs on pull requests only.
 - **Static checks:** lint, typecheck and the zero-dependency check are clean.
-- **Day 9 update (2026-11-12, branch `m1/d09-cli`):** `sieve graph`, `sieve diff` and `sieve plan --mode shadow --static --map` run from source with `node packages/cli/src/main.ts`. 381 tests pass in 27 files. See §6 and DECISIONS 22–23.
+- **Day 9 update (2026-11-12, branch `m1/d09-cli`):** `sieve graph`, `sieve diff` and `sieve plan --mode shadow --static --map` run from source with `node packages/cli/src/main.ts`. 395 tests pass in 28 files, with main merged in after #10. See §6 and DECISIONS 23–24.
 
 **First three things to do:**
 1. Check that the collector is making progress (§5.3): coverage should grow with each daily run.
@@ -86,7 +86,7 @@ npm run typecheck
 npm run check:deps
 ```
 
-Expect `381 passed` from `npm test` (on branch `m1/d09-cli`), and no output from lint or typecheck. To reproduce the recorded benchmarks (§9), run `node bench/ls-tree.ts`, `node bench/lex.ts`, `node bench/graph.ts` and `node bench/static-graph.ts`.
+Expect `395 passed` from `npm test` (on branch `m1/d09-cli`, with #10 merged in), and no output from lint or typecheck. To reproduce the recorded benchmarks (§9), run `node bench/ls-tree.ts`, `node bench/lex.ts`, `node bench/graph.ts` and `node bench/static-graph.ts`.
 
 To try the CLI on this repository:
 
@@ -113,8 +113,8 @@ node packages/cli/src/main.ts plan --mode shadow --static --map .sieve/map
 | `packages/core/src/lockfile/npm.ts` | package-lock v2/v3 → `p:npm:<install location>`. Node-style `locate`, package-to-package dependencies, diff, lockfile detection; other formats are `unparseable` (L3) | `parseNpmLockfile`, `NpmLockfile.locate/dependencies`, `diffLockfiles`, `detectLockfile` | `test/lockfile/npm.test.ts` (16) |
 | `packages/core/src/index.ts` | The package's public exports. Workspace packages export `./src/*.ts` directly (DECISIONS 3) | — | — |
 | `packages/core/src/git/{cat-file,vfs}.ts` | `git cat-file --batch` parser; `GitVfs`, the resolver's `Vfs` over a `TreeIndex` with blobs from git | `readBlobs(cwd, oids)`, `CatFileParser`, `GitVfs.load`, `repoRoot` | `test/git/cat-file.test.ts`, `test/git/vfs.test.ts`, `test/git/git.test.ts` |
-| `packages/core/src/graph/{static,map}.ts` | The static graph builder and the M1 map (canonical JSON): node keys and hashes, edges, `u:` nodes (DECISIONS 22) | `buildStaticMap`, `parseMap`, `mapGraph`, `readLockfile`, `environment`, `isModule`/`isLexed` | `test/graph/static.test.ts`, `test/graph/map.test.ts` |
-| `packages/core/src/select/plan.ts` | Δ(S,H) from a map to a head snapshot, escalations L1/L3, reverse BFS with why-paths (DECISIONS 23) | `selectStatic`, `runAll` | `test/select/plan.test.ts` (examples plus the 2,000-run soundness property) |
+| `packages/core/src/graph/{static,map}.ts` | The static graph builder and the M1 map (canonical JSON): node keys and hashes, edges, `u:` nodes (DECISIONS 23) | `buildStaticMap`, `parseMap`, `mapGraph`, `readLockfile`, `environment`, `isModule`/`isLexed` | `test/graph/static.test.ts`, `test/graph/map.test.ts` |
+| `packages/core/src/select/plan.ts` | Δ(S,H) from a map to a head snapshot, escalations L1/L3, reverse BFS with why-paths (DECISIONS 24) | `selectStatic`, `runAll` | `test/select/plan.test.ts` (examples plus the 2,000-run soundness property) |
 | `packages/cli/src/` | `sieve graph`, `diff`, `plan`: `args.ts` (parseArgs, kickoff gap 1), `config.ts` (§5.1 validation, test discovery), `report.ts` (plan JSON, matrix, summary), `cli.ts`, `main.ts`. `bin: sieve` | `node packages/cli/src/main.ts --help` | `test/{args,config,report,cli}.test.ts` (`cli.test.ts` is end to end) |
 | `packages/vitest`, `packages/jest` | Placeholders for M2 | — | — |
 | `tools/corpus/` | The corpus collector (§5). `repos.json` lists the repositories; `corpus-repo/` is the template for the data repo | `node tools/corpus/src/main.ts …` | `tools/corpus/test/*` (35) |
@@ -231,7 +231,7 @@ GH_TOKEN="$(gh auth token)" node tools/corpus/src/main.ts --config tools/corpus/
 
 ## 6. Day 9, CLI v0
 
-**Status (2026-11-12):** built on branch `m1/d09-cli`, following the plan below; DECISIONS 22 and 23 record where it chose or deviated. It runs on this repository and on honojs/hono (cloned with Ojas's approval; the results are in DECISIONS 23 and [bench/README.md](bench/README.md)). Two readings to confirm with Ojas: an unparseable lockfile escalates to L3 only when it changes (architecture §3.5), and every `u:` node is always changed (the recommendation in item 4.5).
+**Status (2026-11-12):** built on branch `m1/d09-cli`, following the plan below; DECISIONS 23 and 24 record where it chose or deviated. It runs on this repository and on honojs/hono (cloned with Ojas's approval; the results are in DECISIONS 24 and [bench/README.md](bench/README.md)). Two readings to confirm with Ojas: an unparseable lockfile escalates to L3 only when it changes (architecture §3.5), and every `u:` node is always changed (the recommendation in item 4.5).
 
 **Done when:** it runs on this repository and on one corpus repository. Cloning a corpus repository is a download, so ask first.
 
@@ -365,7 +365,7 @@ These are honest limits, not bugs. Each one errs towards running more tests.
   - **Symlinks.** A path below a symlinked directory is `unresolved`.
   - **Workspaces.** The root package counts as a workspace member in the `workspaces` name map, for self-reference.
 - **Graph.** The build merges edges through a `Map` (1.6 s at 1M edges). The M3 map decode replaces it.
-- **Static selection (day 9, DECISIONS 22–23).**
+- **Static selection (day 9, DECISIONS 23–24).**
   - Every would-skip is unproven: anything a test reads through `fs` (fixtures, snapshots) is invisible statically. A changed file outside the graph escalates its owning package (L1), which covers most of it.
   - Every test that reaches an uncertain file always runs, whether or not anything changed.
   - Global inputs are found by conventional names (`vitest.setup.*`, `jest.setup.*` and runner configs). A setup file with another name must be listed in `inputs.global`.
@@ -429,14 +429,15 @@ These are honest limits, not bugs. Each one errs towards running more tests.
 | 19 | The first session hand-over |
 | 20 | This document |
 | 21 | Collector budget |
-| 22 | The static graph and the M1 map |
-| 23 | Static selection and CLI v0 |
+| 22 | Race-proof corpus publishing |
+| 23 | The static graph and the M1 map |
+| 24 | Static selection and CLI v0 |
 
 **Status of the kickoff doc gaps** (DECISIONS 1):
 
 | Gap | Status |
 |---|---|
-| 1. No safe skips in M1; CLI flags differ | Resolved on day 9 (23): `--static` is shadow only, would-skips are labelled unproven, `--shadow` is an alias |
+| 1. No safe skips in M1; CLI flags differ | Resolved on day 9 (24): `--static` is shadow only, would-skips are labelled unproven, `--shadow` is an alias |
 | 2. `import type` and missing import forms | Resolved by the lexer (14) |
 | 3. Where the resolver probes | Resolved: git's view (17) |
 | 4. Runners order candidates differently | Resolved: the union (17) |
