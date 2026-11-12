@@ -13,3 +13,4 @@ export { parsePnpmWorkspace } from './resolve/yaml.ts';
 export { detectLockfile, diffLockfiles, LOCKFILE_PATHS, NpmLockfile, parseNpmLockfile, type DetectedLockfile, type LockedPackage, type Unparseable } from './lockfile/npm.ts';
 export { buildStaticMap, ENGINE, environment, envHash, fileHash, globHash, isLexed, isModule, listingHash, MAP_VERSION, readLockfile, sha256, type DeclaredRule, type LockfileState, type MapLockfile, type SieveMap, type StaticInput } from './graph/static.ts';
 export { MapError, mapGraph, parseMap } from './graph/map.ts';
+export { CONFIG_PATH, runAll, selectStatic, type Escalation, type HeadState, type PlanRules, type Selection } from './select/plan.ts';
