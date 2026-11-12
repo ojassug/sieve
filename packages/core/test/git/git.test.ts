@@ -134,7 +134,17 @@ describe('git snapshots', () => {
     const repo = plumbingRepo('sha1');
     repos.push(repo.dir);
     mkdirSync(join(repo.dir, 'a', 'b'), { recursive: true });
-    expect(realpathSync(await repoRoot(join(repo.dir, 'a', 'b')))).toBe(realpathSync(repo.dir));
+    // Native realpath expands Windows 8.3 short names (RUNNER~1), as git does; the JS one does not.
+    expect(realpathSync.native(await repoRoot(join(repo.dir, 'a', 'b')))).toBe(realpathSync.native(repo.dir));
+  });
+
+  it("reports git's own error when git exits without reading its input", async () => {
+    // Several megabytes of oids into a git that fails at once: writing to its closed stdin gets
+    // EPIPE, which must not hide why git failed.
+    const dir = mkdtempSync(join(tmpdir(), 'sieve-not-a-repo-'));
+    repos.push(dir);
+    const oids = Array.from({ length: 200_000 }, (_, i) => i.toString(16).padStart(40, '0'));
+    await expect(readBlobs(dir, oids)).rejects.toThrow(/not a git repository/i);
   });
 
   it('reads nothing, and spawns nothing, for no oids', async () => {
