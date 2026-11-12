@@ -379,3 +379,8 @@ Implementation decisions too small or too local for an ADR, plus session hand-ov
     - 20 hand mutants of the builder and the selection were all caught. A first version that used the builder as its own oracle caught only 7.
   - End-to-end CLI tests on a throwaway repository: graph, plan with `GITHUB_OUTPUT` and `GITHUB_STEP_SUMMARY`, each fallback, `--mode safe` refused, diff, byte-identical maps and absolute paths.
   - On this repository, a map built at `2a4a4b7` and planned at the CLI commit selects 11 of 27 test files: 7 affected, with why-paths, and 4 new test files. The other 16 are unproven would-skips.
+  - **On honojs/hono** (corpus, pnpm, no `sieve.config.json`), at `f6fbaf02`: `sieve graph` takes 0.44 s cold for 585 files, with 161 test files found by Vitest's default include and 45 uncertain files.
+    - Planning `HEAD~6` → `HEAD~1` (13 changed nodes, `src/hono-base.ts` among them) selects 114 of 161: 87 through changed files, 26 through uncertain files and 1 new test file. The other 47 are unproven would-skips.
+    - The 26 come mostly from adapters that import `hono` itself: its `exports` point at `dist/`, which is build output and not in git. The rest are `bun:test` (an unknown scheme) and one non-literal `import()`.
+    - Planning `HEAD~10` → `HEAD` selects all 161: the release commit bumps the version in the root `package.json`, which every file depends on (its nearest `package.json`, and a global input).
+    - hono's own Vitest config uses projects with extglob includes, so discovery without a `sieve.config.json` also counts adapter and runtime tests that hono runs elsewhere.

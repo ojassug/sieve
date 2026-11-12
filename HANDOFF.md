@@ -17,7 +17,7 @@
 | 5 | `core/graph`: interning, CSR, reverse BFS, why-paths, P1 and P3 | [#5](https://github.com/ojassug/sieve/pull/5) | Met |
 | 6–7 | `core/resolve`: resolver with recorded probes, JSONC, YAML subset, globs | [#6](https://github.com/ojassug/sieve/pull/6) | Met: 5 fixture repos pass |
 | 8 | `core/lockfile/npm`: `p:` nodes, lookup, diff; other formats reported as L3 | [#7](https://github.com/ojassug/sieve/pull/7) | Met |
-| 9 | CLI v0: `sieve graph`, `sieve diff`, `sieve plan --static --shadow --map` | branch `m1/d09-cli` | Runs on this repository (§6); the corpus run awaits approval to clone |
+| 9 | CLI v0: `sieve graph`, `sieve diff`, `sieve plan --static --shadow --map` | branch `m1/d09-cli` | Met: runs on this repository and on honojs/hono (§6) |
 | 10 | Walking skeleton in CI on this repo | — | **Not started** (§7) |
 
 **Health at hand-off.**
@@ -232,7 +232,7 @@ GH_TOKEN="$(gh auth token)" node tools/corpus/src/main.ts --config tools/corpus/
 
 ## 6. Day 9, CLI v0
 
-**Status (2026-11-12):** built on branch `m1/d09-cli`, following the plan below; DECISIONS 22 and 23 record where it chose or deviated. It runs on this repository. Two readings to confirm with Ojas: an unparseable lockfile escalates to L3 only when it changes (architecture §3.5), and every `u:` node is always changed (the recommendation in item 4.5).
+**Status (2026-11-12):** built on branch `m1/d09-cli`, following the plan below; DECISIONS 22 and 23 record where it chose or deviated. It runs on this repository and on honojs/hono (cloned with Ojas's approval; the results are in DECISIONS 23 and [bench/README.md](bench/README.md)). Two readings to confirm with Ojas: an unparseable lockfile escalates to L3 only when it changes (architecture §3.5), and every `u:` node is always changed (the recommendation in item 4.5).
 
 **Done when:** it runs on this repository and on one corpus repository. Cloning a corpus repository is a download, so ask first.
 
@@ -351,7 +351,7 @@ All measured on Windows 11, Ryzen AI 7 350, Node 26.4 and git 2.55. There are no
 
 1. The mirroring policy for the NOASSERTION and LGPL corpus repositories (§5.2).
 2. Whether `sieve-gate` becomes a required check on `main`, which is a branch-protection setting.
-3. Which corpus repository day 9 should run on, and approval to clone it. honojs/hono and colinhacks/zod are small and use Vitest.
+3. ~~Which corpus repository day 9 should run on.~~ Answered 2026-11-12: honojs/hono, cloned with approval.
 4. The GitHub org for merge-queue dogfooding (roadmap day 0, needed by M6), and whether the corpus repo should live under it.
 5. When to make the CLI's would-skips enforceable. Not before records exist (M2/M3) and 4 clean shadow weeks (M7).
 
@@ -373,6 +373,11 @@ These are honest limits, not bugs. Each one errs towards running more tests.
   - `e:runtime` and `e:platform` describe the machine that runs `sieve plan`, not the test shards'.
   - The JSON map is about 2.7 KB per file (26.7 MB at 10,000 files), and a plan re-parses it and rebuilds the CSR arrays (0.8 s at 10,000 files). SMAP fixes both. Extraction is not cached, so incremental builds are as slow as cold ones.
   - Only npm lockfiles are parsed. With pnpm or yarn, every bare import depends on the lockfile file, and any change to it runs everything (L3).
+  - Precision costs seen on hono:
+    - A version bump in the root `package.json` reruns every test, because each file depends on its whole nearest `package.json`. Hashing only the fields that change module semantics (`type`, `exports`, `imports`, `main`, dependencies) would fix it.
+    - A self-import whose `exports` point at build output (`dist/`) is unresolved, so it is uncertain.
+    - `bun:` specifiers count as unknown virtual modules.
+    - `new URL('.', import.meta.url)` names a directory, and the resolver reports it as unresolved.
 - **Collector.** See §5.4. The first run's coverage is still unknown.
 - **Docs that still owe updates:**
   - ADR-0009 provenance width (week 3);
