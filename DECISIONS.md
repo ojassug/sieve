@@ -523,3 +523,49 @@ Implementation decisions too small or too local for an ADR, plus session hand-ov
   - A synthetic 10,000-file monorepo reproduces the recorded benchmark exactly. A plain binary layout of that map is 2.2 MB against 26.7 MB of JSON, and the reverse index derives from the forward arrays in 2.7 ms.
   - 12 probes of the real `buildStaticMap` and `selectStatic`, built with the `fakeRepo` test helper.
   - GitHub's dependency caching reference, read on 2026-11-13: a pull request's cache is scoped to its merge ref, and only trusted triggers can write the default branch's scope.
+
+## 28. The environment leaves the static map; the engine is `sieve-static-2` (2026-11-14)
+
+- **Context.** ADR-0003 and ADR-0009, as corrected on 2026-11-13 (entry 27), make the static map a function of the tree, the config and the engine only. The code still did what entries 23 and 24 describe.
+  - `buildStaticMap` added `e:runtime`, `e:platform` and one `e:env/<NAME>` node per tracked variable, with a DECLARED edge from every test. `selectStatic` recomputed them at the head.
+  - The review's probe built one tree with a `linux-x64` and a `win32-x64` environment. The two maps differed, in `e:platform` only. M1's exit criterion is a byte-identical map across OSes.
+  - The nodes described the machine that ran `sieve plan`, not the shard that runs the test.
+  - This is item 2 of [HANDOFF.md](HANDOFF.md) §1.1.
+- **Decision.**
+  - **Neither the map nor a static plan knows the environment.** `StaticInput.env` and `HeadState.env` are gone, and so is the `e:` branch of Δ(S,H). A plan is a function of the map, the head tree and the config.
+  - **Nothing compares environments until M3.** A change of Node version or OS between the map and the plan no longer selects every test.
+    - That loses no safety. Every would-skip is unproven and shadow-only, and the old comparison was made on the wrong machine.
+    - ADR-0005 puts the comparison in the job that runs the test. `sieve run` does that in M3.
+  - **`environment()` and `envHash()` stay, for the M2 recorder.** They moved to `packages/core/src/environment.ts` and have tests of their own. Nothing calls them yet.
+  - **`env.track` is validated and not used.**
+    - It joins `generated`, `quarantine` and the other keys that the M1 CLI checks without using (architecture §5.1). Tracked variables belong to a record, so the M2 recorder is their next reader.
+    - `Rules.track` is removed, since nothing read it.
+    - Changing `env.track` still runs everything once, like any change to `sieve.config.json` (L3).
+  - **The engine id becomes `sieve-static-2`.** Entry 26's rule is that the id changes when hash definitions or the reading of a map change. Here the reading changes.
+    - **An older map read by this planner:** its `e:` nodes would never change. The plan would ignore a dependency the map declares, and select fewer tests than the engine that built the map.
+    - **A new map read by an older planner:** it finds no `e:` node and compares nothing, without saying so.
+    - **Cost:** one run-all plan per cached map. The plan gives the cause: the map was built by engine "sieve-static-1", expected sieve-static-2.
+    - `MAP_VERSION` stays 1: the fields and their layout did not change.
+  - **The golden map** (`packages/core/test/graph/golden.test.ts`) is ADR-0009's cross-OS check, ahead of SMAP v0.
+    - It builds the map of an in-memory repository with `fakeRepo` and pins the SHA-256 of its canonical JSON. `ci.yml` runs it on Ubuntu with Node 22, 24 and 26, and on Windows with Node 22.
+    - **The engine id is pinned next to the hash.** A change to the hash is reviewed like a snapshot: it comes with a new engine id, or with an entry here saying why older maps stay safe to plan from.
+    - **The fixture has every node kind the builder gives today:** files with modes `100644`, `100755` and `120000`, absent paths, directory listings, the workspaces set, an `import.meta.glob`, a directory URL, global and declared inputs, npm packages with a missing dependency, and two uncertain files. Two file names sort differently by UTF-16 code unit and by code point, and one is above U+FFFF.
+    - Two more assertions say what a failure means before anyone compares hashes: the node count per kind, and the uncertain files and provenance values present.
+    - Resolution hubs and SMAP v0 will each change the hash. Each then has to answer the engine question.
+  - **A lint rule keeps the machine out.** Under `packages/core/src/{graph,lex,lockfile,resolve,select}`, ESLint rejects the `process` global and imports of `node:os`, `node:process` and `environment.ts`.
+    - The golden map catches a dependency on the OS or the Node version, because CI varies both. It cannot catch an environment variable.
+    - `core/src/git` is left out: it runs git.
+  - **Superseded in earlier entries:** the `e:` node kind and its DECLARED edges (entry 23); recomputing `e:` nodes in Δ(S,H) (entry 24); "plan and map share one Node version" (entry 25); the first row of entry 27's table of where the code lags.
+- **Evidence.**
+  - **Same bytes on two systems, before any CI run.** The fixture's map hashes to `7ec52403…5c7fb7` on Windows 11 (x64, Node 26.4) and on Ubuntu under WSL (x64, Node 22.22). That Ubuntu's Node is built without TypeScript support, so it ran a type-stripped copy of the same sources.
+  - **10 hand mutants, all caught.**
+    - By the golden map and `static.test.ts`: an `e:platform` node with an edge from every test; an `e:runtime` node with no edge.
+    - By the golden map: the engine id set back to `sieve-static-1`.
+    - By lint: `static.ts` reading `process.platform`; `static.ts` importing `environment.ts`; `plan.ts` importing `node:os`.
+    - By `environment.test.ts`: the patch version kept in `runtime`; an unset variable read as empty; `envHash` returning the value; `environment()` ignoring the process it is given.
+    - By `config.test.ts`: `env.track` passed through to the rules.
+  - **`sieve graph` on this repository** at `4c89e79` emits no `e:` node. The map goes from 1,465 nodes and 2,807 edges to 1,463 and 2,749: two nodes, and two edges for each of 29 tests.
+  - **The synthetic 10,000-file repository** goes from 106,390 nodes and 684,501 edges to 106,388 and 683,501. `bench/static-graph.ts` runs without an environment; its recorded timings were not measured again.
+  - **An older map.** A map of this repository relabelled `sieve-static-1` gives a run-all plan with exit 0 and the cause above.
+  - **The soundness property** of entry 24 still passes its 2,000 runs. Its oracle never looked at the environment.
+  - 449 tests in 31 files pass. Lint, typecheck and the zero-dependency check are clean.

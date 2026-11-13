@@ -1,7 +1,7 @@
 # Hand-off: SIEVE milestone M1, after roadmap day 8
 
 - **Written:** 2026-11-11 (UTC), at `main` = `00fea91` plus this document.
-- **Updated:** 2026-11-14, after the foundation review and seven ADR corrections. Read §1.1 before anything else: it says where the documents now run ahead of the code.
+- **Updated:** 2026-11-14, after the foundation review and seven ADR corrections. Read §1.1 before anything else: it says where the documents now run ahead of the code. Item 2 of its worklist, the environment out of the map, is done (DECISIONS 28).
 - **For:** whoever continues the implementation, person or agent.
 - **Reading order:** this file, then [DECISIONS.md](DECISIONS.md), then the docs it points to.
 
@@ -30,6 +30,10 @@
   - [#12](https://github.com/ojassug/sieve/pull/12) raised Vitest's `testTimeout` to 20 s. The Windows job on `main` had timed out on a git-heavy corpus test after #11 merged.
   - `.github/workflows/sieve.yml` runs plan → shards → `sieve-gate` on every PR in shadow mode, and builds the map on pushes to `main`.
   - 416 tests pass in 29 files. See §7 and DECISIONS 25.
+- **Environment out of the map (2026-11-14, branch `m1/env-out-of-map`):**
+  - The map and the static plan hold nothing about any machine. The engine id is `sieve-static-2`, and `packages/core/test/graph/golden.test.ts` pins a fixture map's SHA-256 on every CI OS.
+  - 449 tests pass in 31 files. See §1.1 and DECISIONS 28.
+  - **Expect one run-all plan** wherever a cached `sieve-static-1` map meets the new planner, this change's own PR included. The summary gives the engine mismatch as the cause.
 
 **First four things to do:**
 1. Read §1.1. Seven ADRs changed on 2026-11-13, and the code has not caught up.
@@ -59,7 +63,7 @@
 **Where the code lags, and the order to fix it in.** The first four are M1 work and come before SMAP v0, because each changes what a map contains.
 
 1. **Selector backstops** (`core/select/plan.ts`). An unmapped input should make every node of its owning package changed, so the escalation follows the graph. Today L1 forces only the tests under that package's path. A changed module that no test reaches should escalate too. On this repository that rule would have caught the CLI sources, which `cli.test.ts` runs as a child process, without the hand-written rule in `sieve.config.json`. It would have fired on 14 of 70 recent commits, so let `inputs.ignore` cover unreached modules and list them in the summary.
-2. **Environment out of the map** (`core/graph/static.ts`). `e:runtime` and `e:platform` make one tree give different bytes on Linux and Windows. Remove them, then pin a fixture map's SHA-256 in a test that runs on every CI OS.
+2. ~~**Environment out of the map** (`core/graph/static.ts`).~~ Done on 2026-11-14 (DECISIONS 28). The `e:` nodes are gone from the map and from static selection, the engine id is `sieve-static-2`, and `golden.test.ts` pins a fixture map's SHA-256 on every CI OS. When a later item changes that hash, it must also say whether the engine id changes.
 3. **Resolution hubs** (`core/resolve`, `core/graph/static.ts`). Probes are 84% of edges at 10,000 files. The soundness property in `plan.test.ts` is the regression test, because its oracle shares no graph code.
 4. **SMAP v0:** the container, the snapshot layer and the static layer only. The record layer is a new section in M3.
 5. **M2:** the record schema of ADR-0005, three capture scopes, the runner's reported configuration, and resolution evidence for non-literal imports.
@@ -128,7 +132,7 @@ npm run typecheck
 npm run check:deps
 ```
 
-Expect `438 passed` from `npm test` (on `main` after #14), and no output from lint or typecheck. To reproduce the recorded benchmarks (§9), run `node bench/ls-tree.ts`, `node bench/lex.ts`, `node bench/graph.ts` and `node bench/static-graph.ts`.
+Expect `449 passed` from `npm test` (after DECISIONS 28), and no output from lint or typecheck. To reproduce the recorded benchmarks (§9), run `node bench/ls-tree.ts`, `node bench/lex.ts`, `node bench/graph.ts` and `node bench/static-graph.ts`.
 
 To try the CLI on this repository:
 
@@ -155,7 +159,8 @@ node packages/cli/src/main.ts plan --mode shadow --static --map .sieve/map
 | `packages/core/src/lockfile/npm.ts` | package-lock v2/v3 → `p:npm:<install location>`. Node-style `locate`, package-to-package dependencies, diff, lockfile detection; other formats are `unparseable` (L3) | `parseNpmLockfile`, `NpmLockfile.locate/dependencies`, `diffLockfiles`, `detectLockfile` | `test/lockfile/npm.test.ts` (16) |
 | `packages/core/src/index.ts` | The package's public exports. Workspace packages export `./src/*.ts` directly (DECISIONS 3) | — | — |
 | `packages/core/src/git/{cat-file,vfs}.ts` | `git cat-file --batch` parser; `GitVfs`, the resolver's `Vfs` over a `TreeIndex` with blobs from git | `readBlobs(cwd, oids)`, `CatFileParser`, `GitVfs.load`, `repoRoot` | `test/git/cat-file.test.ts`, `test/git/vfs.test.ts`, `test/git/git.test.ts` |
-| `packages/core/src/graph/{static,map}.ts` | The static graph builder and the M1 map (canonical JSON): node keys and hashes, edges, `u:` nodes (DECISIONS 23) | `buildStaticMap`, `parseMap`, `mapGraph`, `readLockfile`, `environment`, `isModule`/`isLexed` | `test/graph/static.test.ts`, `test/graph/map.test.ts` |
+| `packages/core/src/graph/{static,map}.ts` | The static graph builder and the M1 map (canonical JSON): node keys and hashes, edges, `u:` nodes (DECISIONS 23). A function of the tree, the config and the engine only (DECISIONS 28) | `buildStaticMap`, `ENGINE`, `parseMap`, `mapGraph`, `readLockfile`, `isModule`/`isLexed` | `test/graph/static.test.ts`, `test/graph/map.test.ts`, `test/graph/golden.test.ts` (the pinned fixture hash) |
+| `packages/core/src/environment.ts` | Environment components for the M2 recorder: runtime, platform and tracked variables. No caller yet, and lint keeps it out of the graph and selection modules (DECISIONS 28) | `environment`, `envHash` | `test/environment.test.ts` (6) |
 | `packages/core/src/select/plan.ts` | Δ(S,H) from a map to a head snapshot, escalations L1/L3, reverse BFS with why-paths (DECISIONS 24) | `selectStatic`, `runAll` | `test/select/plan.test.ts` (examples plus the 2,000-run soundness property) |
 | `packages/cli/src/` | `sieve graph`, `diff`, `plan`: `args.ts` (parseArgs, kickoff gap 1), `config.ts` (§5.1 validation, test discovery), `report.ts` (plan JSON, matrix, summary), `cli.ts`, `main.ts`. `bin: sieve` | `node packages/cli/src/main.ts --help` | `test/{args,config,report,cli}.test.ts` (`cli.test.ts` is end to end) |
 | `packages/vitest`, `packages/jest` | Placeholders for M2 | — | — |
@@ -300,7 +305,7 @@ GH_TOKEN="$(gh auth token)" node tools/corpus/src/main.ts --config tools/corpus/
       - `d:<dir>`: SHA-256 of the sorted name and kind entries, the same listing semantics as `diff.ts`'s `kindOf`; ⊥ if missing;
       - `g:<key>`: SHA-256 of the sorted matches. That includes the synthetic `workspaces` node, whose matches are `name=dir`;
       - `p:npm:<location>`: the lockfile hash;
-      - `e:<component>`: Node major.minor, OS/arch, and the env vars listed in `sieve.config.json`.
+      - ~~`e:<component>`: Node major.minor, OS/arch, and the env vars listed in `sieve.config.json`.~~ Removed on 2026-11-14: the environment belongs to a record, not to the map (DECISIONS 28).
    4. **Edges, all `STATIC`.** From the importer to:
       - every resolution target, absent path, `d:` directory, config and `g:` node;
       - the file's own configs (item 3);
@@ -312,7 +317,7 @@ GH_TOKEN="$(gh auth token)" node tools/corpus/src/main.ts --config tools/corpus/
       - Architecture §3.5's narrower rule (L1 only when the uncertain file changed) relies on dynamic coverage, which doesn't exist until M2/M3. Record whichever rule you pick in DECISIONS.
       - An unparseable lockfile, or more than one, is L3 (run all), per `detectLockfile`.
    6. **Test files.** Use the `projects` in `sieve.config.json` when present. Otherwise use Vitest's default include, `**/*.{test,spec}.?(c|m)[jt]s?(x)`, excluding `node_modules` and `**/fixtures/**`. For this repository that is `packages/*/test/**/*.test.ts`, `tools/*/test/**/*.test.ts` and `scripts/test/**/*.test.ts`.
-   7. **Δ(S,H).** Use `merkleDiff` for files and listings, recompute the hashes of the `d:`, `g:`, `p:` and `e:` nodes, and compare them with the map's.
+   7. **Δ(S,H).** Use `merkleDiff` for files and listings, recompute the hashes of the `d:`, `g:` and `p:` nodes, and compare them with the map's.
    8. **Selection.** Run `reverseReach(graph, Δ ∪ u-nodes)`. The affected tests run; give each a `whyPath`.
 5. **The map file.** For M1 it is canonical JSON (SMAP binary arrives in week 3): `version`, `objectFormat`, `rootTree`, sorted `nodes` (key → hash), sorted `edges` as `[from, to, provenance]`, `tests`, and the uncertain nodes. Store it at `.sieve/map/map.json`; `.sieve/` is already in `.gitignore`.
 
@@ -370,8 +375,9 @@ These come from the M1 row of [roadmap §1](docs/roadmap.md):
   - 24 of the 26 vetted repositories use them (19 pnpm, 5 yarn), so they gate the replay corpus in M4 ([bench/CORPUS.md](bench/CORPUS.md)).
   - Today `detectLockfile` reports both as unparseable (L3).
   - The YAML subset in `core/resolve/yaml.ts` is too small for `pnpm-lock.yaml`.
-- **The four M1 items of §1.1,** before SMAP: selector backstops, the environment out of the map, resolution hubs, then SMAP v0 itself.
+- **The four M1 items of §1.1,** before SMAP: selector backstops, ~~the environment out of the map~~ (done, DECISIONS 28), resolution hubs, then SMAP v0 itself.
 - **SMAP v0, byte-identical across OSes.**
+  - The JSON map already is: `golden.test.ts` pins one fixture's hash on every CI OS. SMAP v0 takes that fixture over for its static layer.
   - The provenance width is settled: one byte per edge, three bits defined (ADR-0009, DECISIONS 27).
   - v0 is the container, the snapshot layer and the static layer. The record layer comes in M3.
 - **`sieve explain`.**
@@ -437,7 +443,8 @@ These are honest limits, not bugs. Each one errs towards running more tests.
   - Every would-skip is unproven: anything a test reads through `fs` (fixtures, snapshots) is invisible statically. A changed file outside the graph escalates its owning package (L1), which covers most of it.
   - Every test that reaches an uncertain file always runs, whether or not anything changed.
   - Global inputs are found by conventional names (`vitest.setup.*`, `jest.setup.*` and runner configs). A setup file with another name must be listed in `inputs.global`.
-  - `e:runtime` and `e:platform` describe the machine that runs `sieve plan`, not the test shards'. ADR-0005 now puts that comparison in the job that runs the test, and ADR-0003 takes the nodes out of the map (§1.1).
+  - Nothing compares environments. The map and the static plan hold nothing about any machine (DECISIONS 28), and the check in the job that runs the test arrives with `sieve run` (M3). Until then a would-skip says nothing about the Node version or the OS, one more reason it stays unproven.
+  - `env.track` in `sieve.config.json` is validated and used for nothing until the M2 recorder reads it.
   - The JSON map is about 2.7 KB per file (26.7 MB at 10,000 files), and a plan re-parses it and rebuilds the CSR arrays (0.8 s at 10,000 files). SMAP fixes both. Extraction is not cached, so incremental builds are as slow as cold ones.
   - Only npm lockfiles are parsed. With pnpm or yarn, every bare import depends on the lockfile file, and any change to it runs everything (L3).
   - Precision costs seen on hono:
@@ -476,7 +483,7 @@ These are honest limits, not bugs. Each one errs towards running more tests.
   - Name byte-exact fixtures `*.crlf.*`, so `.gitattributes` keeps their CRLF bytes.
   - Resolver fixtures declare symlinks in `_symlinks.json` and expectations in `_expected.json`.
 - **Line endings.** `* text=auto eol=lf` keeps the working tree LF even with `core.autocrlf=true`.
-- **Git worktrees.** A worktree under `.claude/worktrees/` has no `node_modules` of its own, so `@sieve-ci/core` resolves to the main checkout's sources, not the worktree's. Link the worktree's packages into its own `node_modules/@sieve-ci/` (directory junctions, no download) and delete `node_modules/.vitest-cache`, or tests and the CLI run stale code.
+- **Git worktrees.** A worktree under `.claude/worktrees/` has no `node_modules` of its own, so `@sieve-ci/core` resolves to the main checkout's sources, not the worktree's. Link the worktree's packages into its own `node_modules/@sieve-ci/` (directory junctions, no download) and delete `node_modules/.vitest-cache`, or tests and the CLI run stale code. PowerShell's `New-Item -ItemType Junction` does it; `mklink` is awkward to quote from Git Bash.
 - **Credentials.** `gh` is authenticated as `ojassug`.
 - **Scratch scripts are not in the repo:** the vetting and survey scripts behind CORPUS.md, and the hand-mutation helper.
   - The method is described in CORPUS.md and in the PR descriptions of #2 and #4–#7.
@@ -515,6 +522,7 @@ These are honest limits, not bugs. Each one errs towards running more tests.
 | 25 | The walking skeleton in CI |
 | 26 | Directory URLs as dependencies |
 | 27 | The foundation review and the seven ADR corrections |
+| 28 | The environment out of the static map, engine `sieve-static-2`, the golden map |
 
 **Status of the kickoff doc gaps** (DECISIONS 1):
 
