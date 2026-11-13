@@ -442,6 +442,10 @@ Implementation decisions too small or too local for an ADR, plus session hand-ov
     - one over names such as `a[1]`, `b(x)`, `!f`, `g+(h)` and `i@(j)`, plus `l*`, `m?` and `n|o` off Windows, each with an unlisted twin that the unescaped name would match as a glob.
 
     Mutants that skip escaping, or escape only brackets, fail both end-to-end runs. A config that ignores the list fails the first.
+  - **In CI (done when, met 2026-11-13).**
+    - **No map yet.** #13's run 43435242836 missed the cache, ran all 29 files in shards of 10, 10 and 9, and the gate passed. The Windows job then caught a test-only path bug: `os.tmpdir()` is an 8.3 short path there.
+    - **Map cached.** The merge's push run 43435914996 built the map in 153 ms (1,464 nodes, 2,804 edges) and cached it as `sieve-map-f065f80…`, 39 KiB.
+    - **Shadow summary.** #14's run 43479358998 restored that map. Static reachability would run 11 of 29 test files, each with a why-path, and skip 18 (unproven), as the local dry run predicted.
 
 ## 26. A directory named by `new URL(…, import.meta.url)` is a dependency
 

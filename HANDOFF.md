@@ -18,7 +18,7 @@
 | 6–7 | `core/resolve`: resolver with recorded probes, JSONC, YAML subset, globs | [#6](https://github.com/ojassug/sieve/pull/6) | Met: 5 fixture repos pass |
 | 8 | `core/lockfile/npm`: `p:` nodes, lookup, diff; other formats reported as L3 | [#7](https://github.com/ojassug/sieve/pull/7) | Met |
 | 9 | CLI v0: `sieve graph`, `sieve diff`, `sieve plan --static --shadow --map` | [#11](https://github.com/ojassug/sieve/pull/11) | Met: runs on this repository and on honojs/hono (§6) |
-| 10 | Walking skeleton in CI on this repo: `.github/workflows/sieve.yml` | branch `m1/d10-skeleton` | Run-all fallback shown on the first PR; the shadow summary needs a second PR after merge (§7) |
+| 10 | Walking skeleton in CI on this repo: `.github/workflows/sieve.yml` | [#13](https://github.com/ojassug/sieve/pull/13) | Met: run-all fallback on #13, map cached from `main`, shadow summary with why-paths on [#14](https://github.com/ojassug/sieve/pull/14) (§7, DECISIONS 25) |
 
 **Health at hand-off.**
 - **Tests:** 239 in 18 files, all passing on Windows 11 with Node 26.4.
@@ -32,8 +32,8 @@
 
 **First three things to do:**
 1. Check that the collector is making progress (§5.3): coverage should grow with each daily run.
-2. Finish day 10's demonstration (§7): after `m1/d10-skeleton` merges and `main` has cached a map, the next PR that changes code should show the shadow summary with why-paths.
-3. Start the rest of M1 (§8).
+2. Start the rest of M1 (§8). Every PR now shows SIEVE's shadow summary: read it, and record any would-skip that should have run.
+3. Decide with Ojas whether `sieve-gate` becomes a required check (§10).
 
 ## 2. Ground rules that carry over
 
@@ -299,7 +299,10 @@ GH_TOKEN="$(gh auth token)" node tools/corpus/src/main.ts --config tools/corpus/
 **Status (2026-11-13):** built on branch `m1/d10-skeleton`, following the plan below; DECISIONS 25 records where it chose or deviated.
 - Shards get their file lists through `SIEVE_TEST_FILES`, which `vitest.config.ts` reads.
 - `sieve.config.json` sets 3 shards and declares that the CLI end-to-end test depends on `packages/cli/src/**`.
-- Step 1 of the demonstration below is the branch's own PR. Steps 2 and 3 follow its merge.
+- **Done when: met (2026-11-13).**
+  1. #13's run [43435242836](https://github.com/ojassug/sieve/actions/runs/43435242836) found no map and ran all 29 files, saying why.
+  2. The merge's push run [43435914996](https://github.com/ojassug/sieve/actions/runs/43435914996) cached `sieve-map-f065f80…`.
+  3. #14's run [43479358998](https://github.com/ojassug/sieve/actions/runs/43479358998) restored it, and static reachability would run 11 of 29, with why-paths.
 
 The spec is [roadmap §5](docs/roadmap.md) plus architecture §5.3 and §5.4. Build `.github/workflows/sieve.yml`:
 
