@@ -8,7 +8,7 @@
 // result depends only on what it recorded. Anything it cannot decide is `unresolved`, never
 // silently dropped.
 import type { ImportKind } from '../lex/ts.ts';
-import { globToRegExp, matchGlobs } from './glob.ts';
+import { escapeGlob, globToRegExp, matchGlobs } from './glob.ts';
 import { parseJsonc } from './jsonc.ts';
 import { parsePnpmWorkspace } from './yaml.ts';
 
@@ -187,7 +187,7 @@ export class Resolver {
       if (target === null) {
         ev.note('outside repository');
       } else {
-        this.probe(target, ev);
+        this.resolveUrl(target, ev);
       }
       return finish(ev, false);
     }
@@ -613,6 +613,39 @@ export class Resolver {
       ev.targets.add(match);
     }
     ev.globs.set(absolute.join('|'), { matches, patterns: absolute });
+  }
+
+  /**
+   * `new URL(spec, import.meta.url)` names an asset or a directory. A directory's files are all
+   * dependencies, since the code may read any of them, and the glob over them records files that
+   * appear. A missing path may yet become a directory. A symlink below the directory is followed to
+   * the file it names; one that leads to a directory or out of the repository leaves the URL
+   * unresolved, since what the code could read below it is unknowable.
+   */
+  private resolveUrl(target: string, ev: Evidence): void {
+    const kind = this.probe(target, ev);
+    if (kind === null) {
+      ev.dirs.add(target);
+      return;
+    }
+    if (kind !== 'dir') {
+      return;
+    }
+    const pattern = target === '' ? '**' : `${escapeGlob(target)}/**`;
+    const matches = matchGlobs(this.vfs.files(), [pattern]);
+    ev.globs.set(pattern, { matches, patterns: [pattern] });
+    for (const match of matches) {
+      const link = new Evidence();
+      this.probe(match, link);
+      if (link.reason !== undefined) {
+        ev.note(link.reason);
+        ev.targets.clear();
+        return;
+      }
+      for (const path of link.targets) {
+        ev.targets.add(path);
+      }
+    }
   }
 
   /** `__mocks__/<name>` next to each resolved module, as Jest and Vitest manual mocks are found. */
