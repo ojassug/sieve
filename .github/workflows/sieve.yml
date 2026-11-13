@@ -23,8 +23,10 @@ concurrency:
   group: sieve-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
-# The map records the Node version and platform as environment nodes that every test depends on.
-# Plan and build it on the same runner image and Node version, or every test counts as affected.
+# One Node version for every job, to keep the workflow simple. The map does not depend on it, nor
+# on the runner's OS: a map is a function of the tree, the config and the engine only, so any job
+# may build it and any job may plan from it (ADR-0003, DECISIONS 28). Whether a record fits the
+# machine that runs a test is checked in that job, once records exist (ADR-0005, M3).
 env:
   NODE_VERSION: 26
 

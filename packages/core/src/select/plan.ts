@@ -3,15 +3,19 @@
 // unproven static reachability, reported in shadow mode only.
 //
 // Δ(S,H): files and listings come from the Merkle descent against the snapshot stored in the map;
-// g:, p: and e: nodes are recomputed at H and compared. Every u: node is always a seed. What the
+// g: and p: nodes are recomputed at H and compared. Every u: node is always a seed. What the
 // graph cannot see escalates: a changed file outside the graph runs its owning package (L1), and a
 // map or input that cannot be trusted runs everything (L3).
+//
+// The environment is no part of this (ADR-0003, DECISIONS 28). A plan is a function of the map,
+// the head tree and the config; whether a record fits the machine that runs a test is checked in
+// that job, once records exist (ADR-0005).
 import { merkleDiff, TreeIndex, type FileChange } from '../git/diff.ts';
 import type { ObjectFormat } from '../git/git.ts';
 import type { ObjectType } from '../git/ls-tree.ts';
 import { reverseReach, whyPath } from '../graph/graph.ts';
 import { mapGraph } from '../graph/map.ts';
-import { envHash, globHash, isModule, readLockfile, type LockfileState, type MapLockfile, type SieveMap } from '../graph/static.ts';
+import { globHash, isModule, readLockfile, type LockfileState, type MapLockfile, type SieveMap } from '../graph/static.ts';
 import { LOCKFILE_PATHS } from '../lockfile/npm.ts';
 import { matchGlobs } from '../resolve/glob.ts';
 import { Resolver, type Vfs } from '../resolve/resolver.ts';
@@ -26,8 +30,6 @@ export interface HeadState {
   readonly tests: readonly string[];
   /** The blob id of sieve.config.json at H, or null. */
   readonly config: string | null;
-  /** Environment components, as `environment` computes them. */
-  readonly env: Readonly<Record<string, string | null>>;
 }
 
 export interface PlanRules {
@@ -188,7 +190,7 @@ function describe(lockfile: MapLockfile | LockfileState): string {
   return lockfile.kind === 'npm' ? lockfile.path : lockfile.kind === 'unparseable' ? lockfile.paths.join(', ') : 'none';
 }
 
-/** g:, p: and e: nodes whose hash at H differs from the map's. */
+/** g: and p: nodes whose hash at H differs from the map's. */
 function recomputedChanges(map: SieveMap, head: HeadState, lockfile: LockfileState): string[] {
   const changed: string[] = [];
   const packages = lockfile.kind === 'npm' ? lockfile.lockfile.packages : new Map<string, { hash: string }>();
@@ -203,8 +205,6 @@ function recomputedChanges(map: SieveMap, head: HeadState, lockfile: LockfileSta
       now = patterns === undefined ? undefined : globHash(matchGlobs(files, patterns));
     } else if (key.startsWith('p:npm:')) {
       now = packages.get(key.slice('p:npm:'.length))?.hash ?? null;
-    } else if (key.startsWith('e:')) {
-      now = envHash(head.env[key.slice(2)] ?? null);
     } else {
       continue;
     }

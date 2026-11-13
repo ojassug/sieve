@@ -385,7 +385,7 @@ Each spec covers input, output, algorithm, complexity, the safety or correctness
   - `p:eco:location`: an external package. Hash = the lockfile's integrity/version for that install location (npm `packages["node_modules/x"]`, pnpm `name@version(peer)`, yarn berry descriptor).
   - `g:glob@base`: hash of the sorted matched paths (`import.meta.glob`, declared globs).
   - `r:path` and `c:dir`: resolution hubs ([ADR-0003](adr/0003-file-level-graph-granularity.md)). `r:` stands for the probes of one resolved path and `c:` for one directory's config chain, so an importer has one edge per import, not one per probe. Decided on 2026-11-13 and not built yet: the M1 code records each probe as its own edge.
-  - **Environment components are not nodes.** OS and architecture, the runtime version, declared env vars, the runner and its effective configuration, the matrix cell and TZ/locale belong to a record, and are compared in the job that runs the test (§3.3). The M1 map still carries `e:runtime` and `e:platform` nodes; they leave it with SMAP v0.
+  - **Environment components are not nodes.** OS and architecture, the runtime version, declared env vars, the runner and its effective configuration, the matrix cell and TZ/locale belong to a record, and are compared in the job that runs the test (§3.3). **As built:** the M1 map has had no `e:` node since 2026-11-14, and a static plan compares no environment at all until `sieve run` does it in the shard (M3). `packages/core/test/graph/golden.test.ts` pins one fixture map's SHA-256, and CI runs it on Ubuntu and Windows ([DECISIONS.md](../DECISIONS.md) entry 28).
   - `sm:path`: submodule gitlink, hash = commit OID.
 - **Snapshot** = (repo, root tree OID, env fingerprint). Git's tree objects *are* the Merkle tree: equal tree OIDs prove equal subtrees, and they are available in `--depth 1` clones.
 - **Diff protocol (2 round trips).**
@@ -654,7 +654,7 @@ Every escalation appears in the plan summary with its cause. L0 is file-precise.
   - **Container:** a header (magic, format version, hash algorithm, static engine id), a section table with a version per section, and a SHA-256 trailer. A map that fails any check is invalid, and the plan runs everything.
   - **Three layers, each with its own content address:** the snapshot (the tree listing); the static graph, which is a function of the tree, the config and the engine alone and so has the same bytes on every OS; and, from M3, the records, per test and environment cell.
   - **Encoding:** a node's identity is its key string, and numeric ids never leave one file. Keys are sorted by UTF-16 code units and front-coded. Adjacency is stored forward only, and the decoder derives the reverse index. Provenance is one byte per edge: bit 0 static, bit 1 dynamic, bit 2 declared.
-  - **Until SMAP v0 is built** (M1, week 3), the map is the canonical JSON of [DECISIONS.md](../DECISIONS.md) entry 23.
+  - **Until SMAP v0 is built** (M1, week 3), the map is the canonical JSON of [DECISIONS.md](../DECISIONS.md) entry 23, without its `e:` nodes (entry 28). It already has the same bytes on every OS, and a pinned fixture hash checks that in CI.
 - **Chunking** per workspace package, with chunk-local ids and an import table, is defined when the server needs it (M5). Until then a map is one file.
 - **Hashing** ([ADR-0010](adr/0010-hashing.md)). Git's object hash for file contents. SHA-256 (node:crypto) for everything SIEVE computes: digests, fingerprints, CAS keys.
 - **GC.** Per-repo mark-and-sweep.
@@ -715,6 +715,7 @@ Notes on the schema, as the M1 CLI implements it ([DECISIONS.md](../DECISIONS.md
 - A project may also give `include` and `exclude`, test-file globs relative to its `root`. Without them, Vitest projects use Vitest's default include and Jest projects Jest's default `testMatch`, both without `**/node_modules/**` and `**/fixtures/**`. SIEVE plans Vitest and Jest projects; the others (and `results-only` ones) are listed in the summary as not planned.
 - `inputs.global` adds to the conventional global inputs (root `package.json`, `.env*`, Vite, Vitest and Jest configs, and `vitest.setup.*`/`jest.setup.*`); `inputs.ignore` replaces the default ignore list of §3.5.
 - In M1 the CLI validates `server`, `generated`, `quarantine`, `auditRate` and `trustPullRequestsFrom` (only `writers` is defined), but does not use them yet.
+- `env.track` is validated and not used either. Tracked variables are environment components, which belong to a record and not to the map (§3.1), so their first reader is the M2 recorder ([DECISIONS.md](../DECISIONS.md) entry 28).
 
 ### 5.2 CLI ↔ server API v1
 Versioning:

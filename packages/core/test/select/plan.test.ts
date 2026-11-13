@@ -10,14 +10,13 @@ import { fakeRepo, type FakeRepo } from '../graph/fake-repo.ts';
 
 type Files = Record<string, string>;
 const isTest = (path: string) => /\.test\.[jt]s$/.test(path);
-const ENV = { runtime: 'node 26.4', platform: 'linux-x64' };
 
 function mapOf(repo: FakeRepo, options: Partial<StaticInput> = {}): SieveMap {
-  return buildStaticMap({ objectFormat: 'sha1', index: repo.index, vfs: repo.vfs, sources: repo.sources, tests: repo.vfs.files().filter(isTest), env: ENV, ...options });
+  return buildStaticMap({ objectFormat: 'sha1', index: repo.index, vfs: repo.vfs, sources: repo.sources, tests: repo.vfs.files().filter(isTest), ...options });
 }
 
 function headOf(repo: FakeRepo, options: Partial<HeadState> = {}): HeadState {
-  return { objectFormat: 'sha1', index: repo.index, vfs: repo.vfs, tests: repo.vfs.files().filter(isTest), config: null, env: ENV, ...options };
+  return { objectFormat: 'sha1', index: repo.index, vfs: repo.vfs, tests: repo.vfs.files().filter(isTest), config: null, ...options };
 }
 
 function plan(base: Files, head: Files, rules: PlanRules = {}, mapOptions: Partial<StaticInput> = {}, headOptions: Partial<HeadState> = {}): Selection {
@@ -85,12 +84,6 @@ describe('selectStatic', () => {
     const selection = plan(BASE, head);
     expect(selection.changed).toEqual(['p:npm:node_modules/lodash']);
     expect(selected(selection)).toEqual(['test/c.test.ts']);
-  });
-
-  it('selects every test when the environment changes', () => {
-    const selection = plan(BASE, BASE, {}, {}, { env: { ...ENV, runtime: 'node 26.5' } });
-    expect(selection.changed).toEqual(['e:runtime']);
-    expect(selected(selection)).toEqual(['test/a.test.ts', 'test/c.test.ts', 'test/plain.test.ts']);
   });
 
   it('selects bare importers when the workspace packages change', () => {

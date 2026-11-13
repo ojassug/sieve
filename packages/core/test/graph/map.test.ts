@@ -7,7 +7,7 @@ import { buildStaticMap, type SieveMap } from '../../src/graph/static.ts';
 import { fakeRepo } from './fake-repo.ts';
 
 const repo = fakeRepo({ 'src/a.ts': "import './b';\n", 'src/b.ts': '', 'a.test.ts': "import './src/a';\n" });
-const map = buildStaticMap({ objectFormat: 'sha1', index: repo.index, vfs: repo.vfs, sources: repo.sources, tests: ['a.test.ts'], env: { runtime: 'node 26.4' } });
+const map = buildStaticMap({ objectFormat: 'sha1', index: repo.index, vfs: repo.vfs, sources: repo.sources, tests: ['a.test.ts'] });
 const text = canonicalJson(map);
 const edit = (change: (raw: Record<string, unknown>) => void): string => {
   const raw = JSON.parse(text) as Record<string, unknown>;

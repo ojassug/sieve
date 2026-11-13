@@ -17,7 +17,6 @@ import {
   buildStaticMap,
   canonicalJson,
   canonicalJsonPretty,
-  environment,
   GitVfs,
   isLexed,
   lsTree,
@@ -140,7 +139,7 @@ try {
   const sourceBytes = [...sources.values()].reduce((sum, bytes) => sum + bytes.length, 0);
   const map = parseMap(readFileSync(join(out, 'map.json'), 'utf8'));
   const tests = [...map.tests];
-  const build = await time(() => buildStaticMap({ objectFormat, index, vfs: vfs.result, sources, tests, global: DEFAULT_GLOBAL, env: environment([]) }));
+  const build = await time(() => buildStaticMap({ objectFormat, index, vfs: vfs.result, sources, tests, global: DEFAULT_GLOBAL }));
   const serialize = await time(() => canonicalJson(build.result));
   const edges = Object.values(map.edges).reduce((sum, edgesOut) => sum + Object.keys(edgesOut).length, 0);
 
@@ -152,7 +151,7 @@ try {
     const graph = await time(() => mapGraph(parse.result));
     const head = TreeIndex.build(await lsTree(dir, headRev));
     const headVfs = await GitVfs.load(dir, head);
-    const select = await time(() => selectStatic(parse.result, { objectFormat, index: head, vfs: headVfs, tests, config: null, env: environment([]) }, {}));
+    const select = await time(() => selectStatic(parse.result, { objectFormat, index: head, vfs: headVfs, tests, config: null }, {}));
     plan = { parseMs: parse.ms, graphMs: graph.ms, selectMs: select.ms, affected: select.result.affected.length, graphNodes: graph.result.nodeCount };
   }
 

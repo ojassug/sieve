@@ -11,7 +11,6 @@ import {
   canonicalJson,
   canonicalJsonPretty,
   diffLockfiles,
-  environment,
   GitVfs,
   isLexed,
   lsTree,
@@ -122,7 +121,6 @@ async function graph(command: Extract<Command, { name: 'graph' }>, io: Io): Prom
     tests: discoverTests(files, config).tests,
     global: rules.global,
     declared: rules.declared,
-    env: environment(rules.track),
     config: snapshot.config?.oid ?? null,
   });
   const text = `${canonicalJson(map)}\n`;
@@ -203,8 +201,7 @@ async function plan(command: Extract<Command, { name: 'plan' }>, io: Io): Promis
     selection = runAll(tests, fallback!);
   } else {
     try {
-      const track = Object.keys(map.nodes).filter((key) => key.startsWith('e:env/')).map((key) => key.slice('e:env/'.length));
-      const state = { objectFormat: head.objectFormat, index: head.index, vfs: head.vfs, tests, config: head.config?.oid ?? null, env: environment(track) };
+      const state = { objectFormat: head.objectFormat, index: head.index, vfs: head.vfs, tests, config: head.config?.oid ?? null };
       selection = selectStatic(map, state, { ignore: rules.ignore, alwaysRun: rules.alwaysRun });
     } catch (error) {
       // A bug must not block CI either: run everything and say why.

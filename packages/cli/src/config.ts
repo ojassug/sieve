@@ -30,6 +30,7 @@ export interface SieveConfig {
     readonly generated?: readonly { readonly outputs: string; readonly inputs: readonly string[] }[];
     readonly ignore?: readonly string[];
   };
+  /** Validated and not used yet: tracked variables belong to a record (M2), not to the map or a static plan (DECISIONS 28). */
   readonly env?: { readonly track?: readonly string[] };
   readonly selection?: { readonly mode?: Mode; readonly auditRate?: number; readonly alwaysRun?: readonly string[]; readonly trustPullRequestsFrom?: 'writers' };
   readonly quarantine?: { readonly enabled?: boolean; readonly strict?: boolean; readonly sprt?: { readonly p0: number; readonly p1: number; readonly alpha: number; readonly beta: number } };
@@ -249,7 +250,6 @@ export interface Rules {
   readonly declared: readonly DeclaredRule[];
   readonly ignore: readonly string[];
   readonly alwaysRun: readonly string[];
-  readonly track: readonly string[];
   readonly shards: number;
   readonly mode: Mode;
 }
@@ -261,7 +261,6 @@ export function rulesOf(config: SieveConfig): Rules {
     declared: config.inputs?.declared ?? [],
     ignore: config.inputs?.ignore ?? DEFAULT_IGNORE,
     alwaysRun: config.selection?.alwaysRun ?? [],
-    track: config.env?.track ?? [],
     shards: config.sharding?.max ?? 1,
     mode: config.selection?.mode ?? 'shadow',
   };

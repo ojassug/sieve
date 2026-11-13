@@ -108,12 +108,16 @@ describe('discoverTests', () => {
 
 describe('rulesOf', () => {
   it('applies the defaults', () => {
-    expect(rulesOf({ version: 1 })).toEqual({ global: DEFAULT_GLOBAL, declared: [], ignore: DEFAULT_IGNORE, alwaysRun: [], track: [], shards: 1, mode: 'shadow' });
+    expect(rulesOf({ version: 1 })).toEqual({ global: DEFAULT_GLOBAL, declared: [], ignore: DEFAULT_IGNORE, alwaysRun: [], shards: 1, mode: 'shadow' });
+  });
+
+  it('gives env.track no effect until records exist: it is validated only', () => {
+    expect(rulesOf(parseConfig(JSON.stringify({ version: 1, env: { track: ['NODE_ENV', 'TZ'] } })))).toEqual(rulesOf({ version: 1 }));
   });
 
   it('adds declared global inputs to the defaults and takes everything else from the config', () => {
     const rules = rulesOf(parseConfig(JSON.stringify(EXAMPLE)));
     expect(rules.global).toEqual([...DEFAULT_GLOBAL, '.env.test']);
-    expect(rules).toMatchObject({ ignore: ['**/*.md', 'docs/**'], track: ['NODE_ENV', 'TZ'], shards: 16, mode: 'shadow', declared: EXAMPLE.inputs.declared });
+    expect(rules).toMatchObject({ ignore: ['**/*.md', 'docs/**'], shards: 16, mode: 'shadow', declared: EXAMPLE.inputs.declared });
   });
 });
