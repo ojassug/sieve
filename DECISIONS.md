@@ -442,3 +442,31 @@ Implementation decisions too small or too local for an ADR, plus session hand-ov
     - one over names such as `a[1]`, `b(x)`, `!f`, `g+(h)` and `i@(j)`, plus `l*`, `m?` and `n|o` off Windows, each with an unlisted twin that the unescaped name would match as a glob.
 
     Mutants that skip escaping, or escape only brackets, fail both end-to-end runs. A config that ignores the list fails the first.
+
+## 26. A directory named by `new URL(…, import.meta.url)` is a dependency
+
+- **Context.** The lexer records `new URL(spec, import.meta.url)` as a `url` record, so assets next to a module are dependencies. When `spec` named a directory (`'.'`, `'..'`, `'./fixtures/'`), the resolver found no file and reported it as unresolved ("not found"), which made the file uncertain: every test reaching it always ran.
+  - Day 10 hit this in `vitest.config.ts`, a global input, where it would have selected every test on every change (entry 25).
+  - On honojs/hono it made test files uncertain whose only problem was a fixtures directory.
+  - The same pattern written as `import.meta.dirname` was invisible altogether, so the stricter treatment fell only on one spelling.
+- **Decision.**
+  - **A directory URL** depends on every file below it, since the code may read any of them. The resolution's targets are those files, recorded as a glob over `<dir>/**` (`g:glob:<dir>/**`), so a file appearing there changes the glob's hash. `'..'` up to the repository root gives `**`, every file.
+  - **Directory names are glob-escaped.** The dialect has no escape character, so `escapeGlob` writes `*`, `?` and `[` as one-character classes, `{` as a one-option brace, and a leading `!` as a class.
+  - **A missing target** is recorded as a directory that may yet appear (a `d:` node), as for imports.
+  - **Symlinks and submodules below the directory.** A symlink to a file is followed, and both count. A symlink to a directory or out of the repository, or a submodule, leaves the URL unresolved: what the code could read below it cannot be listed.
+  - **Selection (L1).** An added file that a glob of the map matches no longer escalates its package. It shows in Δ as that glob's changed hash, which selects exactly its dependents, like a new module's probes. This covers directory URLs, `import.meta.glob`, `inputs.global` and declared inputs. A new file no glob matches still escalates.
+  - **The engine stays `sieve-static-1`.** The planner never re-resolves at H: it trusts the map's edges and only recomputes node hashes, whose definitions did not change.
+    - An old map read by the new planner selects what the old engine would have.
+    - A new map read by an old planner uses the same glob dialect, and escalates more, not less.
+    - So `ENGINE` changes when hash definitions or the reading of a map change, not when the builder becomes more precise.
+  - **Code that walks out of the directory** (`new URL('.', import.meta.url)` and then `../src`) reads files this does not record. Like any `fs` read, that is why every would-skip stays unproven until records exist (M2/M3).
+- **Evidence.**
+  - **Resolver examples:** a file, a directory with or without a trailing slash, `'.'`, the root, `app/[slug]`, a symlink to a file, symlinks to a directory and out of the repository, a missing path and a path outside the repository.
+  - **Evidence-completeness property.** It now also runs over `url` records, with directory specifiers added. It caught a mutant that dropped the "may yet become a directory" record: an absent target that became a directory changed the result unseen.
+  - **`escapeGlob` properties:** 2,000 pairs of paths built from glob characters. The escaped glob matches exactly its path, and with `/**` exactly the path and what is below it, never as an exclude.
+  - **Selection examples:** the importer is not uncertain; a file changing below the directory selects it with a why-path; a file appearing selects it with no escalation; a new file outside any glob still escalates; the directory appearing selects it through `d:`.
+  - **7 hand mutants were all caught:** no escaping; no "may yet become a directory"; no glob; symlinks not checked; files not targets; the L1 exemption dropped; every added file exempt.
+  - **On hono** at `f6fbaf02`, uncertain files fall from 45 to 44. Nodes rise from 3,288 to 3,377 and edges from 13,543 to 14,453.
+    - `adapters/deno/test/serve-static.test.ts` now depends on `adapters/deno/test/**`.
+    - `build/declaration-emit.test.ts` depends on its fixtures directory, and on `**` through `new URL('..', import.meta.url)`, which names the repository root.
+  - **On this repository**, `vitest.config.ts` keeps `import.meta.dirname`. A root-directory URL in a global input would now be a dependency on every file, which still selects every test on any change.
