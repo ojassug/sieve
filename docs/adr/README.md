@@ -3,6 +3,7 @@
 All 21 ADRs below were accepted on 2026-11-11 in the planning session.
 - Until implementation starts on 2026-11-16, ADRs may be corrected in place. After that, a change to a decision is a new ADR that supersedes the old one.
 - "Decided by Ojas" marks product calls made directly in that session.
+- **Corrected in place on 2026-11-13:** ADRs 0003, 0004, 0005, 0009, 0012, 0014 and 0021, after the [foundation review](../research/2026-11-foundation-review.md). Each one's status line names the findings behind its change. [DECISIONS.md](../../DECISIONS.md) entry 27 summarizes what changed and what the code still has to catch up on.
 
 | # | Decision |
 |---|---|

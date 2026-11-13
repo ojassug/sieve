@@ -38,5 +38,5 @@ A map that fails any check is invalid, and the plan runs everything.
 
 ## Consequences
 - The format is versioned, with golden vectors, round-trip property tests and decoder fuzzing. One golden vector has a path with a character above U+FFFF.
-- CI asserts one fixture repository's static-layer hash on every OS. A change to that hash without a change to the engine id fails the build.
+- CI asserts one fixture repository's static-layer hash on every OS. A change to that hash is reviewed like a snapshot: it comes with a new engine id, or with a recorded reason why maps from the older builder stay safe to plan from ([DECISIONS.md](../../DECISIONS.md) entry 26).
 - The record layer is an addition to the container, not a new format.

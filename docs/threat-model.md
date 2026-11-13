@@ -1,6 +1,6 @@
 # SIEVE threat model and adversarial review
 
-- **Status:** approved 2026-11-11.
+- **Status:** approved 2026-11-11. §1.3 and the table in §2.1 were corrected on 2026-11-13 after the [foundation review](research/2026-11-foundation-review.md), together with ADR-0012, ADR-0014 and ADR-0021.
 - **Related:**
   - [architecture.md](architecture.md) (§3 algorithms, §7 verification);
   - ADRs [0011](adr/0011-tenancy-rls.md) (tenancy), [0012](adr/0012-ci-auth-and-trust-lanes.md) (CI auth and trust lanes), [0010](adr/0010-hashing.md) (hashing).
@@ -27,9 +27,14 @@
 - **Audit log** records logins, token creation and revocation, settings, quarantine overrides, forced runs, manual skips and exports.
 
 ### 1.3 Trust lanes and map poisoning ([ADR-0012](adr/0012-ci-auth-and-trust-lanes.md))
-- **Trusted lanes** are default-branch pushes and schedules, `merge_group`, `workflow_dispatch` by writers, and same-repo PRs whose `author_association` is OWNER, MEMBER or COLLABORATOR.
-- **Untrusted lanes** are fork PRs, first-time contributors and unknown actors.
-- Untrusted records **never** become skip evidence or flake observations outside their own PR. Otherwise a fork could fabricate passes to force future skips, or flips to get a test quarantined and its real failure ignored.
+- **Three lanes**, set from a run's verified claims (`event_name`, `ref`, `job_workflow_ref`) and never from what the client reports:
+  - **evidence:** runs of reviewed code, which are pushes and schedules on the default branch, `workflow_dispatch` on the default branch, and `merge_group`;
+  - **pull request:** any pull-request run that can authenticate, whoever its author is;
+  - **untrusted:** fork PRs and unknown actors, which cannot authenticate.
+- **Only evidence-lane runs change shared state:** records, static graph segments, the extraction cache and flake state. Otherwise a fork could fabricate passes to force future skips, or flips to get a test quarantined and its real failure ignored.
+- **A pull-request run is evidence for its own pull request only**, even from an owner or member. Its code and its workflow are unreviewed: a branch that narrows its test command, or breaks the recorder, would otherwise produce passing records that everyone else's plans rely on.
+- **Flake observations** from a pull request count toward shared state only when the test's inputs are inputs the default branch has had, or together with a flaky failure from the default branch or a second pull request ([ADR-0014](adr/0014-flake-decisions-sprt.md)). No single pull request can quarantine a test.
+- **Lite mode** gets the same split from GitHub's cache scopes: only trusted triggers on the default branch can write its scope, and a pull request's cache is readable by that pull request alone ([ADR-0021](adr/0021-lite-mode-actions-cache.md)).
 - **Fork PR flow:**
   - Fork runs get a read-only token and no secrets (verified); secondary sources say OIDC is also withheld.
   - On opted-in public repos they may run an anonymous read-only plan (rate-limited); otherwise they run everything.
@@ -71,7 +76,16 @@
 | Cached failure masquerading as pass | Only passing trusted records are evidence; known-failing tests always run |
 | Record from an untrusted run | Lanes |
 | SIEVE bug (resolver, mapper, BFS) | Shadow mode for 4 clean weeks before enforcement; audit sampling; nightly full runs; independent naive verifier (P4); seeded-fault replay; incident workflow freezing the package |
-| External services, network, time | Outside assumption A1 by definition. Documented; these tests show up in the flake ledger; nightly runs keep them exercised |
+| External services, network, time | Outside assumption A1 by definition. Documented; these tests show up in the flake ledger; nightly runs keep them exercised; a record older than the configured horizon is no longer evidence |
+| Inputs read outside a test's own worker: transform and plugin configuration, global setup, files and packages the runner config names by a string | Three capture scopes (test file, worker, run), the runner's reported effective configuration, and escalation of any changed node that no test reaches ([ADR-0005](adr/0005-closure-equality-safety-criterion.md)) |
+| A test file the runner would run and SIEVE's own discovery does not find | The runner decides what a test is: `sieve run` also runs every discovered file the plan does not mention ([ADR-0004](adr/0004-test-file-selection-unit.md)) |
+| An environment that differs between the plan job and the shard, or between matrix cells | Records are per environment, and equality is checked in the job that runs the test |
+| A record made by unreviewed pull-request code, such as a narrowed test command | Only evidence-lane runs change shared state (§1.3); the runner's effective configuration is part of the environment |
+| A module found only at run time that a new file would shadow | An uncertain file always counts as changed, unless the record carries resolution evidence for that importer |
+| A quarantine caused by one pull request's own nondeterminism, or by an outage | No single pull request can quarantine a test; a burst of flips in one job is an environment incident ([ADR-0014](adr/0014-flake-decisions-sprt.md)) |
+| A replaced Lite-mode map | Only trusted triggers on the default branch can write its cache scope, and the map names its origin ([ADR-0021](adr/0021-lite-mode-actions-cache.md)) |
+
+The last seven rows were added on 2026-11-13. Their mitigations are decided and not yet built; [DECISIONS.md](../DECISIONS.md) entry 27 says which milestone builds each.
 
 ### 2.2 Where could one tenant see another tenant's data?
 | Vector | Mitigation |
