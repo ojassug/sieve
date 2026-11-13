@@ -23,4 +23,22 @@ export default defineConfig([
       '@typescript-eslint/no-unused-vars': ['error', { ignoreRestSiblings: true }],
     },
   },
+  {
+    // A map and a static plan are functions of the tree, the config and the engine only (ADR-0003,
+    // DECISIONS 28): what builds or reads them must not look at the machine it runs on.
+    files: ['packages/core/src/{graph,lex,lockfile,resolve,select}/**/*.ts'],
+    rules: {
+      'no-restricted-globals': ['error', { name: 'process', message: 'The map must not depend on the machine that builds it (DECISIONS 28).' }],
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            { name: 'node:os', message: 'The map must not depend on the machine that builds it (DECISIONS 28).' },
+            { name: 'node:process', message: 'The map must not depend on the machine that builds it (DECISIONS 28).' },
+          ],
+          patterns: [{ regex: 'environment\\.ts$', message: 'Environment components belong to records, not to the map (ADR-0005, DECISIONS 28).' }],
+        },
+      ],
+    },
+  },
 ]);
