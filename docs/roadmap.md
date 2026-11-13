@@ -53,3 +53,16 @@ Target IDs (T1–T8) and property IDs (P1–P11) are defined in [../bench/TARGET
 - **The slice:** `git ls-tree` listing → Merkle diff against the last default-branch snapshot (in `actions/cache`) → static import graph (lexer + basic resolver) → directed reverse BFS → plan JSON with why-paths → GitHub plan job → dynamic matrix → shards → aggregator gate → job summary.
 - **Done** = it runs on every dogfood PR in shadow mode, is deterministic, and falls back to run-all with no map.
 - Later milestones deepen each component (dynamic edges, proofs, server) without changing the slice's shape.
+
+## 6. Work added by the 2026-11-13 ADR corrections
+The [foundation review](research/2026-11-foundation-review.md) led to seven ADRs being corrected in place ([DECISIONS.md](../DECISIONS.md) entry 27). The milestone table in §1 is unchanged. This is what each milestone now also has to deliver.
+
+| Milestone | From | Added work |
+|---|---|---|
+| M1, weeks 2–3 | ADR-0003, ADR-0005, ADR-0009 | L1 seeds every node of the owning package, and a changed node that no test reaches escalates. Environment nodes leave the map, and a fixture map's hash is asserted on every CI OS. Resolution hubs (`r:`, `c:`). SMAP v0 is the container, the snapshot layer and the static layer |
+| M2 | ADR-0005 | The record schema: closure as (node, hash) pairs, digest, environment, engine and recorder versions, completeness flags, time. Three capture scopes (test file, worker, run). The runner's reported effective configuration. Resolution evidence for non-literal imports |
+| M3 | ADR-0004, ADR-0005, ADR-0009, ADR-0012, ADR-0021 | `sieve run` runs every discovered test file the plan does not mention, and checks the shard's environment and tree against the plan. Several records per test, keyed by environment cell, in a record layer of SMAP. Base-free proofs and verifier. Lite mode: keys with format and cell, `cache-mode`, the origin check, and pull-request-scoped evidence |
+| M5 | ADR-0009, ADR-0012 | Lanes set from verified OIDC claims; only evidence-lane runs change shared state. Map chunking with chunk-local ids |
+| M7 | ADR-0014 | Flake observations scoped to inputs the default branch has had; no single pull request can quarantine a test; the burst guard; expected sample numbers restated for enforced selection |
+
+**Recommended by the review and not yet decided** ([HANDOFF.md](../HANDOFF.md) §10): build Vitest recording before Jest's, since 13 of the 15 replay candidates use Vitest; start the replay container in M2; move ratio-rule ordering to M7 and proof signing to M5, out of M3; amend K1's wording and time the candidates' suites before M4.

@@ -3,7 +3,16 @@
 - **Reviewed:** `main` at `86a995e`, with days 1–9 merged. The day-10 workflow was read from branch `m1/d10-skeleton` at `2252cfe`; it is not merged and was not run.
 - **For:** Ojas, and whoever implements M2 and later.
 - **The date that matters:** ADRs can be corrected in place until 2026-11-16. §3 gives replacement text for seven of them.
-- **Nothing in the repository was changed** except this file. Nothing was committed, pushed or installed.
+- **Nothing in the repository was changed** by the review except this file. Nothing was committed, pushed or installed.
+
+## What happened after the review (2026-11-14)
+
+The rest of this report is as written on 2026-11-13. Read it with these facts in mind.
+- **The seven ADR edits of §3 are applied.** Ojas approved them on 2026-11-13. One sentence differs from §3: ADR-0009's consequence about the engine id now also allows a recorded reason why older maps stay safe, to agree with [DECISIONS.md](../../DECISIONS.md) entry 26.
+- **The other documents follow.** [architecture.md](../architecture.md), [threat-model.md](../threat-model.md), [roadmap.md](../roadmap.md) §6, [HANDOFF.md](../../HANDOFF.md) §1.1 and §10, and DECISIONS entry 27 carry the corrections. Entry 27 lists where the code still lags.
+- **`main` moved while the review was being written.** Day 10 (#13) and the directory-URL fix (#14, DECISIONS 26) merged. `new URL('.', import.meta.url)` is no longer a cause of uncertainty, and a new file that a mapped glob matches no longer escalates. No finding depends on either. The counts for this repository in "What I ran" are those of `86a995e`.
+- **Line citations were refreshed** to `main` at `acf76c2`. Only `plan.ts` had moved.
+- **Everything not in an ADR is still a recommendation:** findings M6 to M8 and L1 to L7, §4, and the questions in §6.
 
 ## How to read this
 
@@ -102,7 +111,7 @@ This table answers the first review question. "Static" is what the merged code d
 - files and packages the runner config names by a string, not an import: Jest's `preset`, `transform`, `testEnvironment` and `globalSetup`, Vitest's `globalSetup`, and setup files with unconventional names;
 - anything that reaches tests through a step outside the runner: a seed or code-generation script, a migration, a child process.
 
-L1 is meant to be the net for "a changed file not in V(G_S)". It has two holes. Every module file is a node whether or not anything reaches it ([static.ts:212](../../packages/core/src/graph/static.ts#L212)), so a changed module never escalates. And L1 forces only the tests whose path lies under the owning package ([plan.ts:123](../../packages/core/src/select/plan.ts#L123)), not the tests that depend on that package.
+L1 is meant to be the net for "a changed file not in V(G_S)". It has two holes. Every module file is a node whether or not anything reaches it ([static.ts:212](../../packages/core/src/graph/static.ts#L212)), so a changed module never escalates. And L1 forces only the tests whose path lies under the owning package ([plan.ts:126](../../packages/core/src/select/plan.ts#L126)), not the tests that depend on that package.
 
 **Evidence.**
 - **Verified, probe 1.** `packages/db/migrations/001.sql` is modified. `packages/api/src/handler.ts` imports `db`, and `packages/api/test/api.test.ts` imports the handler. Result: L1 with scope `packages/db`; only `packages/db/test/db.test.ts` is forced; the api test is a would-skip.
@@ -213,7 +222,7 @@ L1 is meant to be the net for "a changed file not in V(G_S)". It has two holes. 
 **Evidence.**
 - **Verified.** ADR-0012, Decision; threat-model §1.3. `workflow_dispatch` "by writers" has no restriction on the ref.
 - **Verified.** `sieve record` uploads "graph segments (trusted lanes)" (§5.1), and extraction results are cached by blob id and extractor version (§3.2). The server never sees file contents, so it cannot check either.
-- **Verified by reading.** A changed workflow file is in no test's closure. It escalates L1 at the root, which forces every test to run on that pull request ([plan.ts:99](../../packages/core/src/select/plan.ts#L99)). Probe 1 exercises the same code path with another file.
+- **Verified by reading.** A changed workflow file is in no test's closure. It escalates L1 at the root, which forces every test to run on that pull request ([plan.ts:100](../../packages/core/src/select/plan.ts#L100)). Probe 1 exercises the same code path with another file.
 
 **Failure scenario, with no bad intent.** A work-in-progress pull request narrows its test command to `-t smoke` in the workflow file to get feedback sooner. L1 forces every test file to run. Each passes in seconds, having run almost nothing, and each record's closure equals `main`'s. Those records are trusted. From then on every pull request skips those tests on the strength of runs that tested nothing. A compromised account can do the same on purpose, or upload forged extraction results for `main`'s blob ids. Neither needs a review.
 
@@ -254,7 +263,7 @@ L1 is meant to be the net for "a changed file not in V(G_S)". It has two holes. 
 **Claim.** §3.5 escalates an unresolved or non-literal import only "in a changed file without dynamic coverage". A module found at run time has an edge from the test and nothing else: no absent paths and no listing. A file that would shadow it is invisible. The day-9 rule, every `u:` node is always a seed, is what keeps this safe, and one other line of the selector depends on it.
 
 **Evidence.**
-- **Verified.** New module files are exempt from L1, with the comment "A new module nothing loaded at S can only matter through probes and listings already in Δ" ([plan.ts:102](../../packages/core/src/select/plan.ts#L102)). That holds only while every load has probes.
+- **Verified.** New module files are exempt from L1, with the comment "A new module nothing loaded at S can only matter through probes and listings already in Δ" ([plan.ts:103](../../packages/core/src/select/plan.ts#L103)). That holds only while every load has probes.
 - **Verified, probe 12.** A file that becomes uncertain at the head is selected, because the file itself changed. The day-9 rule has no hole of its own.
 - **Inferred.** Vitest resolves modules in the Vite server process, outside worker hooks (threat-model §2.1, first row).
 
@@ -263,7 +272,7 @@ L1 is meant to be the net for "a changed file not in V(G_S)". It has two holes. 
 **Recommended change.**
 - Keep the day-9 rule as the default at every milestone: **every `u:` node is a seed.**
 - A record may discharge a `u:` node for its own test only when it carries resolution evidence for that importer. The plugin records the (importer, specifier) pairs that non-literal imports produced at run time, and the static resolver turns each into targets and probes as it does for a literal import. Vite's `resolveId` hook and Jest's `resolver` option are the likely extension points (inferred).
-- Record in DECISIONS that the exemption at `plan.ts:103` is sound only under this rule, and correct §3.5's first row.
+- Record in DECISIONS that the exemption at `plan.ts:106` is sound only under this rule, and correct §3.5's first row.
 
 **Category.** New DECISIONS entry. Architecture §3.5 is a living document and needs no ADR. Defer the resolution evidence to M2.
 
@@ -469,7 +478,7 @@ L1 is meant to be the net for "a changed file not in V(G_S)". It has two holes. 
 
 ## 3. Proposed ADR edits
 
-Each block is the full replacement for the named section. Everything outside the named sections stays as it is.
+**Applied on 2026-11-13** (see the note at the top). Each block is the full replacement for the named section. Everything outside the named sections stays as it is.
 
 ### ADR-0003: replace the first two bullets of "Decision"
 
@@ -633,7 +642,7 @@ The architecture is a living document, so these need no ADR: the glossary (recor
 ### The two day-9 rules
 
 **(a) Every `u:` node is always a seed: confirm it, and keep it past M3.**
-- It is the only rule that is sound without resolution evidence (H4), and the new-module exemption at `plan.ts:103` depends on it.
+- It is the only rule that is sound without resolution evidence (H4), and the new-module exemption at `plan.ts:106` depends on it.
 - Its cost is measured. On hono, 26 of 161 tests always run because of it. On this repository none do: the 18 uncertain files are fixtures that nothing imports.
 - Keep shadow mode useful by removing false uncertainty at the source, not by weakening the rule. HANDOFF §11 already lists the three causes on hono: self-imports that resolve to `dist/` (M8), `bun:` specifiers, and `new URL('.', import.meta.url)` naming a directory.
 

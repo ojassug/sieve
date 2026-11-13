@@ -474,3 +474,52 @@ Implementation decisions too small or too local for an ADR, plus session hand-ov
     - `adapters/deno/test/serve-static.test.ts` now depends on `adapters/deno/test/**`.
     - `build/declaration-emit.test.ts` depends on its fixtures directory, and on `**` through `new URL('..', import.meta.url)`, which names the repository root.
   - **On this repository**, `vitest.config.ts` keeps `import.meta.dirname`. A root-directory URL in a global input would now be a dependency on every file, which still selects every test on any change.
+
+## 27. The foundation review, and seven ADRs corrected in place (2026-11-13)
+
+- **Context.** Before M2 starts writing records, Ojas asked for a read-only review of the architecture, the ADRs, the roadmap, the threat model and the merged code. ADRs can be corrected in place only until 2026-11-16 (entry 1).
+  - The review is [docs/research/2026-11-foundation-review.md](docs/research/2026-11-foundation-review.md). It read `main` at `86a995e`, before day 10 (entry 25) and the directory-URL fix (entry 26) merged.
+  - Its verdict: the foundation is sound enough to build M2 on, if seven contracts are corrected before records exist. It has 3 critical, 4 high, 8 medium and 7 low findings (C1–C3, H1–H4, M1–M8, L1–L7).
+- **Decision.** Ojas approved the seven ADR corrections on 2026-11-13. Each ADR's status line names the findings behind it.
+
+  | ADR | What changed | Findings |
+  |---|---|---|
+  | 0003, graph nodes | Environment components are record attributes, not nodes. Resolution hubs (`r:` for one resolved path, `c:` for one directory's config chain) are node kinds. Provenance is a bitmask. `u:` is an uncertain file | C3, M1, M3 |
+  | 0004, selection unit | The runner, not SIEVE, decides what a test file is. `sieve run` also runs every discovered file the plan does not mention. A plan that knows no tests runs the command unfiltered | C2 |
+  | 0005, safety criterion | A record is self-contained: closure as (node, hash) pairs, digest, environment, engine and recorder versions, completeness flags, time. Validity is base-free. The environment is compared in the job that runs the test. Capture has three scopes (test file, worker, run), and the runner reports its effective configuration. Uncertain nodes and unmapped inputs override a record | C1, C3, H1, H4 |
+  | 0009, SMAP | A container with a section table and a trailer; three layers (snapshot, static graph, records); one provenance byte per edge; forward adjacency only; UTF-16 key order; chunking defined in M5 | C3, M2, M4 |
+  | 0012, trust lanes | Three lanes: evidence, pull request, untrusted. Only runs of reviewed code change shared state. A pull-request run is evidence for its own pull request only, whoever its author is | H2 |
+  | 0014, flake decisions | An observation counts toward shared state only on inputs the default branch has had, or together with a flaky failure from the default branch or a second pull request. A burst of flips in one job is an environment incident | H3 |
+  | 0021, Lite mode | The cache trust model, from GitHub's documented scoping rules. Keys carry the format version and the environment cell. Only the map job has `cache-mode: write`. The map names its origin. Proofs are unsigned | M5 |
+
+- **What this settles.**
+  - **Entry 16, provenance width:** one byte per edge with three bits defined, as the code already has it. ADR-0009 no longer says 2 bits.
+  - **Entry 17, probe-edge volume:** exact hub nodes. Measured at 10,000 files, probes are 84% of the 684,501 edges and 91% of the 106,390 nodes. A hub's evidence depends only on its path or directory, never on the importer, so nothing is lost. Not built yet.
+  - **The day-9 `u:` rule** (entry 23): every uncertain file counts as changed in every plan. It is now in ADR-0005, and it stays past M3 unless a record carries resolution evidence for that importer. The exemptions of new modules and of glob-matched new files from L1 (entries 24 and 26) are sound only under this rule.
+  - **The day-9 lockfile rule** (entry 23): the review recommends confirming that an unparseable lockfile escalates to L3 only when it changes. The code is unchanged, and the confirmation is still Ojas's ([HANDOFF.md](HANDOFF.md) §10).
+- **How it meets entry 26.** Entry 26 keeps `sieve-static-1` when the builder only becomes more precise. The review asked for a guard that fails when the map of a fixture changes and the engine id does not. ADR-0009 now takes both: a changed golden hash comes with a new engine id, or with a recorded reason why older maps stay safe. Once records exist, ADR-0005 makes a record invalid when the engine or recorder version differs from the planner's.
+- **Where the code lags the corrected ADRs.** Nothing below is a live fault: every plan is still shadow-only and every would-skip unproven.
+
+  | The ADR now says | The code today | When |
+  |---|---|---|
+  | The static map holds nothing about the builder's machine | `e:runtime` and `e:platform` are nodes, so one tree gives different bytes on Linux and Windows | M1, with SMAP v0 |
+  | An unmapped input makes every node of its owning package changed; a changed node no test reaches is an unmapped input | L1 forces only tests under the owning package's path; a changed module nothing reaches does not escalate | M1 |
+  | Resolution hubs | One edge per probe | M1, with SMAP v0 |
+  | SMAP container, snapshot and static layers | Canonical JSON map (entry 23) | M1, week 3 |
+  | Self-contained records, three capture scopes, reported configuration, resolution evidence | No recorder yet | M2 |
+  | `sieve run` reconciles with the runner's discovery, and checks the shard's environment and tree | Shards run exactly `SIEVE_TEST_FILES` (entry 25); the plan measures the environment in its own job | M3 |
+  | Record layer in SMAP; base-free proofs; the Lite key layout, `cache-mode` and origin check | `sieve.yml` saves `sieve-map-<sha>` and restores by prefix | M3 |
+  | Lanes from verified claims | No server | M5 |
+  | Observation scoping and the burst guard | No ledger | M7 |
+
+- **Not decided.** These findings are recommendations until Ojas takes them up; the review's §2 has the evidence for each.
+  - **M6:** four dependencies the static extractor drops without a `u:` node: a file kind it cannot lex (`.vue`, `.svelte`), a `file:` link dependency, a workspace package shadowed by a nested installed copy, and `createRequire` under another name.
+  - **M7:** K1 is ambiguous as written and needs about 300 faulty changes to bound a 1% miss rate; the corpus collector keeps no logs, so it cannot name the test that flaked.
+  - **M8:** `generated` rules cannot hash outputs in a plan job that builds nothing; they have to map outputs to inputs.
+  - **L1–L7:** map consistency checks, glob node keys, resolver evidence for `ownerDir`, file lists out of the job outputs, `package.json` field hashing, default tracked environment variables.
+  - The review's recommendations for [HANDOFF.md](HANDOFF.md) §10 and its nine questions for the owner.
+- **Evidence.** All in the review, with the inputs to rebuild each probe.
+  - `npm test` at `86a995e`: 395 tests in 28 files pass.
+  - A synthetic 10,000-file monorepo reproduces the recorded benchmark exactly. A plain binary layout of that map is 2.2 MB against 26.7 MB of JSON, and the reverse index derives from the forward arrays in 2.7 ms.
+  - 12 probes of the real `buildStaticMap` and `selectStatic`, built with the `fakeRepo` test helper.
+  - GitHub's dependency caching reference, read on 2026-11-13: a pull request's cache is scoped to its merge ref, and only trusted triggers can write the default branch's scope.
