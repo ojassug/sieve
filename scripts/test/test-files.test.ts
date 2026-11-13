@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { dirname, join, relative } from 'node:path';
@@ -23,7 +23,10 @@ function vitestList(root: string, args: readonly string[], env: Record<string, s
       stdio: ['ignore', 'pipe', 'pipe'],
     });
     const listed = JSON.parse(readFileSync(out, 'utf8')) as { file: string }[];
-    return listed.map(({ file }) => relative(root, file).replaceAll('\\', '/')).sort();
+    // Native realpath expands Windows 8.3 short names (RUNNER~1 in os.tmpdir() on the hosted
+    // runner), which Vitest reports in full; the JS one does not.
+    const base = realpathSync.native(root);
+    return listed.map(({ file }) => relative(base, realpathSync.native(file)).replaceAll('\\', '/')).sort();
   } finally {
     rmSync(dirname(out), { recursive: true, force: true });
   }
