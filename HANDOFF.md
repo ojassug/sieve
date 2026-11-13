@@ -1,6 +1,7 @@
 # Hand-off: SIEVE milestone M1, after roadmap day 8
 
 - **Written:** 2026-11-11 (UTC), at `main` = `00fea91` plus this document.
+- **Updated:** 2026-11-14, after the foundation review and seven ADR corrections. Read §1.1 before anything else: it says where the documents now run ahead of the code.
 - **For:** whoever continues the implementation, person or agent.
 - **Reading order:** this file, then [DECISIONS.md](DECISIONS.md), then the docs it points to.
 
@@ -30,10 +31,47 @@
   - `.github/workflows/sieve.yml` runs plan → shards → `sieve-gate` on every PR in shadow mode, and builds the map on pushes to `main`.
   - 416 tests pass in 29 files. See §7 and DECISIONS 25.
 
-**First three things to do:**
-1. Check that the collector is making progress (§5.3): coverage should grow with each daily run.
-2. Start the rest of M1 (§8). Every PR now shows SIEVE's shadow summary: read it, and record any would-skip that should have run.
-3. Decide with Ojas whether `sieve-gate` becomes a required check (§10).
+**First four things to do:**
+1. Read §1.1. Seven ADRs changed on 2026-11-13, and the code has not caught up.
+2. Check that the collector is making progress (§5.3): coverage should grow with each daily run.
+3. Start the rest of M1 (§8), in the order §1.1 gives. Every PR now shows SIEVE's shadow summary: read it, and record any would-skip that should have run.
+4. Take the open decisions to Ojas (§10).
+
+### 1.1 The foundation review (2026-11-13)
+
+**What happened.** Before M2 writes its first record, the whole design and the merged code were reviewed. The report is [docs/research/2026-11-foundation-review.md](docs/research/2026-11-foundation-review.md), and [DECISIONS.md](DECISIONS.md) entry 27 is its summary.
+- **Verdict:** the foundation is sound enough to build M2 on, if seven contracts are corrected before records exist.
+- **Ojas approved seven ADR corrections,** and they are merged: ADR-0003, 0004, 0005, 0009, 0012, 0014 and 0021. [docs/architecture.md](docs/architecture.md) and [docs/threat-model.md](docs/threat-model.md) are updated to match, and [docs/roadmap.md](docs/roadmap.md) §6 lists the work each milestone gained.
+- **No code changed.** Every plan is still shadow-only and every would-skip unproven, so nothing below is a live fault.
+
+**What the corrected ADRs now require**, in one line each:
+
+| ADR | Now requires |
+|---|---|
+| 0003 | The static graph is a function of the tree, the config and the engine only: no environment nodes. Shared probes sit behind hub nodes (`r:`, `c:`) |
+| 0004 | The runner decides what a test file is. `sieve run` also runs every file the runner discovers that the plan does not mention |
+| 0005 | A record stores its own closure, environment, versions, flags and time. A skip needs every recorded hash to match at the head, and the environment to match in the job that runs the test. Uncertain files and unmapped inputs override any record |
+| 0009 | SMAP is a container with a snapshot layer, a static layer and, from M3, a record layer. Provenance is one byte per edge |
+| 0012 | Only runs of reviewed code (default-branch pushes and schedules, `merge_group`) change shared state. A pull-request run is evidence for its own pull request only |
+| 0014 | No single pull request can quarantine a test |
+| 0021 | Lite mode's trust model is written down. Keys carry the format and the environment cell; only the map job may write the cache |
+
+**Where the code lags, and the order to fix it in.** The first four are M1 work and come before SMAP v0, because each changes what a map contains.
+
+1. **Selector backstops** (`core/select/plan.ts`). An unmapped input should make every node of its owning package changed, so the escalation follows the graph. Today L1 forces only the tests under that package's path. A changed module that no test reaches should escalate too. On this repository that rule would have caught the CLI sources, which `cli.test.ts` runs as a child process, without the hand-written rule in `sieve.config.json`. It would have fired on 14 of 70 recent commits, so let `inputs.ignore` cover unreached modules and list them in the summary.
+2. **Environment out of the map** (`core/graph/static.ts`). `e:runtime` and `e:platform` make one tree give different bytes on Linux and Windows. Remove them, then pin a fixture map's SHA-256 in a test that runs on every CI OS.
+3. **Resolution hubs** (`core/resolve`, `core/graph/static.ts`). Probes are 84% of edges at 10,000 files. The soundness property in `plan.test.ts` is the regression test, because its oracle shares no graph code.
+4. **SMAP v0:** the container, the snapshot layer and the static layer only. The record layer is a new section in M3.
+5. **M2:** the record schema of ADR-0005, three capture scopes, the runner's reported configuration, and resolution evidence for non-literal imports.
+6. **M3:** `sieve run` with discovery reconciliation and the per-shard environment and tree check; base-free proofs; the Lite-mode key layout, `cache-mode` and origin check.
+
+**Findings that are still only recommendations** (review §2, DECISIONS 27). Each needs Ojas's decision or a small fix:
+- four dependencies the static extractor drops without flagging them (M6);
+- K1's wording, and the logs the collector does not keep (M7);
+- `generated` rules, which decide the savings on most of the corpus (M8);
+- seven low-severity items (L1–L7).
+
+**One number to distrust.** The review measured `main` at `86a995e`. Day 10 and the fix of DECISIONS 26 merged after it, so its counts for this repository (1,461 nodes, 2,777 edges, 28 tests) are a day old. Its line citations were refreshed to `main` at `acf76c2`.
 
 ## 2. Ground rules that carry over
 
@@ -90,7 +128,7 @@ npm run typecheck
 npm run check:deps
 ```
 
-Expect `438 passed` from `npm test` (on branch `m1/new-url-dirs`), and no output from lint or typecheck. To reproduce the recorded benchmarks (§9), run `node bench/ls-tree.ts`, `node bench/lex.ts`, `node bench/graph.ts` and `node bench/static-graph.ts`.
+Expect `438 passed` from `npm test` (on `main` after #14), and no output from lint or typecheck. To reproduce the recorded benchmarks (§9), run `node bench/ls-tree.ts`, `node bench/lex.ts`, `node bench/graph.ts` and `node bench/static-graph.ts`.
 
 To try the CLI on this repository:
 
@@ -237,7 +275,7 @@ GH_TOKEN="$(gh auth token)" node tools/corpus/src/main.ts --config tools/corpus/
 
 ## 6. Day 9, CLI v0
 
-**Status (2026-11-12):** built on branch `m1/d09-cli`, following the plan below; DECISIONS 23 and 24 record where it chose or deviated. It runs on this repository and on honojs/hono (cloned with Ojas's approval; the results are in DECISIONS 24 and [bench/README.md](bench/README.md)). Two readings to confirm with Ojas: an unparseable lockfile escalates to L3 only when it changes (architecture §3.5), and every `u:` node is always changed (the recommendation in item 4.5).
+**Status (2026-11-12):** built on branch `m1/d09-cli`, following the plan below; DECISIONS 23 and 24 record where it chose or deviated. It runs on this repository and on honojs/hono (cloned with Ojas's approval; the results are in DECISIONS 24 and [bench/README.md](bench/README.md)). Two readings to confirm with Ojas: an unparseable lockfile escalates to L3 only when it changes (architecture §3.5), and every `u:` node is always changed (the recommendation in item 4.5). On 2026-11-13 the second became part of ADR-0005. The first is still open: the review recommends confirming it (§10).
 
 **Done when:** it runs on this repository and on one corpus repository. Cloning a corpus repository is a download, so ask first.
 
@@ -332,12 +370,14 @@ These come from the M1 row of [roadmap §1](docs/roadmap.md):
   - 24 of the 26 vetted repositories use them (19 pnpm, 5 yarn), so they gate the replay corpus in M4 ([bench/CORPUS.md](bench/CORPUS.md)).
   - Today `detectLockfile` reports both as unparseable (L3).
   - The YAML subset in `core/resolve/yaml.ts` is too small for `pnpm-lock.yaml`.
+- **The four M1 items of §1.1,** before SMAP: selector backstops, the environment out of the map, resolution hubs, then SMAP v0 itself.
 - **SMAP v0, byte-identical across OSes.**
-  - First settle the provenance width. ADR-0009 says 2 bits per edge, but an edge is often both static and dynamic, which needs a 3-bit mask (DECISIONS 16).
+  - The provenance width is settled: one byte per edge, three bits defined (ADR-0009, DECISIONS 27).
+  - v0 is the container, the snapshot layer and the static layer. The record layer comes in M3.
 - **`sieve explain`.**
 - **Golden graphs for 6 repositories.** These need clones, so ask first.
 - **T6:** a 10,000-file graph in under 30 s cold and under 3 s incremental. The lexer alone is about 3 s per 100 MB.
-- **Measure the probe-edge volume** on a real repository. Expect about 10 edges per extensionless import. If it's too large, add per-directory "probe group" nodes (DECISIONS 17).
+- ~~**Measure the probe-edge volume.**~~ Done on 2026-11-13: 84% of edges at 10,000 files. The answer is hub nodes (§1.1 item 3, DECISIONS 27).
 - **The open items from the kickoff brief, §7:**
   - Time each candidate's suite offline (R2 in CORPUS.md); none are timed yet.
   - Read the licenses of date-fns, maplibre and every NOASSERTION repository.
@@ -368,6 +408,20 @@ All measured on Windows 11, Ryzen AI 7 350, Node 26.4 and git 2.55. There are no
 4. The GitHub org for merge-queue dogfooding (roadmap day 0, needed by M6), and whether the corpus repo should live under it.
 5. When to make the CLI's would-skips enforceable. Not before records exist (M2/M3) and 4 clean shadow weeks (M7).
 
+The review recommends an answer to each of 1, 2, 4 and 5 in its §4. In short: mirror baserow's reports privately now; require `sieve-gate` alongside `ci.yml`, not in its place; move to the org before M5; and enforce on evidence (about 300 faulty changes with no escape), not on a date.
+
+**Added by the foundation review (2026-11-13).** Its §6 gives the context for each.
+
+6. Whether an unparseable lockfile escalates to L3 only when it changes (the open day-9 reading). The review says yes.
+7. Whether a collaborator is inside the threat model. It decides how strict the server's lane rules are.
+8. Whether v1 supports a test matrix or one environment cell. This repository's `ci.yml` runs four cells; `sieve.yml` covers one.
+9. Whether a change to a module that no test reaches escalates by default, or is only reported until shadow data is in.
+10. Whether Lite mode may enforce skips on GitHub's cache scoping alone, or only with a verified attestation of the map.
+11. Which reading of K1 is the pre-registered one. The review proposes the pooled median, with no miss among at least 300 faulty changes. `bench/TARGETS.md` allows a dated amendment before the first measurement.
+12. Two downloads of data that expires: the logs of failed attempts for the collector, and baserow's test reports.
+13. Cloning the 15 replay candidates to time their suites (R2). Without it the M4 compute budget is a guess.
+14. Which of the review's remaining findings (M6, M8, L1–L7) to fix, and when.
+
 ## 11. Known gaps and limits in the merged code
 
 These are honest limits, not bugs. Each one errs towards running more tests.
@@ -383,7 +437,7 @@ These are honest limits, not bugs. Each one errs towards running more tests.
   - Every would-skip is unproven: anything a test reads through `fs` (fixtures, snapshots) is invisible statically. A changed file outside the graph escalates its owning package (L1), which covers most of it.
   - Every test that reaches an uncertain file always runs, whether or not anything changed.
   - Global inputs are found by conventional names (`vitest.setup.*`, `jest.setup.*` and runner configs). A setup file with another name must be listed in `inputs.global`.
-  - `e:runtime` and `e:platform` describe the machine that runs `sieve plan`, not the test shards'.
+  - `e:runtime` and `e:platform` describe the machine that runs `sieve plan`, not the test shards'. ADR-0005 now puts that comparison in the job that runs the test, and ADR-0003 takes the nodes out of the map (§1.1).
   - The JSON map is about 2.7 KB per file (26.7 MB at 10,000 files), and a plan re-parses it and rebuilds the CSR arrays (0.8 s at 10,000 files). SMAP fixes both. Extraction is not cached, so incremental builds are as slow as cold ones.
   - Only npm lockfiles are parsed. With pnpm or yarn, every bare import depends on the lockfile file, and any change to it runs everything (L3).
   - Precision costs seen on hono:
@@ -394,12 +448,19 @@ These are honest limits, not bugs. Each one errs towards running more tests.
   - Every test runs twice on a PR, once in `ci.yml` and once in the shards, until shadow mode gives way to real skips.
   - Shards are split round-robin, not by duration.
   - The map is rebuilt from scratch on every push to `main`.
-  - Whether `actions/cache` scoping is safe to trust is M3 work (ADR-0021).
+  - ADR-0021 now states the cache trust model: a fork or an untrusted author cannot replace the map. Its key layout, `cache-mode` and origin check are M3 work; `sieve.yml` still saves `sieve-map-<sha>` and restores by prefix.
+  - The shards run exactly the plan's list, which comes from SIEVE's own discovery. A test that Vitest would run and SIEVE does not find runs only in `ci.yml`. Keep `ci.yml` required until `sieve run` reconciles with the runner (ADR-0004).
   - A directory named by `new URL(…, import.meta.url)` depends on every file below it (DECISIONS 26). In a global input, a URL that names the repository root would select every test on any change, so this repository uses `import.meta.dirname`.
 - **Collector.** See §5.4. The first run's coverage is still unknown.
+- **Found by the foundation review and not fixed** (its M6 and L1–L3; DECISIONS 27):
+  - An import of a `.vue` or `.svelte` file is a plain target: that file's own imports are not followed, and nothing is flagged.
+  - A `file:` link dependency outside the workspace list gets a `p:` node with a constant hash and no edge to its sources.
+  - A workspace package wins by name even when a nested installed copy would shadow it for that importer.
+  - `createRequire` bound to a name other than `require` yields no record.
+  - `parseMap` accepts a map whose `u:` node is missing from `uncertain`, and then never seeds it.
+  - Two `import.meta.glob` calls can share one `g:` node when a pattern contains a vertical bar.
 - **Docs that still owe updates:**
-  - ADR-0009 provenance width (week 3);
-  - architecture §9.3 says `GITHUB_TOKEN` gets 1,000 requests per hour; the probe measured 5,000 (DECISIONS 9).
+  - architecture §3.1 on `generated` files and §3.10 on the enforcement gate, and `bench/TARGETS.md` on K1. The review recommends changes (M7, M8), and they wait on Ojas (§10).
 
 ## 12. Environment notes (Windows host)
 
@@ -451,6 +512,9 @@ These are honest limits, not bugs. Each one errs towards running more tests.
 | 22 | Race-proof corpus publishing |
 | 23 | The static graph and the M1 map |
 | 24 | Static selection and CLI v0 |
+| 25 | The walking skeleton in CI |
+| 26 | Directory URLs as dependencies |
+| 27 | The foundation review and the seven ADR corrections |
 
 **Status of the kickoff doc gaps** (DECISIONS 1):
 

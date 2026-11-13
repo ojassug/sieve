@@ -12,6 +12,7 @@ Every skip carries a machine-checkable proof, and uncertainty always means the t
 - `packages/cli` runs from source: `node packages/cli/src/main.ts graph`, `diff` and `plan --mode shadow --static`. Without test records no skip is proven safe, so plans run every test and report the would-skips as unproven static reachability.
 - `.github/workflows/sieve.yml` runs SIEVE on its own pull requests: plan, test shards and a gate, in shadow mode, with the map cached from `main`.
 - `tools/corpus` archives CI history into [ojassug/sieve-corpus](https://github.com/ojassug/sieve-corpus).
+- A [foundation review](docs/research/2026-11-foundation-review.md) on 2026-11-13 led to seven ADRs being corrected in place. The documents now describe several things the code does not do yet; [HANDOFF.md](HANDOFF.md) §1.1 lists them in the order to build them.
 
 To continue the work, start with [HANDOFF.md](HANDOFF.md).
 
@@ -25,7 +26,8 @@ To continue the work, start with [HANDOFF.md](HANDOFF.md).
 | [docs/architecture.md](docs/architecture.md) | Product definition, architecture diagrams, algorithm specs, data model, interfaces, verification strategy, risks, research spike results |
 | [docs/threat-model.md](docs/threat-model.md) | Security model (tenancy, auth, trust lanes, privacy) and the adversarial review |
 | [docs/roadmap.md](docs/roadmap.md) | 10 milestones (about 640 commits over 26 weeks), the first two weeks in detail, walking skeleton, cut list, pivot plan |
-| [docs/adr/](docs/adr/README.md) | 21 architecture decision records |
+| [docs/adr/](docs/adr/README.md) | 21 architecture decision records, seven of them corrected in place on 2026-11-13 |
+| [docs/research/2026-11-foundation-review.md](docs/research/2026-11-foundation-review.md) | The 2026-11-13 review of the design and the M1 code: findings with evidence, the ADR corrections, and the recommendations still open |
 | [bench/TARGETS.md](bench/TARGETS.md) | Pre-registered benchmark targets and the kill criterion |
 | [bench/CORPUS.md](bench/CORPUS.md) · [bench/README.md](bench/README.md) | Corpus selection criteria and vetting · recorded benchmark numbers |
 | [docs/research/RESEARCH_REPORT.md](docs/research/RESEARCH_REPORT.md) | The 2026-11-04 study that chose SIEVE (unmodified copy) |
