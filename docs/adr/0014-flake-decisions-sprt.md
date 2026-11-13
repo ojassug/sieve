@@ -1,6 +1,6 @@
 # ADR-0014: Flake decisions — SPRT episodes, decayed Beta estimates, hysteresis state machine
 
-- Status: Accepted (2026-11-11)
+- Status: Accepted (2026-11-11); corrected in place on 2026-11-13 after the [foundation review](../research/2026-11-foundation-review.md), finding H3
 - Deciders: Ojas Sugur
 - Related: [architecture.md](../architecture.md) §2.5 and §3.6
 
@@ -11,7 +11,10 @@ Flaky failures drive rerun culture (research report A1). Quarantine decisions ne
 - **Identical-input classes:**
   - v1: (test case, tree OID, environment);
   - v2: (test case, closure fingerprint, environment).
-- **Observations** come only from trusted lanes, and only from classes containing at least one pass. Failures in all-fail classes stay pending until a pass shows up.
+- **Observations** come from authenticated runs, and only from classes containing at least one pass. Failures in all-fail classes stay pending until a pass shows up.
+  - An observation counts toward a test's shared state when its inputs are inputs the default branch has had. In v1 the tree is a default-branch tree; in v2 the closure fingerprint occurs in an evidence-lane map.
+  - An observation on content that exists only in a pull request counts toward that pull request's own report. It moves the shared state only together with a flaky failure from the default branch or from a second pull request. No single pull request can quarantine a test.
+  - When more than a set number of tests flip in one job, the job is an environment incident and adds no per-test observation.
 - **Detection:** a fresh Wald SPRT per Suspect episode.
   - p₀ = 0.002, p₁ = 0.02, α = 0.01, β = 0.05.
   - Thresholds A ≈ 4.55 and B ≈ −2.99.
@@ -31,3 +34,4 @@ Flaky failures drive rerun culture (research report A1). Quarantine decisions ne
 - Parameters are validated by simulation (P9) and against rerun ground truth (target T3, precision ≥ 0.9).
 - The UI shows the log-likelihood-ratio trace against both thresholds.
 - Capture divergences seen through v2 classes are reported as incidents, not quarantines.
+- With selection enforced, unaffected tests do not run on pull requests. Shared evidence then comes from default-branch, nightly, audit-sample and shadow-mode runs. The expected sample numbers are restated for that rate in M7.

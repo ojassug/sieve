@@ -1,6 +1,6 @@
 # ADR-0004: The test file is the selection unit
 
-- Status: Accepted (2026-11-11)
+- Status: Accepted (2026-11-11); corrected in place on 2026-11-13 after the [foundation review](../research/2026-11-foundation-review.md), finding C2
 - Deciders: Ojas Sugur
 - Related: [architecture.md](../architecture.md) §3.12
 
@@ -13,7 +13,8 @@
 ## Decision
 - SIEVE selects **test files** for JS/TS and **test modules** for pytest.
 - Test cases are tracked individually for the flake ledger, durations and identity, but are not selected individually in v1.
-- Runner plugins apply the plan's exact file list. There are no command-line substring filters.
+- Runner plugins apply the plan's file list. There are no command-line substring filters.
+- The runner, not SIEVE, decides what a test file is. A plan selects among the test files SIEVE knows. `sieve run` asks the runner which files it discovers and also runs every discovered file the plan does not mention, each in exactly one shard. A plan that knows no test files runs the project's command unfiltered.
 
 ## Alternatives considered
 - **Case-level selection (`-t` filters):** rejected for v1. More savings in big files, but order-dependence risk and runner-specific filter semantics.
