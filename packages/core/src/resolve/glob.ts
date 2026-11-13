@@ -42,6 +42,15 @@ export function globToRegExp(glob: string): RegExp {
   return new RegExp(`^${re}$`);
 }
 
+/**
+ * A literal path as a glob that matches only that path. The dialect has no escape character, so
+ * `*`, `?` and `[` become one-character classes, `{` a one-option brace, and a leading `!` (which
+ * would make the pattern an exclude) a class too. Every other character is already literal.
+ */
+export function escapeGlob(path: string): string {
+  return path.replace(/[*?[{]|^!/g, (c) => (c === '{' ? '{{}' : `[${c}]`));
+}
+
 /** Files matching any include pattern and no `!`-prefixed exclude pattern, in input order. */
 export function matchGlobs(files: readonly string[], patterns: readonly string[]): string[] {
   const includes = patterns.filter((p) => !p.startsWith('!')).map((p) => globToRegExp(p));
