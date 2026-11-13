@@ -3,13 +3,12 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { dirname, join, relative } from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { escapeGlob, parseTestFiles, TEST_FILES_ENV, testFilesFromEnv } from '../lib/test-files.ts';
 
-const repo = fileURLToPath(new URL('../..', import.meta.url));
+const repo = join(import.meta.dirname, '..', '..');
 const vitestBin = join(dirname(createRequire(import.meta.url).resolve('vitest/package.json')), 'vitest.mjs');
 
 /** Runs `vitest list --filesOnly` and returns the files it would run, relative to `root`, sorted. */

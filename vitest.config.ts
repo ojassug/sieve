@@ -1,11 +1,11 @@
-import { fileURLToPath } from 'node:url';
-
 import { configDefaults, defineConfig } from 'vitest/config';
 
 import { testFilesFromEnv } from './scripts/lib/test-files.ts';
 
 // A CI shard of the sieve workflow sets SIEVE_TEST_FILES to its exact file list (scripts/lib/test-files.ts).
-const listed = testFilesFromEnv(process.env, fileURLToPath(new URL('.', import.meta.url)));
+// import.meta.dirname, not new URL('.', import.meta.url): SIEVE's resolver reads the latter as an
+// unresolvable import, and this file is a global input, so every test would always be selected.
+const listed = testFilesFromEnv(process.env, import.meta.dirname);
 
 export default defineConfig({
   test: {
