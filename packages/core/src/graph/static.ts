@@ -4,6 +4,10 @@
 // on every file, absent path, directory listing, glob, config and package that could change what
 // it loads. What cannot be decided is not dropped: it becomes a `u:` node, always treated as changed
 // (DECISIONS 23).
+//
+// The map is a function of the tree, the config and the engine only (ADR-0003, DECISIONS 28). It
+// holds nothing about the machine that built it, so one tree gives the same bytes on every OS and
+// Node version; test/graph/golden.test.ts pins that.
 import { createHash } from 'node:crypto';
 
 import { canonicalJson } from '../canonical-json.ts';
@@ -17,8 +21,11 @@ import { DECLARED, STATIC } from './graph.ts';
 
 /** The map format; a map of another version is invalid (L3). */
 export const MAP_VERSION = 1;
-/** What builds the graph; a map built by another engine is invalid (L3), since its edges may differ. */
-export const ENGINE = 'sieve-static-1';
+/**
+ * What builds the graph and how a plan reads it; a map built by another engine is invalid (L3).
+ * `sieve-static-2` has no `e:` nodes: a plan no longer compares the environment (DECISIONS 28).
+ */
+export const ENGINE = 'sieve-static-2';
 
 const MODULE = /\.(?:[cm]?[jt]s|[jt]sx)$/;
 /** `.d.ts`, `.d.mts`, `.d.cts` and arbitrary-extension declarations such as `.d.css.ts`. */
@@ -94,8 +101,6 @@ export interface StaticInput {
   /** `inputs.global` patterns: every test depends on what they match. */
   readonly global?: readonly string[];
   readonly declared?: readonly DeclaredRule[];
-  /** Environment components (see `environment`); every test depends on each. */
-  readonly env?: Readonly<Record<string, string | null>>;
   readonly config?: string | null;
 }
 
@@ -121,21 +126,6 @@ export function listingHash(index: TreeIndex, dir: string): string | null {
 /** The hash of a `g:` node: SHA-256 of the sorted matches. */
 export function globHash(matches: readonly string[]): string {
   return sha256(canonicalJson([...matches].sort(compareStrings)));
-}
-
-/** The hash of an `e:` node; values are hashed so the map never holds environment values. */
-export function envHash(value: string | null): string | null {
-  return value === null ? null : sha256(value);
-}
-
-/** Environment components: Node major.minor, OS and architecture, and each tracked variable. */
-export function environment(track: readonly string[], proc: Pick<NodeJS.Process, 'versions' | 'platform' | 'arch' | 'env'> = process): Record<string, string | null> {
-  const [major, minor] = proc.versions.node.split('.');
-  const env: Record<string, string | null> = { runtime: `node ${major ?? ''}.${minor ?? ''}`, platform: `${proc.platform}-${proc.arch}` };
-  for (const name of track) {
-    env[`env/${name}`] = proc.env[name] ?? null;
-  }
-  return env;
 }
 
 class MapBuilder {
@@ -251,7 +241,6 @@ export function buildStaticMap(input: StaticInput): SieveMap {
       b.edge(globalKey, b.file(match), DECLARED);
     }
   }
-  const env = Object.entries(input.env ?? {}).map(([name, value]) => b.node(`e:${name}`, envHash(value)));
   const declared = (input.declared ?? []).map((rule) => {
     const matches = matchGlobs(files, [rule.match]);
     const key = b.glob(`g:declared:${rule.match}`, matches, [rule.match]);
@@ -265,9 +254,6 @@ export function buildStaticMap(input: StaticInput): SieveMap {
     const from = b.file(test);
     if (globalKey !== null) {
       b.edge(from, globalKey, DECLARED);
-    }
-    for (const key of env) {
-      b.edge(from, key, DECLARED);
     }
     for (const rule of declared) {
       if (matchGlobs([test], [rule.affects]).length > 0) {

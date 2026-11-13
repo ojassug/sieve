@@ -52,7 +52,7 @@ describe('buildStaticMap', () => {
     'test/a.test.ts': "import { a } from '../src/a';\n",
     'docs/guide.md': '# guide\n',
   });
-  const map = build(repo, { global: ['package.json', '.env*'], env: { runtime: 'node 26.4', 'env/TZ': null } });
+  const map = build(repo, { global: ['package.json', '.env*'] });
 
   it('describes the snapshot', () => {
     expect(map.version).toBe(1);
@@ -109,15 +109,15 @@ describe('buildStaticMap', () => {
     expect(map.nodes['p:npm:node_modules/gone']).toBeNull();
   });
 
-  it('makes each test depend on the global inputs and the environment, as DECLARED edges', () => {
+  it('makes each test depend on the global inputs, as DECLARED edges', () => {
     const test = edgesFrom(map, 'f:test/a.test.ts');
     expect(test['g:inputs.global']).toBe(DECLARED);
-    expect(test['e:runtime']).toBe(DECLARED);
-    expect(test['e:env/TZ']).toBe(DECLARED);
     expect(edgesFrom(map, 'g:inputs.global')).toEqual({ 'f:package.json': DECLARED });
     expect(map.globs['g:inputs.global']).toEqual(['package.json', '.env*']);
-    expect(map.nodes['e:env/TZ']).toBeNull();
-    expect(map.nodes['e:runtime']).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  it('holds nothing about the machine that built it: every node is a file, listing, glob or package', () => {
+    expect(Object.keys(map.nodes).filter((key) => !/^[fdgp]:/.test(key))).toEqual([]);
   });
 
   it('hashes a directory listing by names and kinds, not contents', () => {
