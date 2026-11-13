@@ -405,3 +405,40 @@ Implementation decisions too small or too local for an ADR, plus session hand-ov
     - The 26 come mostly from adapters that import `hono` itself: its `exports` point at `dist/`, which is build output and not in git. The rest are `bun:test` (an unknown scheme) and one non-literal `import()`.
     - Planning `HEAD~10` → `HEAD` selects all 161: the release commit bumps the version in the root `package.json`, which every file depends on (its nearest `package.json`, and a global input).
     - hono's own Vitest config uses projects with extglob includes, so discovery without a `sieve.config.json` also counts adapter and runtime tests that hono runs elsewhere.
+
+## 25. The walking skeleton in CI (day 10)
+
+- **Context.** Day 10 puts the plan → matrix → shards → gate slice into CI on this repository, in shadow mode, with the map kept in `actions/cache` (roadmap §4 and §5, architecture §5.3 and §5.4, [HANDOFF.md](HANDOFF.md) §7). Until the runner plugin and `sieve run` arrive (M3), a shard needs some other way to run an exact file list. ADR-0004 rules out Vitest's positional filters, which match substrings.
+- **Decision.**
+  - **`.github/workflows/sieve.yml`** runs on pull requests, pushes to `main` and merge groups, alongside `ci.yml`, which still runs the whole suite on every OS and Node version. Its jobs:
+    - **`plan`** restores the map, runs `sieve plan --mode shadow --static --map .sieve/map` from source, and writes `matrix`, `count` and the job summary.
+    - **`test`** is a matrix of shards from the plan, skipped when `count` is 0. Each shard runs `npx vitest run` with its file list.
+    - **`sieve-gate`** always runs (`if: always()`). It passes only if `plan` succeeded and every shard succeeded, or the shards were skipped because `count` was 0.
+    - **`map`** runs only on pushes: `sieve graph --out .sieve/map/map.json`, then `actions/cache/save` under `sieve-map-<sha>`.
+  - **Finding the map.** `plan` restores with key `sieve-map-<sha>` and `restore-keys: sieve-map-`, so a pull request gets the newest map saved on `main`. If no cache matches, the CLI's run-all fallback applies.
+  - **Plan and map share one Node version** (`NODE_VERSION`, 26) and one runner image. The map records the runtime and platform as `e:` nodes that every test depends on, so a mismatch would mark every test affected.
+  - **Exact file lists, until M3.**
+    - The shard passes `SIEVE_TEST_FILES`, a JSON array of repository-relative POSIX paths, and `vitest.config.ts` makes it the `include` (`scripts/lib/test-files.ts`).
+    - Each path is glob-escaped: what tinyglobby, Vitest's globber, escapes, plus `!`, `+` and `@` everywhere.
+    - `exclude` is emptied, so nothing can drop a listed file.
+    - A list that is invalid, or that names something that is not a file, fails the shard loudly. Uncertainty means run: a shard must never run fewer files than its plan.
+  - **`sieve.config.json`.**
+    - `sharding.max` is 3: the 29 test files split round-robin into 3 shards.
+    - One `inputs.declared` rule: `packages/cli/src/**` affects `packages/cli/test/cli.test.ts`. That test runs the CLI as a child process, by path, which the static graph cannot see. Core changes reach the CLI sources through their imports, so one rule covers both packages.
+  - **Global inputs avoid `new URL(…, import.meta.url)`.** The resolver reads it as an import it cannot resolve (§11 of the hand-off). In `vitest.config.ts`, which every test depends on, that would mark every test affected on every change. Both new files use `import.meta.dirname` instead.
+  - **Not yet:**
+    - `sieve-gate` is not a required check. That is a branch-protection setting for Ojas to decide ([HANDOFF.md](HANDOFF.md) §10).
+    - The gate is a shell step until `sieve gate` exists.
+    - Shards are round-robin, not duration-balanced; LPT planning (§3.8) needs recorded durations.
+- **Evidence.**
+  - **Discovery matches Vitest.** With no `projects` in the config, `sieve plan` finds the same 29 files as `vitest list` under `vitest.config.ts`.
+  - **Run-all fallback.** With no map, `sieve plan` exits 0, writes `count=29` and 3 shards, and the summary says it could not use a map.
+  - **A past fix, re-planned.** A map built at the parent of `4742257` (a fix in `packages/core/src/git/git.ts`), planned at `4742257`, selects 9 of 27 test files, with why-paths. One of the 18 would-skips was `cli.test.ts`, which drives `git.ts` through the CLI, hence the declared rule.
+  - **A probe on this branch.** A throwaway commit adds one line to `git.ts` on top of this branch, made with `git commit-tree` so no branch moves. Planned against this branch's map, it selects 10 of 29, `cli.test.ts` among them, through `g:declared:packages/cli/src/**`.
+    - Before the switch to `import.meta.dirname`, the same probe selected all 29, through the uncertain `vitest.config.ts`.
+    - After it, the map has 18 uncertain files, all of them lexer fixtures that are data.
+  - **The file-list mechanism.** `scripts/test/test-files.test.ts` covers parsing, escaping, and two end-to-end `vitest list` runs:
+    - one through this repository's `vitest.config.ts`;
+    - one over names such as `a[1]`, `b(x)`, `!f`, `g+(h)` and `i@(j)`, plus `l*`, `m?` and `n|o` off Windows, each with an unlisted twin that the unescaped name would match as a glob.
+
+    Mutants that skip escaping, or escape only brackets, fail both end-to-end runs. A config that ignores the list fails the first.

@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "inputs": {
+    "declared": [
+      { "match": "packages/cli/src/**", "affects": "packages/cli/test/cli.test.ts" }
+    ]
+  },
+  "sharding": { "max": 3 }
+}
