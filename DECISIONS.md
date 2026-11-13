@@ -405,3 +405,72 @@ Implementation decisions too small or too local for an ADR, plus session hand-ov
     - The 26 come mostly from adapters that import `hono` itself: its `exports` point at `dist/`, which is build output and not in git. The rest are `bun:test` (an unknown scheme) and one non-literal `import()`.
     - Planning `HEAD~10` → `HEAD` selects all 161: the release commit bumps the version in the root `package.json`, which every file depends on (its nearest `package.json`, and a global input).
     - hono's own Vitest config uses projects with extglob includes, so discovery without a `sieve.config.json` also counts adapter and runtime tests that hono runs elsewhere.
+
+## 25. The walking skeleton in CI (day 10)
+
+- **Context.** Day 10 puts the plan → matrix → shards → gate slice into CI on this repository, in shadow mode, with the map kept in `actions/cache` (roadmap §4 and §5, architecture §5.3 and §5.4, [HANDOFF.md](HANDOFF.md) §7). Until the runner plugin and `sieve run` arrive (M3), a shard needs some other way to run an exact file list. ADR-0004 rules out Vitest's positional filters, which match substrings.
+- **Decision.**
+  - **`.github/workflows/sieve.yml`** runs on pull requests, pushes to `main` and merge groups, alongside `ci.yml`, which still runs the whole suite on every OS and Node version. Its jobs:
+    - **`plan`** restores the map, runs `sieve plan --mode shadow --static --map .sieve/map` from source, and writes `matrix`, `count` and the job summary.
+    - **`test`** is a matrix of shards from the plan, skipped when `count` is 0. Each shard runs `npx vitest run` with its file list.
+    - **`sieve-gate`** always runs (`if: always()`). It passes only if `plan` succeeded and every shard succeeded, or the shards were skipped because `count` was 0.
+    - **`map`** runs only on pushes: `sieve graph --out .sieve/map/map.json`, then `actions/cache/save` under `sieve-map-<sha>`.
+  - **Finding the map.** `plan` restores with key `sieve-map-<sha>` and `restore-keys: sieve-map-`, so a pull request gets the newest map saved on `main`. If no cache matches, the CLI's run-all fallback applies.
+  - **Plan and map share one Node version** (`NODE_VERSION`, 26) and one runner image. The map records the runtime and platform as `e:` nodes that every test depends on, so a mismatch would mark every test affected.
+  - **Exact file lists, until M3.**
+    - The shard passes `SIEVE_TEST_FILES`, a JSON array of repository-relative POSIX paths, and `vitest.config.ts` makes it the `include` (`scripts/lib/test-files.ts`).
+    - Each path is glob-escaped: what tinyglobby, Vitest's globber, escapes, plus `!`, `+` and `@` everywhere.
+    - `exclude` is emptied, so nothing can drop a listed file.
+    - A list that is invalid, or that names something that is not a file, fails the shard loudly. Uncertainty means run: a shard must never run fewer files than its plan.
+  - **`sieve.config.json`.**
+    - `sharding.max` is 3: the 29 test files split round-robin into 3 shards.
+    - One `inputs.declared` rule: `packages/cli/src/**` affects `packages/cli/test/cli.test.ts`. That test runs the CLI as a child process, by path, which the static graph cannot see. Core changes reach the CLI sources through their imports, so one rule covers both packages.
+  - **Global inputs avoid `new URL(…, import.meta.url)`.** The resolver reads it as an import it cannot resolve (§11 of the hand-off). In `vitest.config.ts`, which every test depends on, that would mark every test affected on every change. Both new files use `import.meta.dirname` instead.
+  - **Not yet:**
+    - `sieve-gate` is not a required check. That is a branch-protection setting for Ojas to decide ([HANDOFF.md](HANDOFF.md) §10).
+    - The gate is a shell step until `sieve gate` exists.
+    - Shards are round-robin, not duration-balanced; LPT planning (§3.8) needs recorded durations.
+- **Evidence.**
+  - **Discovery matches Vitest.** With no `projects` in the config, `sieve plan` finds the same 29 files as `vitest list` under `vitest.config.ts`.
+  - **Run-all fallback.** With no map, `sieve plan` exits 0, writes `count=29` and 3 shards, and the summary says it could not use a map.
+  - **A past fix, re-planned.** A map built at the parent of `4742257` (a fix in `packages/core/src/git/git.ts`), planned at `4742257`, selects 9 of 27 test files, with why-paths. One of the 18 would-skips was `cli.test.ts`, which drives `git.ts` through the CLI, hence the declared rule.
+  - **A probe on this branch.** A throwaway commit adds one line to `git.ts` on top of this branch, made with `git commit-tree` so no branch moves. Planned against this branch's map, it selects 10 of 29, `cli.test.ts` among them, through `g:declared:packages/cli/src/**`.
+    - Before the switch to `import.meta.dirname`, the same probe selected all 29, through the uncertain `vitest.config.ts`.
+    - After it, the map has 18 uncertain files, all of them lexer fixtures that are data.
+  - **The file-list mechanism.** `scripts/test/test-files.test.ts` covers parsing, escaping, and two end-to-end `vitest list` runs:
+    - one through this repository's `vitest.config.ts`;
+    - one over names such as `a[1]`, `b(x)`, `!f`, `g+(h)` and `i@(j)`, plus `l*`, `m?` and `n|o` off Windows, each with an unlisted twin that the unescaped name would match as a glob.
+
+    Mutants that skip escaping, or escape only brackets, fail both end-to-end runs. A config that ignores the list fails the first.
+  - **In CI (done when, met 2026-11-13).**
+    - **No map yet.** #13's run 43435242836 missed the cache, ran all 29 files in shards of 10, 10 and 9, and the gate passed. The Windows job then caught a test-only path bug: `os.tmpdir()` is an 8.3 short path there.
+    - **Map cached.** The merge's push run 43435914996 built the map in 153 ms (1,464 nodes, 2,804 edges) and cached it as `sieve-map-f065f80…`, 39 KiB.
+    - **Shadow summary.** #14's run 43479358998 restored that map. Static reachability would run 11 of 29 test files, each with a why-path, and skip 18 (unproven), as the local dry run predicted.
+
+## 26. A directory named by `new URL(…, import.meta.url)` is a dependency
+
+- **Context.** The lexer records `new URL(spec, import.meta.url)` as a `url` record, so assets next to a module are dependencies. When `spec` named a directory (`'.'`, `'..'`, `'./fixtures/'`), the resolver found no file and reported it as unresolved ("not found"), which made the file uncertain: every test reaching it always ran.
+  - Day 10 hit this in `vitest.config.ts`, a global input, where it would have selected every test on every change (entry 25).
+  - On honojs/hono it made test files uncertain whose only problem was a fixtures directory.
+  - The same pattern written as `import.meta.dirname` was invisible altogether, so the stricter treatment fell only on one spelling.
+- **Decision.**
+  - **A directory URL** depends on every file below it, since the code may read any of them. The resolution's targets are those files, recorded as a glob over `<dir>/**` (`g:glob:<dir>/**`), so a file appearing there changes the glob's hash. `'..'` up to the repository root gives `**`, every file.
+  - **Directory names are glob-escaped.** The dialect has no escape character, so `escapeGlob` writes `*`, `?` and `[` as one-character classes, `{` as a one-option brace, and a leading `!` as a class.
+  - **A missing target** is recorded as a directory that may yet appear (a `d:` node), as for imports.
+  - **Symlinks and submodules below the directory.** A symlink to a file is followed, and both count. A symlink to a directory or out of the repository, or a submodule, leaves the URL unresolved: what the code could read below it cannot be listed.
+  - **Selection (L1).** An added file that a glob of the map matches no longer escalates its package. It shows in Δ as that glob's changed hash, which selects exactly its dependents, like a new module's probes. This covers directory URLs, `import.meta.glob`, `inputs.global` and declared inputs. A new file no glob matches still escalates.
+  - **The engine stays `sieve-static-1`.** The planner never re-resolves at H: it trusts the map's edges and only recomputes node hashes, whose definitions did not change.
+    - An old map read by the new planner selects what the old engine would have.
+    - A new map read by an old planner uses the same glob dialect, and escalates more, not less.
+    - So `ENGINE` changes when hash definitions or the reading of a map change, not when the builder becomes more precise.
+  - **Code that walks out of the directory** (`new URL('.', import.meta.url)` and then `../src`) reads files this does not record. Like any `fs` read, that is why every would-skip stays unproven until records exist (M2/M3).
+- **Evidence.**
+  - **Resolver examples:** a file, a directory with or without a trailing slash, `'.'`, the root, `app/[slug]`, a symlink to a file, symlinks to a directory and out of the repository, a missing path and a path outside the repository.
+  - **Evidence-completeness property.** It now also runs over `url` records, with directory specifiers added. It caught a mutant that dropped the "may yet become a directory" record: an absent target that became a directory changed the result unseen.
+  - **`escapeGlob` properties:** 2,000 pairs of paths built from glob characters. The escaped glob matches exactly its path, and with `/**` exactly the path and what is below it, never as an exclude.
+  - **Selection examples:** the importer is not uncertain; a file changing below the directory selects it with a why-path; a file appearing selects it with no escalation; a new file outside any glob still escalates; the directory appearing selects it through `d:`.
+  - **7 hand mutants were all caught:** no escaping; no "may yet become a directory"; no glob; symlinks not checked; files not targets; the L1 exemption dropped; every added file exempt.
+  - **On hono** at `f6fbaf02`, uncertain files fall from 45 to 44. Nodes rise from 3,288 to 3,377 and edges from 13,543 to 14,453.
+    - `adapters/deno/test/serve-static.test.ts` now depends on `adapters/deno/test/**`.
+    - `build/declaration-emit.test.ts` depends on its fixtures directory, and on `**` through `new URL('..', import.meta.url)`, which names the repository root.
+  - **On this repository**, `vitest.config.ts` keeps `import.meta.dirname`. A root-directory URL in a global input would now be a dependency on every file, which still selects every test on any change.

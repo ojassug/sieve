@@ -17,19 +17,23 @@
 | 5 | `core/graph`: interning, CSR, reverse BFS, why-paths, P1 and P3 | [#5](https://github.com/ojassug/sieve/pull/5) | Met |
 | 6–7 | `core/resolve`: resolver with recorded probes, JSONC, YAML subset, globs | [#6](https://github.com/ojassug/sieve/pull/6) | Met: 5 fixture repos pass |
 | 8 | `core/lockfile/npm`: `p:` nodes, lookup, diff; other formats reported as L3 | [#7](https://github.com/ojassug/sieve/pull/7) | Met |
-| 9 | CLI v0: `sieve graph`, `sieve diff`, `sieve plan --static --shadow --map` | branch `m1/d09-cli` | Met: runs on this repository and on honojs/hono (§6) |
-| 10 | Walking skeleton in CI on this repo | — | **Not started** (§7) |
+| 9 | CLI v0: `sieve graph`, `sieve diff`, `sieve plan --static --shadow --map` | [#11](https://github.com/ojassug/sieve/pull/11) | Met: runs on this repository and on honojs/hono (§6) |
+| 10 | Walking skeleton in CI on this repo: `.github/workflows/sieve.yml` | [#13](https://github.com/ojassug/sieve/pull/13) | Met: run-all fallback on #13, map cached from `main`, shadow summary with why-paths on [#14](https://github.com/ojassug/sieve/pull/14) (§7, DECISIONS 25) |
 
 **Health at hand-off.**
 - **Tests:** 239 in 18 files, all passing on Windows 11 with Node 26.4.
 - **CI:** green on `main` (`00fea91`): static checks; Ubuntu on Node 22, 24 and 26; Windows on Node 22. The DCO job runs on pull requests only.
 - **Static checks:** lint, typecheck and the zero-dependency check are clean.
 - **Day 9 update (2026-11-12, branch `m1/d09-cli`):** `sieve graph`, `sieve diff` and `sieve plan --mode shadow --static --map` run from source with `node packages/cli/src/main.ts`. 395 tests pass in 28 files, with main merged in after #10. See §6 and DECISIONS 23–24.
+- **Day 10 update (2026-11-13, branch `m1/d10-skeleton`):**
+  - [#12](https://github.com/ojassug/sieve/pull/12) raised Vitest's `testTimeout` to 20 s. The Windows job on `main` had timed out on a git-heavy corpus test after #11 merged.
+  - `.github/workflows/sieve.yml` runs plan → shards → `sieve-gate` on every PR in shadow mode, and builds the map on pushes to `main`.
+  - 416 tests pass in 29 files. See §7 and DECISIONS 25.
 
 **First three things to do:**
 1. Check that the collector is making progress (§5.3): coverage should grow with each daily run.
-2. Read §2, then build day 9 (§6).
-3. Build day 10 (§7). It needs at least one merge to `main` and two PRs to demonstrate.
+2. Start the rest of M1 (§8). Every PR now shows SIEVE's shadow summary: read it, and record any would-skip that should have run.
+3. Decide with Ojas whether `sieve-gate` becomes a required check (§10).
 
 ## 2. Ground rules that carry over
 
@@ -86,7 +90,7 @@ npm run typecheck
 npm run check:deps
 ```
 
-Expect `395 passed` from `npm test` (on branch `m1/d09-cli`, with #10 merged in), and no output from lint or typecheck. To reproduce the recorded benchmarks (§9), run `node bench/ls-tree.ts`, `node bench/lex.ts`, `node bench/graph.ts` and `node bench/static-graph.ts`.
+Expect `438 passed` from `npm test` (on branch `m1/new-url-dirs`), and no output from lint or typecheck. To reproduce the recorded benchmarks (§9), run `node bench/ls-tree.ts`, `node bench/lex.ts`, `node bench/graph.ts` and `node bench/static-graph.ts`.
 
 To try the CLI on this repository:
 
@@ -109,7 +113,7 @@ node packages/cli/src/main.ts plan --mode shadow --static --map .sieve/map
 | `packages/core/src/lex/ts.ts` | Import lexer for `.ts`, `.tsx` and JS: 12 record kinds, `typeOnly` and `inlineTypeOnly`, non-literal specifiers as `null`, diagnostics that mark a file uncertain | `lexImports(source, dialect)`, `lexImportsFromBytes`, `dialectOf(path)` | `test/lex/golden.test.ts` (20), `test/lex/lexer.test.ts` (17); fixtures in `test/fixtures/lex/` |
 | `packages/core/src/graph/graph.ts` | CSR graph: nodes numbered in sorted-name order; `STATIC`/`DYNAMIC`/`DECLARED` provenance bits; multi-source reverse BFS; why-paths | `GraphBuilder.addNode/addEdge/build`, `reverseReach`, `whyPath` | `test/graph/graph.test.ts` (13: P1, P3, why-paths, determinism) |
 | `packages/core/src/resolve/resolver.ts` | Resolution over a `Vfs`, the git view of a snapshot. Probes the union of TypeScript, Vite and Jest candidate orders, and records targets, absent paths, `d:` directories, configs and `g:` sets. Covers tsconfig `paths`/`baseUrl`/`extends`, `exports`/`imports`, workspaces, `__mocks__` and symlinks | `Resolver.resolve({from, specifier, kind, patterns?, base?})`, `Resolver.workspaces()`, `Resolver.ownerDir()`, `MemoryVfs`, `exportsTargets`, `joinPath`, `dirname` | `test/resolve/resolver.test.ts` (52: fixtures plus the evidence-completeness property); fixtures in `test/fixtures/resolve/` |
-| `packages/core/src/resolve/{jsonc,yaml,glob}.ts` | JSONC (tsconfig), the pnpm-workspace YAML subset, globs | `parseJsonc`, `parsePnpmWorkspace`, `globToRegExp` | `test/resolve/formats.test.ts` (24) |
+| `packages/core/src/resolve/{jsonc,yaml,glob}.ts` | JSONC (tsconfig), the pnpm-workspace YAML subset, globs | `parseJsonc`, `parsePnpmWorkspace`, `globToRegExp`, `escapeGlob` | `test/resolve/formats.test.ts` (34) |
 | `packages/core/src/lockfile/npm.ts` | package-lock v2/v3 → `p:npm:<install location>`. Node-style `locate`, package-to-package dependencies, diff, lockfile detection; other formats are `unparseable` (L3) | `parseNpmLockfile`, `NpmLockfile.locate/dependencies`, `diffLockfiles`, `detectLockfile` | `test/lockfile/npm.test.ts` (16) |
 | `packages/core/src/index.ts` | The package's public exports. Workspace packages export `./src/*.ts` directly (DECISIONS 3) | — | — |
 | `packages/core/src/git/{cat-file,vfs}.ts` | `git cat-file --batch` parser; `GitVfs`, the resolver's `Vfs` over a `TreeIndex` with blobs from git | `readBlobs(cwd, oids)`, `CatFileParser`, `GitVfs.load`, `repoRoot` | `test/git/cat-file.test.ts`, `test/git/vfs.test.ts`, `test/git/git.test.ts` |
@@ -119,7 +123,9 @@ node packages/cli/src/main.ts plan --mode shadow --static --map .sieve/map
 | `packages/vitest`, `packages/jest` | Placeholders for M2 | — | — |
 | `tools/corpus/` | The corpus collector (§5). `repos.json` lists the repositories; `corpus-repo/` is the template for the data repo | `node tools/corpus/src/main.ts …` | `tools/corpus/test/*` (35) |
 | `tools/replay`, `tools/toyrepo` | Placeholders for M4 and M3 | — | — |
-| `scripts/` | CI guards: `check-zero-deps.ts`, `check-dco.ts` (logic in `scripts/lib/`) | `npm run check:deps`, `npm run check:dco` | `scripts/test/*` (16) |
+| `scripts/` | CI guards: `check-zero-deps.ts`, `check-dco.ts` (logic in `scripts/lib/`). `lib/test-files.ts` turns a shard's `SIEVE_TEST_FILES` list into Vitest's `include` (DECISIONS 25) | `npm run check:deps`, `npm run check:dco` | `scripts/test/*` (37) |
+| `sieve.config.json` | SIEVE's config for this repository: 3 shards, and one declared input for the CLI end-to-end test | — | — |
+| `.github/workflows/sieve.yml` | The walking skeleton: `plan`, `test` (one job per shard), `sieve-gate`, and `map` on pushes to `main` (DECISIONS 25) | — | — |
 | `bench/` | `TARGETS.md` (pre-registered), `CORPUS.md` (selection criteria and first-pass vetting), `README.md` (recorded numbers), `results/*.json`, scripts `ls-tree.ts`, `lex.ts`, `graph.ts` | — | — |
 | `.github/workflows/ci.yml` | `static` (deps, lint, typecheck; Node 26), `test` (Ubuntu, Node 22/24/26), `windows` (Node 22), `dco` (PRs only) | — | — |
 
@@ -169,7 +175,7 @@ The data is the flake ground truth (T3) and the durations for the replay corpus.
 **Scheduled runs.** The 03:17 UTC run for 2026-11-12 fired eight hours late, as run 43207509015 at 11:15 UTC, still on the old collector. GitHub can delay or drop scheduled runs. If they go missing, start runs by hand with `gh workflow run collect.yml --repo ojassug/sieve-corpus`.
 
 **Pushing to sieve-corpus during a run no longer loses it.**
-- In the first two runs, the publish step committed and pushed without pulling first. A concurrent push (a `collector.ref` bump, for instance) made its push fail, and that run's manifest and state were lost; the release assets were published regardless.
+- In the first two runs, the publish step committed and pushed without pulling first. A concurrent push (a `collector.ref` bump, for instance) would have made its push fail and lost that run's manifest and state, although the release assets would still have been published. Neither run was hit.
 - The publish step now re-applies onto the latest `main` and retries, and fails loudly rather than quietly if it still cannot push (DECISIONS 22).
 - Better still, normal operation no longer pushes there: the collector version follows `main` in this repository. The remaining reasons to push to sieve-corpus are updating the caller stub or the README from `tools/corpus/corpus-repo/`, which the `templates` job in each run will tell you about. Those are safe during a run, but check `gh run list --repo ojassug/sieve-corpus` first anyway if you want the run's log to stay easy to read.
 
@@ -288,7 +294,15 @@ GH_TOKEN="$(gh auth token)" node tools/corpus/src/main.ts --config tools/corpus/
 - **Run from source.** The CLI runs straight from source through type stripping: `node packages/cli/src/main.ts …` on Node 22.18 or later. In CI, `npm ci --omit=dev --ignore-scripts` installs only the workspace links, and that was verified. The published bundle comes later (DECISIONS 3).
 - **Missing or unreadable map.** The plan must fall back to run-all, exit 0, and say so in the summary.
 
-## 7. Next: day 10, the walking skeleton
+## 7. Day 10, the walking skeleton
+
+**Status (2026-11-13):** built on branch `m1/d10-skeleton`, following the plan below; DECISIONS 25 records where it chose or deviated.
+- Shards get their file lists through `SIEVE_TEST_FILES`, which `vitest.config.ts` reads.
+- `sieve.config.json` sets 3 shards and declares that the CLI end-to-end test depends on `packages/cli/src/**`.
+- **Done when: met (2026-11-13).**
+  1. #13's run [43435242836](https://github.com/ojassug/sieve/actions/runs/43435242836) found no map and ran all 29 files, saying why.
+  2. The merge's push run [43435914996](https://github.com/ojassug/sieve/actions/runs/43435914996) cached `sieve-map-f065f80…`.
+  3. #14's run [43479358998](https://github.com/ojassug/sieve/actions/runs/43479358998) restored it, and static reachability would run 11 of 29, with why-paths.
 
 The spec is [roadmap §5](docs/roadmap.md) plus architecture §5.3 and §5.4. Build `.github/workflows/sieve.yml`:
 
@@ -376,7 +390,12 @@ These are honest limits, not bugs. Each one errs towards running more tests.
     - A version bump in the root `package.json` reruns every test, because each file depends on its whole nearest `package.json`. Hashing only the fields that change module semantics (`type`, `exports`, `imports`, `main`, dependencies) would fix it.
     - A self-import whose `exports` point at build output (`dist/`) is unresolved, so it is uncertain.
     - `bun:` specifiers count as unknown virtual modules.
-    - `new URL('.', import.meta.url)` names a directory, and the resolver reports it as unresolved.
+- **Walking skeleton (day 10, DECISIONS 25).**
+  - Every test runs twice on a PR, once in `ci.yml` and once in the shards, until shadow mode gives way to real skips.
+  - Shards are split round-robin, not by duration.
+  - The map is rebuilt from scratch on every push to `main`.
+  - Whether `actions/cache` scoping is safe to trust is M3 work (ADR-0021).
+  - A directory named by `new URL(…, import.meta.url)` depends on every file below it (DECISIONS 26). In a global input, a URL that names the repository root would select every test on any change, so this repository uses `import.meta.dirname`.
 - **Collector.** See §5.4. The first run's coverage is still unknown.
 - **Docs that still owe updates:**
   - ADR-0009 provenance width (week 3);

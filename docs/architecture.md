@@ -752,6 +752,13 @@ jobs:
 - No early-exit hacks are needed.
 - `pull_request` checks out the merge commit `refs/pull/N/merge`. SIEVE hashes the tree actually tested, and takes `pull_request.base.sha` from `$GITHUB_EVENT_PATH` as the base hint, with no API call.
 
+**In M1** ([DECISIONS.md](../DECISIONS.md) entry 25), SIEVE's own repository runs this shape as `.github/workflows/sieve.yml`, with three stand-ins:
+- the CLI runs from source;
+- each shard hands its exact file list to Vitest in `SIEVE_TEST_FILES` until `sieve run` and the runner plugin exist;
+- the gate is a shell step until `sieve gate` exists.
+
+The plan diffs against the Lite-mode map in `actions/cache` (§5.4), which a `map` job builds on every push to `main`.
+
 **GitHub App.**
 - **Permissions** (to confirm against the permissions reference in M6): Checks write; Actions read (artifacts for fork pull-ingest); Contents read; Metadata read; Pull requests write (only for the optional sticky comment).
 - **Events and handling:**

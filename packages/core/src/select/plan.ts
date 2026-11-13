@@ -96,11 +96,14 @@ export function selectStatic(map: SieveMap, head: HeadState, rules: PlanRules): 
   const resolver = new Resolver(head.vfs);
   const escalations: Escalation[] = [];
   const ignore = rules.ignore ?? [];
+  const globbed = Object.values(map.globs);
   for (const change of delta.files) {
     const { path, kind } = change;
     const handled = Object.hasOwn(map.nodes, `f:${path}`) || path === CONFIG_PATH || LOCKFILE_PATHS.includes(path);
-    // A new module nothing loaded at S can only matter through probes and listings already in Δ.
-    if (handled || matchGlobs([path], ignore).length > 0 || (kind === 'added' && isModule(path))) {
+    // A new module nothing loaded at S can only matter through probes and listings already in Δ, and
+    // a new file that a glob of the map matches shows in Δ as that glob's changed hash.
+    const seen = kind === 'added' && (isModule(path) || globbed.some((patterns) => matchGlobs([path], patterns).length > 0));
+    if (handled || matchGlobs([path], ignore).length > 0 || seen) {
       continue;
     }
     escalations.push({ level: 'L1', scope: resolver.ownerDir(path), cause: `${path} was ${kind} and is not in the graph` });
