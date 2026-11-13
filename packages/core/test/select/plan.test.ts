@@ -107,6 +107,39 @@ describe('selectStatic', () => {
     expect(selected(selection)).toEqual(['test/a.test.ts']);
   });
 
+  describe('a directory named by new URL(…, import.meta.url)', () => {
+    const base = { ...BASE, 'src/a.ts': "export const data = new URL('./data/', import.meta.url);\n", 'src/data/x.json': '1', 'src/data/deep/y.json': '1' };
+
+    it('is a dependency, not an uncertainty', () => {
+      expect(mapOf(fakeRepo(base)).uncertain).toEqual({});
+      expect(selected(plan(base, base))).toEqual([]);
+    });
+
+    it('selects its importers when a file below it changes', () => {
+      const selection = plan(base, { ...base, 'src/data/deep/y.json': '2' });
+      expect(selection.affected).toEqual([{ test: 'test/a.test.ts', path: ['f:test/a.test.ts', 'f:src/a.ts', 'f:src/data/deep/y.json'] }]);
+      expect(selection.escalations).toEqual([]);
+    });
+
+    it('selects its importers when a file appears below it, which needs no escalation', () => {
+      const selection = plan(base, { ...base, 'src/data/z.json': '1' });
+      expect(selection.changed).toContain('g:glob:src/data/**');
+      expect(selection.escalations).toEqual([]);
+      expect(selected(selection)).toEqual(['test/a.test.ts']);
+    });
+
+    it('still escalates a new file that no glob in the map matches (L1)', () => {
+      const selection = plan(base, { ...base, 'src/other.json': '1' });
+      expect(selection.escalations).toEqual([{ level: 'L1', scope: '', cause: 'src/other.json was added and is not in the graph' }]);
+    });
+
+    it('selects its importers when it appears, having been missing', () => {
+      const missing = { ...BASE, 'src/a.ts': "export const data = new URL('./data/', import.meta.url);\n" };
+      const selection = plan(missing, { ...missing, 'src/data/x.json': '1' });
+      expect(selection.affected.find((a) => a.test === 'test/a.test.ts')?.path).toEqual(['f:test/a.test.ts', 'f:src/a.ts', 'd:src/data']);
+    });
+  });
+
   it('runs new tests, and tests named by alwaysRun', () => {
     const selection = plan(BASE, { ...BASE, 'test/new.test.ts': '' }, { alwaysRun: ['test/plain.*'] });
     expect(selection.forced).toEqual([

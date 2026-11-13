@@ -5,6 +5,7 @@ import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
 import type { ImportKind } from '../../src/lex/ts.ts';
+import { matchGlobs } from '../../src/resolve/glob.ts';
 import { exportsTargets, MemoryVfs, Resolver, type Resolution } from '../../src/resolve/resolver.ts';
 
 const FIXTURES = join(import.meta.dirname, '..', 'fixtures', 'resolve');
@@ -97,6 +98,70 @@ describe('exportsTargets', () => {
   });
 });
 
+// `new URL(spec, import.meta.url)`: an asset next to the module, or a directory whose files the
+// code may read. A directory depends on everything below it, as a glob, so files that appear count.
+describe('new URL(…, import.meta.url)', () => {
+  const resolver = new Resolver(
+    new MemoryVfs(
+      {
+        'src/a.ts': '',
+        'src/logo.svg': '',
+        'src/fixtures/one.json': '',
+        'src/fixtures/deep/two.json': '',
+        'app/[slug]/page.ts': '',
+        'app/s/page.ts': '',
+        'real/data.json': '',
+        'top.ts': '',
+      },
+      { 'aliases/data.json': '../real/data.json', 'links/dir': '../real', 'links/up': '../../outside' },
+    ),
+  );
+  const url = (from: string, specifier: string) => resolver.resolve({ from, specifier, kind: 'url' });
+
+  it('resolves a file to that file', () => {
+    expect(url('src/a.ts', './logo.svg')).toMatchObject({ kind: 'file', targets: ['src/logo.svg'], globs: [] });
+  });
+
+  it('resolves a directory to every file below it, recorded as a glob', () => {
+    const files = ['src/fixtures/deep/two.json', 'src/fixtures/one.json'];
+    for (const specifier of ['./fixtures/', './fixtures', 'fixtures/']) {
+      const result = url('src/a.ts', specifier);
+      expect(result, specifier).toMatchObject({ kind: 'file', targets: files, globs: [{ key: 'src/fixtures/**', matches: files, patterns: ['src/fixtures/**'] }] });
+      expect(result.dirs, specifier).toContain('src/fixtures');
+      expect(result.reason, specifier).toBeUndefined();
+    }
+  });
+
+  it("resolves '.' to the module's own directory, itself included", () => {
+    expect(url('src/a.ts', '.').targets).toEqual(['src/a.ts', 'src/fixtures/deep/two.json', 'src/fixtures/one.json', 'src/logo.svg']);
+  });
+
+  it('resolves the repository root to every file', () => {
+    const small = new Resolver(new MemoryVfs({ 'a/b/c.ts': '', 'd.json': '' }));
+    const result = small.resolve({ from: 'a/b/c.ts', specifier: '../..', kind: 'url' });
+    expect(result).toMatchObject({ kind: 'file', targets: ['a/b/c.ts', 'd.json'], globs: [{ key: '**', matches: ['a/b/c.ts', 'd.json'], patterns: ['**'] }] });
+  });
+
+  it('escapes glob characters in the directory name', () => {
+    expect(url('app/[slug]/page.ts', '.')).toMatchObject({ targets: ['app/[slug]/page.ts'], globs: [{ key: 'app/[[]slug]/**', patterns: ['app/[[]slug]/**'] }] });
+  });
+
+  it('follows a symlink below the directory to the file it names', () => {
+    expect(url('top.ts', './aliases/').targets).toEqual(['aliases/data.json', 'real/data.json']);
+  });
+
+  it('leaves a directory unresolved when a symlink below it leads to a directory or out of the repository', () => {
+    expect(url('top.ts', './links/')).toMatchObject({ kind: 'unresolved', reason: 'symlinked directory', targets: [] });
+    expect(url('top.ts', '.')).toMatchObject({ kind: 'unresolved', targets: [] });
+  });
+
+  it('leaves a missing path, a path outside the repository and a symlinked directory unresolved', () => {
+    expect(url('src/a.ts', './nowhere/')).toMatchObject({ kind: 'unresolved', reason: 'not found', absent: ['src/nowhere'], dirs: ['src/nowhere'] });
+    expect(url('top.ts', '..')).toMatchObject({ kind: 'unresolved', reason: 'outside repository' });
+    expect(url('top.ts', './links/dir/')).toMatchObject({ kind: 'unresolved', reason: 'symlinked directory' });
+  });
+});
+
 // The resolver's soundness: a result may only depend on what it recorded. Adding a file that is
 // not a probed path, a config, or under a probed directory, or removing a file that is not a
 // target or config, must leave the result unchanged.
@@ -107,20 +172,21 @@ describe('evidence completeness (property)', () => {
   const UNIVERSE = DIRS.flatMap((dir) => NAMES.flatMap((name) => EXTS.map((ext) => (dir === '' ? `${name}${ext}` : `${dir}/${name}${ext}`)))).filter(
     (path) => !DIRS.includes(path),
   );
-  const SPECIFIERS = ['./x', './x.js', '../x', '../x.ts', './index', '..', '.', '../b', '../../x', '/x', './util', '../x/util', './x/index'];
+  const SPECIFIERS = ['./x', './x.js', '../x', '../x.ts', './index', '..', '.', '../b', '../../x', '/x', './util', '../x/util', './x/index', '../..', '../x/', './util/'];
   const IMPORTER = 'a/b/f.ts';
 
   const covered = (result: Resolution, path: string): boolean =>
     result.targets.includes(path) ||
     result.absent.includes(path) ||
     result.configs.includes(path) ||
-    result.dirs.some((dir) => path === dir || path.startsWith(`${dir}/`) || dir.startsWith(`${path}/`));
+    result.dirs.some((dir) => path === dir || path.startsWith(`${dir}/`) || dir.startsWith(`${path}/`)) ||
+    result.globs.some((glob) => glob.patterns !== undefined && matchGlobs([path], glob.patterns).length > 0);
 
-  const resolve = (files: string[], specifier: string): Resolution =>
+  const resolveAs = (files: string[], specifier: string, kind: ImportKind): Resolution =>
     new Resolver(new MemoryVfs(Object.fromEntries([...files, IMPORTER].map((f) => [f, ''])))).resolve({
       from: IMPORTER,
       specifier,
-      kind: 'static',
+      kind,
       patterns: null,
     });
 
@@ -128,20 +194,21 @@ describe('evidence completeness (property)', () => {
   const coexists = (files: string[], path: string) =>
     !files.some((f) => f.startsWith(`${path}/`) || path.startsWith(`${f}/`)) && path !== IMPORTER && !IMPORTER.startsWith(`${path}/`);
 
-  it('adding or removing unrecorded files never changes a resolution', () => {
+  it.each(['static', 'url'] as const)('adding or removing unrecorded files never changes a %s resolution', (kind) => {
     fc.assert(
       fc.property(fc.subarray(UNIVERSE, { maxLength: 12 }), fc.constantFrom(...SPECIFIERS), (picked, specifier) => {
         const files = picked.filter((path, _i, all) => all.every((other) => other === path || !other.startsWith(`${path}/`)) && coexists([], path));
-        const before = resolve(files, specifier);
+        const resolve = (set: string[]) => resolveAs(set, specifier, kind);
+        const before = resolve(files);
         for (const extra of UNIVERSE) {
           if (!files.includes(extra) && coexists(files, extra) && !covered(before, extra)) {
-            const after = resolve([...files, extra], specifier);
+            const after = resolve([...files, extra]);
             expect({ kind: after.kind, targets: after.targets }, `adding ${extra}`).toEqual({ kind: before.kind, targets: before.targets });
           }
         }
         for (const gone of files) {
           if (!before.targets.includes(gone) && !before.configs.includes(gone) && !covered(before, gone)) {
-            const after = resolve(files.filter((f) => f !== gone), specifier);
+            const after = resolve(files.filter((f) => f !== gone));
             expect({ kind: after.kind, targets: after.targets }, `removing ${gone}`).toEqual({ kind: before.kind, targets: before.targets });
           }
         }

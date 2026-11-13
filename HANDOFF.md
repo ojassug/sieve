@@ -18,7 +18,7 @@
 | 6–7 | `core/resolve`: resolver with recorded probes, JSONC, YAML subset, globs | [#6](https://github.com/ojassug/sieve/pull/6) | Met: 5 fixture repos pass |
 | 8 | `core/lockfile/npm`: `p:` nodes, lookup, diff; other formats reported as L3 | [#7](https://github.com/ojassug/sieve/pull/7) | Met |
 | 9 | CLI v0: `sieve graph`, `sieve diff`, `sieve plan --static --shadow --map` | [#11](https://github.com/ojassug/sieve/pull/11) | Met: runs on this repository and on honojs/hono (§6) |
-| 10 | Walking skeleton in CI on this repo: `.github/workflows/sieve.yml` | branch `m1/d10-skeleton` | Run-all fallback shown on the first PR; the shadow summary needs a second PR after merge (§7) |
+| 10 | Walking skeleton in CI on this repo: `.github/workflows/sieve.yml` | [#13](https://github.com/ojassug/sieve/pull/13) | Met: run-all fallback on #13, map cached from `main`, shadow summary with why-paths on [#14](https://github.com/ojassug/sieve/pull/14) (§7, DECISIONS 25) |
 
 **Health at hand-off.**
 - **Tests:** 239 in 18 files, all passing on Windows 11 with Node 26.4.
@@ -32,8 +32,8 @@
 
 **First three things to do:**
 1. Check that the collector is making progress (§5.3): coverage should grow with each daily run.
-2. Finish day 10's demonstration (§7): after `m1/d10-skeleton` merges and `main` has cached a map, the next PR that changes code should show the shadow summary with why-paths.
-3. Start the rest of M1 (§8).
+2. Start the rest of M1 (§8). Every PR now shows SIEVE's shadow summary: read it, and record any would-skip that should have run.
+3. Decide with Ojas whether `sieve-gate` becomes a required check (§10).
 
 ## 2. Ground rules that carry over
 
@@ -90,7 +90,7 @@ npm run typecheck
 npm run check:deps
 ```
 
-Expect `416 passed` from `npm test` (on branch `m1/d10-skeleton`), and no output from lint or typecheck. To reproduce the recorded benchmarks (§9), run `node bench/ls-tree.ts`, `node bench/lex.ts`, `node bench/graph.ts` and `node bench/static-graph.ts`.
+Expect `438 passed` from `npm test` (on branch `m1/new-url-dirs`), and no output from lint or typecheck. To reproduce the recorded benchmarks (§9), run `node bench/ls-tree.ts`, `node bench/lex.ts`, `node bench/graph.ts` and `node bench/static-graph.ts`.
 
 To try the CLI on this repository:
 
@@ -113,7 +113,7 @@ node packages/cli/src/main.ts plan --mode shadow --static --map .sieve/map
 | `packages/core/src/lex/ts.ts` | Import lexer for `.ts`, `.tsx` and JS: 12 record kinds, `typeOnly` and `inlineTypeOnly`, non-literal specifiers as `null`, diagnostics that mark a file uncertain | `lexImports(source, dialect)`, `lexImportsFromBytes`, `dialectOf(path)` | `test/lex/golden.test.ts` (20), `test/lex/lexer.test.ts` (17); fixtures in `test/fixtures/lex/` |
 | `packages/core/src/graph/graph.ts` | CSR graph: nodes numbered in sorted-name order; `STATIC`/`DYNAMIC`/`DECLARED` provenance bits; multi-source reverse BFS; why-paths | `GraphBuilder.addNode/addEdge/build`, `reverseReach`, `whyPath` | `test/graph/graph.test.ts` (13: P1, P3, why-paths, determinism) |
 | `packages/core/src/resolve/resolver.ts` | Resolution over a `Vfs`, the git view of a snapshot. Probes the union of TypeScript, Vite and Jest candidate orders, and records targets, absent paths, `d:` directories, configs and `g:` sets. Covers tsconfig `paths`/`baseUrl`/`extends`, `exports`/`imports`, workspaces, `__mocks__` and symlinks | `Resolver.resolve({from, specifier, kind, patterns?, base?})`, `Resolver.workspaces()`, `Resolver.ownerDir()`, `MemoryVfs`, `exportsTargets`, `joinPath`, `dirname` | `test/resolve/resolver.test.ts` (52: fixtures plus the evidence-completeness property); fixtures in `test/fixtures/resolve/` |
-| `packages/core/src/resolve/{jsonc,yaml,glob}.ts` | JSONC (tsconfig), the pnpm-workspace YAML subset, globs | `parseJsonc`, `parsePnpmWorkspace`, `globToRegExp` | `test/resolve/formats.test.ts` (24) |
+| `packages/core/src/resolve/{jsonc,yaml,glob}.ts` | JSONC (tsconfig), the pnpm-workspace YAML subset, globs | `parseJsonc`, `parsePnpmWorkspace`, `globToRegExp`, `escapeGlob` | `test/resolve/formats.test.ts` (34) |
 | `packages/core/src/lockfile/npm.ts` | package-lock v2/v3 → `p:npm:<install location>`. Node-style `locate`, package-to-package dependencies, diff, lockfile detection; other formats are `unparseable` (L3) | `parseNpmLockfile`, `NpmLockfile.locate/dependencies`, `diffLockfiles`, `detectLockfile` | `test/lockfile/npm.test.ts` (16) |
 | `packages/core/src/index.ts` | The package's public exports. Workspace packages export `./src/*.ts` directly (DECISIONS 3) | — | — |
 | `packages/core/src/git/{cat-file,vfs}.ts` | `git cat-file --batch` parser; `GitVfs`, the resolver's `Vfs` over a `TreeIndex` with blobs from git | `readBlobs(cwd, oids)`, `CatFileParser`, `GitVfs.load`, `repoRoot` | `test/git/cat-file.test.ts`, `test/git/vfs.test.ts`, `test/git/git.test.ts` |
@@ -299,7 +299,10 @@ GH_TOKEN="$(gh auth token)" node tools/corpus/src/main.ts --config tools/corpus/
 **Status (2026-11-13):** built on branch `m1/d10-skeleton`, following the plan below; DECISIONS 25 records where it chose or deviated.
 - Shards get their file lists through `SIEVE_TEST_FILES`, which `vitest.config.ts` reads.
 - `sieve.config.json` sets 3 shards and declares that the CLI end-to-end test depends on `packages/cli/src/**`.
-- Step 1 of the demonstration below is the branch's own PR. Steps 2 and 3 follow its merge.
+- **Done when: met (2026-11-13).**
+  1. #13's run [43435242836](https://github.com/ojassug/sieve/actions/runs/43435242836) found no map and ran all 29 files, saying why.
+  2. The merge's push run [43435914996](https://github.com/ojassug/sieve/actions/runs/43435914996) cached `sieve-map-f065f80…`.
+  3. #14's run [43479358998](https://github.com/ojassug/sieve/actions/runs/43479358998) restored it, and static reachability would run 11 of 29, with why-paths.
 
 The spec is [roadmap §5](docs/roadmap.md) plus architecture §5.3 and §5.4. Build `.github/workflows/sieve.yml`:
 
@@ -387,13 +390,12 @@ These are honest limits, not bugs. Each one errs towards running more tests.
     - A version bump in the root `package.json` reruns every test, because each file depends on its whole nearest `package.json`. Hashing only the fields that change module semantics (`type`, `exports`, `imports`, `main`, dependencies) would fix it.
     - A self-import whose `exports` point at build output (`dist/`) is unresolved, so it is uncertain.
     - `bun:` specifiers count as unknown virtual modules.
-    - `new URL('.', import.meta.url)` names a directory, and the resolver reports it as unresolved.
 - **Walking skeleton (day 10, DECISIONS 25).**
   - Every test runs twice on a PR, once in `ci.yml` and once in the shards, until shadow mode gives way to real skips.
   - Shards are split round-robin, not by duration.
   - The map is rebuilt from scratch on every push to `main`.
   - Whether `actions/cache` scoping is safe to trust is M3 work (ADR-0021).
-  - A global input that uses `new URL(…, import.meta.url)` would make every test always run (see the resolver item above).
+  - A directory named by `new URL(…, import.meta.url)` depends on every file below it (DECISIONS 26). In a global input, a URL that names the repository root would select every test on any change, so this repository uses `import.meta.dirname`.
 - **Collector.** See §5.4. The first run's coverage is still unknown.
 - **Docs that still owe updates:**
   - ADR-0009 provenance width (week 3);
