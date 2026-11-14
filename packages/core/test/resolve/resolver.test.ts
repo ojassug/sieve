@@ -220,6 +220,63 @@ describe('evidence completeness (property)', () => {
 
 // A file's own config dependencies: the tsconfig chain that governs it and the nearest
 // package.json, whose `type` decides how Node loads it.
+describe('packageOf', () => {
+  const npm = new Resolver(
+    new MemoryVfs({
+      'package.json': '{"name":"root","workspaces":["packages/*","!packages/skip"]}',
+      'packages/a/package.json': '{"name":"a"}',
+      'packages/a/src/x.ts': '',
+      'packages/a/test/fixtures/repo/package.json': '{"name":"fixture"}',
+      'packages/a/test/fixtures/repo/src/y.ts': '',
+      'packages/unnamed/package.json': '{}',
+      'packages/skip/package.json': '{"name":"skip"}',
+      'packages/nopkg/z.ts': '',
+      'bench/package.json': '{"type":"module"}',
+      'bench/b.ts': '',
+    }),
+  );
+
+  it('is the deepest workspace member that holds the path, named or not', () => {
+    expect(npm.packageOf('packages/a/src/x.ts')).toBe('packages/a');
+    expect(npm.packageOf('packages/a')).toBe('packages/a');
+    expect(npm.packageOf('packages/unnamed/index.js')).toBe('packages/unnamed');
+  });
+
+  it('ignores a package.json that is not a workspace member, such as a fixture or a type marker', () => {
+    expect(npm.packageOf('packages/a/test/fixtures/repo/src/y.ts')).toBe('packages/a');
+    expect(npm.packageOf('bench/b.ts')).toBe('');
+  });
+
+  it('is the root for excluded members, directories without a package.json and paths outside every member', () => {
+    expect(npm.packageOf('packages/skip/s.ts')).toBe('');
+    expect(npm.packageOf('packages/nopkg/z.ts')).toBe('');
+    expect(npm.packageOf('packages/ab/c.ts')).toBe('');
+    expect(npm.packageOf('README.md')).toBe('');
+  });
+
+  it('prefers a nested member to the member around it', () => {
+    const nested = new Resolver(
+      new MemoryVfs({
+        'package.json': '{"workspaces":["packages/*","packages/a/plugins/*"]}',
+        'packages/a/package.json': '{}',
+        'packages/a/plugins/p/package.json': '{}',
+      }),
+    );
+    expect(nested.packageOf('packages/a/plugins/p/x.ts')).toBe('packages/a/plugins/p');
+    expect(nested.packageOf('packages/a/plugins/x.ts')).toBe('packages/a');
+  });
+
+  it('reads pnpm-workspace.yaml', () => {
+    const pnpm = new Resolver(new MemoryVfs({ 'package.json': '{}', 'pnpm-workspace.yaml': "packages:\n  - 'apps/*'\n", 'apps/web/package.json': '{}' }));
+    expect(pnpm.packageOf('apps/web/src/main.ts')).toBe('apps/web');
+  });
+
+  it('is the root for everything when the workspace list cannot be read', () => {
+    const broken = new Resolver(new MemoryVfs({ 'package.json': '{"workspaces":', 'packages/a/package.json': '{}' }));
+    expect(broken.packageOf('packages/a/x.ts')).toBe('');
+  });
+});
+
 describe('fileConfigs', () => {
   it('records the tsconfig chain, the nearest package.json and every miss on the way up', () => {
     const resolver = new Resolver(

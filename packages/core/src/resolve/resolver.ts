@@ -141,6 +141,8 @@ interface Workspaces {
   readonly absent: readonly string[];
   readonly byName: ReadonlyMap<string, string>;
   readonly names: readonly string[];
+  /** Every workspace member directory, named or not, sorted. */
+  readonly members: readonly string[];
   readonly uncertain: boolean;
 }
 
@@ -232,6 +234,21 @@ export class Resolver {
   }
 
   /** The directory of the nearest package.json above `path` ('' when only the root has one, or none). */
+  /**
+   * The package a path belongs to, for escalations: the deepest workspace member that holds it,
+   * else the repository root (''). A package.json that is not a workspace member, such as a test
+   * fixture or a `type` marker, does not start a package. Module resolution uses `ownerDir`.
+   */
+  packageOf(path: string): string {
+    let owner = '';
+    for (const dir of this.workspaces().members) {
+      if ((path === dir || path.startsWith(`${dir}/`)) && dir.length > owner.length) {
+        owner = dir;
+      }
+    }
+    return owner;
+  }
+
   ownerDir(path: string): string {
     for (let dir = dirname(path); ; dir = dirname(dir)) {
       if (this.vfs.kind(joinPath(dir, 'package.json')!) === 'file' || dir === '') {
@@ -558,6 +575,7 @@ export class Resolver {
     const includes = patterns.filter((p) => !p.startsWith('!')).map((p) => globToRegExp(trimSlashes(p)));
     const excludes = patterns.filter((p) => p.startsWith('!')).map((p) => globToRegExp(trimSlashes(p.slice(1))));
     const byName = new Map<string, string>();
+    const members: string[] = [];
     const claim = (name: unknown, dir: string): void => {
       if (typeof name !== 'string') {
         return;
@@ -574,6 +592,7 @@ export class Resolver {
       }
       const dir = dirname(file);
       if (includes.some((re) => re.test(dir)) && !excludes.some((re) => re.test(dir))) {
+        members.push(dir);
         claim(readJson(file)?.['name'], dir);
       }
     }
@@ -581,7 +600,7 @@ export class Resolver {
       claim(root['name'], '');
     }
     const names = [...byName].map(([name, dir]) => `${name}=${dir}`).sort(compareStrings);
-    this.workspaceCache = { configs, absent, byName, names, uncertain };
+    this.workspaceCache = { configs, absent, byName, names, members: members.sort(compareStrings), uncertain };
     return this.workspaceCache;
   }
 
