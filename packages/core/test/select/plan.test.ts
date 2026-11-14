@@ -141,16 +141,110 @@ describe('selectStatic', () => {
     ]);
   });
 
-  it('runs every test of the owning package when a file outside the graph changes (L1)', () => {
-    const base = { ...BASE, 'pkgs/p/package.json': '{}', 'pkgs/p/test/x.test.ts': '', 'pkgs/p/test/fixtures/data.json': '1' };
-    const selection = plan(base, { ...base, 'pkgs/p/test/fixtures/data.json': '2' });
-    expect(selection.escalations).toEqual([{ level: 'L1', scope: 'pkgs/p', cause: 'pkgs/p/test/fixtures/data.json was modified and is not in the graph' }]);
-    expect(selection.forced).toEqual([{ test: 'pkgs/p/test/x.test.ts', reason: 'L1: pkgs/p/test/fixtures/data.json was modified and is not in the graph' }]);
+  describe('unmapped inputs (L1, ADR-0005)', () => {
+    const WORKSPACES: Files = {
+      ...BASE,
+      'package.json': '{"name":"app","workspaces":["pkgs/*"]}',
+      'pkgs/db/package.json': '{"name":"db","main":"src/index.ts"}',
+      'pkgs/db/src/index.ts': 'export const db = 1;\n',
+      'pkgs/db/migrations/001.sql': 'create table t ();\n',
+      'pkgs/db/test/db.test.ts': "import '../src/index';\n",
+      'pkgs/api/package.json': '{"name":"api"}',
+      'pkgs/api/src/handler.ts': "import 'db';\n",
+      'pkgs/api/test/api.test.ts': "import '../src/handler';\n",
+      'pkgs/cli/package.json': '{"name":"cli"}',
+      'pkgs/cli/src/main.ts': "import 'api';\n",
+      'pkgs/cli/test/cli.test.ts': '',
+      'pkgs/cli/test/fixtures/repo/package.json': '{"name":"fixture"}',
+      'pkgs/cli/test/fixtures/repo/data.json': '1',
+    };
+
+    it('makes every node of the owning package changed, so the escalation follows dependencies into other packages', () => {
+      const selection = plan(WORKSPACES, { ...WORKSPACES, 'pkgs/db/migrations/001.sql': 'create table u ();\n' });
+      const cause = 'pkgs/db/migrations/001.sql was modified and is not in the graph';
+      expect(selection.escalations).toEqual([{ level: 'L1', scope: 'pkgs/db', cause }]);
+      expect(selection.forced.map(({ test, reason }) => ({ test, reason }))).toEqual([
+        { test: 'pkgs/api/test/api.test.ts', reason: `L1: ${cause}` },
+        { test: 'pkgs/db/test/db.test.ts', reason: `L1: ${cause}` },
+      ]);
+      // The why-path crosses into the escalated package; where it ends there is a tie-break among
+      // that package's nodes (a probe directory sorts before the source file).
+      const [api, db] = selection.forced;
+      expect(api!.path!.slice(0, 2)).toEqual(['f:pkgs/api/test/api.test.ts', 'f:pkgs/api/src/handler.ts']);
+      expect(api!.path!.at(-1)).toMatch(/^[fd]:pkgs\/db\//);
+      expect(db!.path).toEqual(['f:pkgs/db/test/db.test.ts']);
+      expect(selection.wouldSkip).toEqual(['pkgs/cli/test/cli.test.ts', 'test/a.test.ts', 'test/c.test.ts', 'test/plain.test.ts']);
+    });
+
+    it('takes the owning package from the workspace members, not from a fixture package.json', () => {
+      const selection = plan(WORKSPACES, { ...WORKSPACES, 'pkgs/cli/test/fixtures/repo/data.json': '2' });
+      expect(selection.escalations).toEqual([{ level: 'L1', scope: 'pkgs/cli', cause: 'pkgs/cli/test/fixtures/repo/data.json was modified and is not in the graph' }]);
+      expect(selected(selection)).toEqual(['pkgs/cli/test/cli.test.ts']);
+    });
+
+    it('treats a changed module that no test reaches as an unmapped input', () => {
+      const selection = plan(WORKSPACES, { ...WORKSPACES, 'pkgs/cli/src/main.ts': "import 'api';\nimport 'db';\n" });
+      const cause = 'pkgs/cli/src/main.ts changed and no test reaches it';
+      expect(selection.escalations).toEqual([{ level: 'L1', scope: 'pkgs/cli', cause }]);
+      expect(selection.forced).toEqual([{ test: 'pkgs/cli/test/cli.test.ts', reason: `L1: ${cause}`, path: ['f:pkgs/cli/test/cli.test.ts'] }]);
+    });
+
+    it('runs everything when the unreached module belongs to the root', () => {
+      const base = { ...BASE, 'scripts/seed.ts': '' };
+      const selection = plan(base, { ...base, 'scripts/seed.ts': 'export {};\n' });
+      expect(selection.escalations).toEqual([{ level: 'L1', scope: '', cause: 'scripts/seed.ts changed and no test reaches it' }]);
+      expect(selection.wouldSkip).toEqual([]);
+    });
+
+    it('treats a package that no test reaches as an unmapped input when its lockfile entry changes', () => {
+      const eslint = (integrity: string) => ({ 'node_modules/eslint': { version: '10', integrity } });
+      const selection = plan({ ...BASE, 'package-lock.json': LOCK('sha512-1', eslint('sha512-e1')) }, { ...BASE, 'package-lock.json': LOCK('sha512-1', eslint('sha512-e2')) });
+      expect(selection.escalations).toEqual([{ level: 'L1', scope: '', cause: 'p:npm:node_modules/eslint changed and no test reaches it' }]);
+      expect(selection.wouldSkip).toEqual([]);
+    });
+
+    it('treats a glob that no test reaches as an unmapped input of the root, since its matches can lie anywhere', () => {
+      const base = { ...BASE, 'scripts/gen.ts': "import.meta.glob('./templates/*.ts');\n" };
+      const selection = plan(base, { ...base, 'scripts/templates/b.ts': '' });
+      expect(selection.escalations).toEqual([{ level: 'L1', scope: '', cause: 'g:glob:scripts/templates/*.ts changed and no test reaches it' }]);
+    });
+
+    it('lets inputs.ignore cover unreached nodes and files outside the graph, and lists what it ignored', () => {
+      const base = { ...BASE, 'scripts/seed.ts': '', 'package-lock.json': LOCK('sha512-1', { 'node_modules/eslint': { integrity: 'sha512-e1' } }) };
+      const head = { ...base, 'scripts/seed.ts': 'export {};\n', 'README.md': '# hi', 'package-lock.json': LOCK('sha512-1', { 'node_modules/eslint': { integrity: 'sha512-e2' } }) };
+      const selection = plan(base, head, { ignore: ['**/*.md', 'scripts/**', 'node_modules/eslint'] });
+      expect(selection.escalations).toEqual([]);
+      expect(selection.ignored).toEqual(['README.md', 'node_modules/eslint', 'scripts/seed.ts']);
+      expect(selected(selection)).toEqual([]);
+    });
+
+    it('does not escalate a deleted test, which reaches itself in the map', () => {
+      const head = { ...BASE };
+      delete head['test/plain.test.ts'];
+      expect(plan(BASE, head).escalations).toEqual([]);
+    });
+
+    it('does not count an uncertain file that nothing reaches as a change', () => {
+      const base = { ...BASE, 'fixtures/u.ts': "import './nowhere';\n" };
+      const selection = plan(base, base);
+      expect(selection.uncertain).toEqual(['u:fixtures/u.ts']);
+      expect(selection.escalations).toEqual([]);
+      expect(selected(selection)).toEqual([]);
+    });
+  });
+
+  it('seeds every u: node, even one a damaged map lists no causes for', () => {
+    const base = { ...BASE, 'src/b.ts': "import './nowhere';\n" };
+    const map = mapOf(fakeRepo(base));
+    const selection = selectStatic({ ...map, uncertain: {} }, headOf(fakeRepo(base)), {});
+    expect(selection.uncertain).toEqual(['u:src/b.ts']);
+    expect(selected(selection)).toEqual(['test/a.test.ts']);
   });
 
   it('ignores changes that match the ignore patterns, and new modules nothing could have loaded', () => {
     const selection = plan(BASE, { ...BASE, 'README.md': '# hi', 'docs/x.txt': 'x', 'src/new.ts': '' }, { ignore: ['**/*.md', 'docs/**'] });
     expect(selection.escalations).toEqual([]);
+    expect(selection.ignored).toEqual(['README.md', 'docs/x.txt']);
     expect(selected(selection)).toEqual([]);
   });
 
