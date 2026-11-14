@@ -6,7 +6,7 @@ export { lsTree, readBlobs, readObjectFormat, repoRoot, type ObjectFormat } from
 export { LsTreeParser, parseLsTree, type LsTreeEntry, type ObjectType } from './git/ls-tree.ts';
 export { GitVfs } from './git/vfs.ts';
 export { dialectOf, lexImports, lexImportsFromBytes, type Dialect, type DiagnosticCode, type ImportKind, type ImportRecord, type LexDiagnostic, type LexResult } from './lex/ts.ts';
-export { DECLARED, DYNAMIC, Graph, GraphBuilder, reverseReach, STATIC, whyPath, type Reach } from './graph/graph.ts';
+export { DECLARED, DYNAMIC, forwardReach, Graph, GraphBuilder, reverseReach, STATIC, whyPath, type Reach } from './graph/graph.ts';
 export { globToRegExp, matchGlobs } from './resolve/glob.ts';
 export { parseJsonc } from './resolve/jsonc.ts';
 export { dirname, exportsTargets, joinPath, MemoryVfs, Resolver, type EntryKind, type GlobEvidence, type Resolution, type ResolutionKind, type ResolveRequest, type Vfs } from './resolve/resolver.ts';

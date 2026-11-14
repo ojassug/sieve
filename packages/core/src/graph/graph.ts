@@ -188,6 +188,35 @@ export function reverseReach(graph: Graph, seeds: Iterable<number>): Reach {
   return { reached, parent, order: queue.slice(0, tail) };
 }
 
+/** 1 for every seed and everything it depends on, directly or transitively. O(seeds + reached edges). */
+export function forwardReach(graph: Graph, seeds: Iterable<number>): Uint8Array {
+  const n = graph.nodeCount;
+  const reached = new Uint8Array(n);
+  const queue = new Uint32Array(n);
+  let tail = 0;
+  for (const seed of seeds) {
+    if (!Number.isInteger(seed) || seed < 0 || seed >= n) {
+      throw new RangeError(`seed ${seed} is not a node`);
+    }
+    if (reached[seed] === 0) {
+      reached[seed] = 1;
+      queue[tail++] = seed;
+    }
+  }
+  const { fwdOffsets, fwdTargets } = graph;
+  for (let head = 0; head < tail; head++) {
+    const v = queue[head]!;
+    for (let k = fwdOffsets[v]!; k < fwdOffsets[v + 1]!; k++) {
+      const w = fwdTargets[k]!;
+      if (reached[w] === 0) {
+        reached[w] = 1;
+        queue[tail++] = w;
+      }
+    }
+  }
+  return reached;
+}
+
 /** The chain from a seed to `node` (seed first), or null when `node` was not reached. */
 export function whyPath(reach: Reach, node: number): number[] | null {
   if (reach.reached[node] !== 1) {
