@@ -7,12 +7,12 @@ SIEVE is a self-hostable test-intelligence service for CI. On every run it:
 
 Every skip carries a machine-checkable proof, and uncertainty always means the test runs.
 
-**Status:** implementation of milestone M1 started on 2026-11-11. Roadmap days 1–10 are merged, the walking skeleton in CI included; the rest of M1 (weeks 2–3) is next.
+**Status:** implementation of milestone M1 started on 2026-11-11. Roadmap days 1–10 are merged, the walking skeleton in CI included; the rest of M1 (weeks 2–3) is under way.
 - `packages/core` has the snapshot diff, import lexer, module resolver, impact graph, npm lockfile reader, static graph builder and static selection.
 - `packages/cli` runs from source: `node packages/cli/src/main.ts graph`, `diff` and `plan --mode shadow --static`. Without test records no skip is proven safe, so plans run every test and report the would-skips as unproven static reachability.
 - `.github/workflows/sieve.yml` runs SIEVE on its own pull requests: plan, test shards and a gate, in shadow mode, with the map cached from `main`.
 - `tools/corpus` archives CI history into [ojassug/sieve-corpus](https://github.com/ojassug/sieve-corpus).
-- A [foundation review](docs/research/2026-11-foundation-review.md) on 2026-11-13 led to seven ADRs being corrected in place. The documents now describe several things the code does not do yet; [HANDOFF.md](HANDOFF.md) §1.1 lists them in the order to build them.
+- A [foundation review](docs/research/2026-11-foundation-review.md) on 2026-11-13 led to seven ADRs being corrected in place. The documents now describe several things the code does not do yet; [HANDOFF.md](HANDOFF.md) §1.1 lists them in the order to build them. The first two are built: the static map holds no environment, and unmapped inputs escalate along the graph.
 
 To continue the work, start with [HANDOFF.md](HANDOFF.md).
 

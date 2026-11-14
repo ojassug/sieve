@@ -30,13 +30,13 @@
   - [#12](https://github.com/ojassug/sieve/pull/12) raised Vitest's `testTimeout` to 20 s. The Windows job on `main` had timed out on a git-heavy corpus test after #11 merged.
   - `.github/workflows/sieve.yml` runs plan → shards → `sieve-gate` on every PR in shadow mode, and builds the map on pushes to `main`.
   - 416 tests pass in 29 files. See §7 and DECISIONS 25.
-- **Environment out of the map (2026-11-14, branch `m1/env-out-of-map`):**
+- **Environment out of the map (2026-11-14, [#16](https://github.com/ojassug/sieve/pull/16), merged):**
   - The map and the static plan hold nothing about any machine. The engine id is `sieve-static-2`, and `packages/core/test/graph/golden.test.ts` pins a fixture map's SHA-256 on every CI OS.
   - 449 tests pass in 31 files. See §1.1 and DECISIONS 28.
   - **Expect one run-all plan** wherever a cached `sieve-static-1` map meets the new planner, this change's own PR included. The summary gives the engine mismatch as the cause.
-- **Selector backstops (2026-11-14, branch `m1/selector-backstops`):**
+- **Selector backstops (2026-11-14, [#17](https://github.com/ojassug/sieve/pull/17), merged):**
   - An unmapped input (a changed file that is not a node, or a changed node that no test reaches) makes every node of its owning package changed, so the escalation follows the graph across packages. The owning package is the deepest workspace member, else the root. Every `u:` node seeds the plan, and `parseMap` checks causes and nodes both ways.
-  - `sieve.config.json` adds `inputs.ignore` for benchmarks, the CI guards' entry points and the lint config. Its own PR therefore plans run-all once: the config changed (L3).
+  - `sieve.config.json` adds `inputs.ignore` for benchmarks, the CI guards' entry points and the lint config. So #17's own plan ran all 31 test files once, as expected: the config changed (L3), in run [43560947907](https://github.com/ojassug/sieve/actions/runs/43560947907). The merge's push run [43561166703](https://github.com/ojassug/sieve/actions/runs/43561166703) cached `sieve-map-ab408f9…` (1,466 nodes, 2,790 edges).
   - 473 tests pass in 31 files. See §1.1 and DECISIONS 29.
 
 **First four things to do:**
@@ -155,10 +155,10 @@ node packages/cli/src/main.ts plan --mode shadow --static --map .sieve/map
 | `packages/core/src/canonical-json.ts` | Canonical JSON: sorted keys (UTF-16 order), `-0`→`0`; throws on NaN, `undefined` array elements, cycles and non-plain objects | `canonicalJson`, `canonicalJsonPretty` | `test/canonical-json.test.ts` (21) |
 | `packages/core/src/git/ls-tree.ts` | Streaming parser for `git ls-tree -z`, SHA-1 and SHA-256. Non-UTF-8 paths are flagged `undecodable`, never dropped | `LsTreeParser`, `parseLsTree` | `test/git/ls-tree.test.ts` (12) |
 | `packages/core/src/git/diff.ts` | `TreeIndex`; Merkle descent `merkleDiff`; oracle `naiveDiff`. Files added, deleted or modified (mode changes count), plus changed directory listings | `TreeIndex.build`, `merkleDiff`, `naiveDiff` | `test/git/diff.test.ts` (10, includes P10) |
-| `packages/core/src/git/git.ts` | Runs git: `lsTree` (`ls-tree -r -t -z --full-tree`) and `readObjectFormat` | `lsTree(cwd, rev)`, `readObjectFormat(cwd)` | `test/git/git.test.ts` (3, differential against `git diff-tree`) |
+| `packages/core/src/git/git.ts` | Runs git: `lsTree` (`ls-tree -r -t -z --full-tree`) and `readObjectFormat` | `lsTree(cwd, rev)`, `readObjectFormat(cwd)` | `test/git/git.test.ts` (9, differential against `git diff-tree`) |
 | `packages/core/src/lex/ts.ts` | Import lexer for `.ts`, `.tsx` and JS: 12 record kinds, `typeOnly` and `inlineTypeOnly`, non-literal specifiers as `null`, diagnostics that mark a file uncertain | `lexImports(source, dialect)`, `lexImportsFromBytes`, `dialectOf(path)` | `test/lex/golden.test.ts` (20), `test/lex/lexer.test.ts` (17); fixtures in `test/fixtures/lex/` |
 | `packages/core/src/graph/graph.ts` | CSR graph: nodes numbered in sorted-name order; `STATIC`/`DYNAMIC`/`DECLARED` provenance bits; multi-source reverse BFS; forward reach; why-paths | `GraphBuilder.addNode/addEdge/build`, `reverseReach`, `forwardReach`, `whyPath` | `test/graph/graph.test.ts` (P1, P3, forward reach, why-paths, determinism) |
-| `packages/core/src/resolve/resolver.ts` | Resolution over a `Vfs`, the git view of a snapshot. Probes the union of TypeScript, Vite and Jest candidate orders, and records targets, absent paths, `d:` directories, configs and `g:` sets. Covers tsconfig `paths`/`baseUrl`/`extends`, `exports`/`imports`, workspaces, `__mocks__` and symlinks | `Resolver.resolve({from, specifier, kind, patterns?, base?})`, `Resolver.workspaces()`, `Resolver.ownerDir()` (nearest `package.json`, for resolution), `Resolver.packageOf()` (deepest workspace member, for escalations), `MemoryVfs`, `exportsTargets`, `joinPath`, `dirname` | `test/resolve/resolver.test.ts` (52: fixtures plus the evidence-completeness property); fixtures in `test/fixtures/resolve/` |
+| `packages/core/src/resolve/resolver.ts` | Resolution over a `Vfs`, the git view of a snapshot. Probes the union of TypeScript, Vite and Jest candidate orders, and records targets, absent paths, `d:` directories, configs and `g:` sets. Covers tsconfig `paths`/`baseUrl`/`extends`, `exports`/`imports`, workspaces, `__mocks__` and symlinks | `Resolver.resolve({from, specifier, kind, patterns?, base?})`, `Resolver.workspaces()`, `Resolver.ownerDir()` (nearest `package.json`, for resolution), `Resolver.packageOf()` (deepest workspace member, for escalations), `MemoryVfs`, `exportsTargets`, `joinPath`, `dirname` | `test/resolve/resolver.test.ts` (71: fixtures, `fileConfigs`, `packageOf`, plus the evidence-completeness properties); fixtures in `test/fixtures/resolve/` |
 | `packages/core/src/resolve/{jsonc,yaml,glob}.ts` | JSONC (tsconfig), the pnpm-workspace YAML subset, globs | `parseJsonc`, `parsePnpmWorkspace`, `globToRegExp`, `escapeGlob` | `test/resolve/formats.test.ts` (34) |
 | `packages/core/src/lockfile/npm.ts` | package-lock v2/v3 → `p:npm:<install location>`. Node-style `locate`, package-to-package dependencies, diff, lockfile detection; other formats are `unparseable` (L3) | `parseNpmLockfile`, `NpmLockfile.locate/dependencies`, `diffLockfiles`, `detectLockfile` | `test/lockfile/npm.test.ts` (16) |
 | `packages/core/src/index.ts` | The package's public exports. Workspace packages export `./src/*.ts` directly (DECISIONS 3) | — | — |
@@ -168,7 +168,7 @@ node packages/cli/src/main.ts plan --mode shadow --static --map .sieve/map
 | `packages/core/src/select/plan.ts` | Δ(S,H) from a map to a head snapshot, escalations L1/L3, reverse BFS with why-paths (DECISIONS 24). Unmapped inputs seed their owning package (DECISIONS 29) | `selectStatic`, `runAll` | `test/select/plan.test.ts` (examples plus the 2,000-run soundness property) |
 | `packages/cli/src/` | `sieve graph`, `diff`, `plan`: `args.ts` (parseArgs, kickoff gap 1), `config.ts` (§5.1 validation, test discovery), `report.ts` (plan JSON, matrix, summary), `cli.ts`, `main.ts`. `bin: sieve` | `node packages/cli/src/main.ts --help` | `test/{args,config,report,cli}.test.ts` (`cli.test.ts` is end to end) |
 | `packages/vitest`, `packages/jest` | Placeholders for M2 | — | — |
-| `tools/corpus/` | The corpus collector (§5). `repos.json` lists the repositories; `corpus-repo/` is the template for the data repo | `node tools/corpus/src/main.ts …` | `tools/corpus/test/*` (35) |
+| `tools/corpus/` | The corpus collector (§5). `repos.json` lists the repositories; `corpus-repo/` is the template for the data repo | `node tools/corpus/src/main.ts …` | `tools/corpus/test/*` (50) |
 | `tools/replay`, `tools/toyrepo` | Placeholders for M4 and M3 | — | — |
 | `scripts/` | CI guards: `check-zero-deps.ts`, `check-dco.ts` (logic in `scripts/lib/`). `lib/test-files.ts` turns a shard's `SIEVE_TEST_FILES` list into Vitest's `include` (DECISIONS 25) | `npm run check:deps`, `npm run check:dco` | `scripts/test/*` (37) |
 | `sieve.config.json` | SIEVE's config for this repository: 3 shards, one declared input for the CLI end-to-end test, and `inputs.ignore` for benchmarks, CI guard entry points and the lint config (DECISIONS 29) | — | — |
@@ -219,7 +219,7 @@ The data is the flake ground truth (T3) and the durations for the replay corpus.
 
 **The fix**, in DECISIONS 21, has three parts: oldest days first, per-repository shares, and PostHog dropped. It takes effect on the first run that starts after it reached `main` here; check that run's manifest the same way.
 
-**Scheduled runs.** The 03:17 UTC run for 2026-11-12 fired eight hours late, as run 43207509015 at 11:15 UTC, still on the old collector. GitHub can delay or drop scheduled runs. If they go missing, start runs by hand with `gh workflow run collect.yml --repo ojassug/sieve-corpus`.
+**Scheduled runs.** The 03:17 UTC runs for 2026-11-12 and 2026-11-13 both fired about eight hours late: 43207509015 at 11:15 UTC, still on the old collector, and 43413524405 at 11:00 UTC. GitHub can delay or drop scheduled runs. If they go missing, start runs by hand with `gh workflow run collect.yml --repo ojassug/sieve-corpus`.
 
 **Pushing to sieve-corpus during a run no longer loses it.**
 - In the first two runs, the publish step committed and pushed without pulling first. A concurrent push (a `collector.ref` bump, for instance) would have made its push fail and lost that run's manifest and state, although the release assets would still have been published. Neither run was hit.
@@ -243,13 +243,27 @@ gh api repos/ojassug/sieve-corpus/contents/manifests/2026 --jq '.[].name'
 - `pending`.
 - `items[].status`: `complete`, `error`, `capped` (the share ran out and no time was left) or `stopped`, and per-item `error` text.
 - `requestsByRepo`: what each repository cost.
-- `coverage`: backfill days complete per repository, out of the 82 days between 89 and 8 days ago.
+- `coverage`: backfill days complete per repository, out of the 87 days between 89 and 3 days ago. Before the fix it re-collected 7 recent days, so the first two manifests count out of 82.
 
 **Expected coverage.** This is an estimate, from the first run's counts:
 - Without PostHog, the repositories produce roughly 1,300 runs a day, at about 3 requests per run: roughly 4,000 requests a day.
 - One daily run can make about 25,000 requests.
 - So each run should cover about 6 days of history, and the coverage should net about 5 days a day while the oldest day expires.
-- Expect the backlog to clear within 2–3 weeks. The manifest's `coverage` makes those losses visible. Record the real numbers in `bench/CORPUS.md`, or in a DECISIONS entry, once you have them.
+- Expect the backlog to clear within 2–3 weeks. The manifest's `coverage` makes those losses visible.
+
+**Measured, to the 2026-11-13 manifest** (also in [bench/CORPUS.md](bench/CORPUS.md)). Collection is faster than the estimate:
+
+| Run | Collector | Requests | Items done | Pending after | Repositories with all days |
+|---|---|---|---|---|---|
+| 1, 2026-11-11 (43026895799) | old | 24,581 | 44 | 2,270 | 0 of 26 |
+| 2, 2026-11-12 (43207509015) | old | 25,086 | 117 | 2,197 | 0 of 26 |
+| 3, 2026-11-12, by hand (43289738736) | fixed, `3c92385` | 26,079 | 1,142, plus 13 capped and 1 error | 1,082 | 8 of 25 |
+| 4, 2026-11-13 (43413524405) | fixed, `3c92385` | 23,978 | 416, plus 7 capped | 703 | 11 of 25 |
+
+- Every run spent its 320-minute budget and stopped one item partway through (`stoppedEarly`: time budget spent).
+- After run 4, 11 repositories have all 87 days. The slowest eight (AutoGPT, baserow, meshery, prettier, TanStack/query, lexical, luma.gl, vuejs/core) have 30 or 31, then typescript-eslint 35, vite 36, trpc 49, svelte 50, zod 54 and babel 75.
+- Run 4 added 8 to 16 days to each of the slowest eight, while one day a day expires. At that pace they need four to eight more daily runs, fewer once finished repositories free their share. That is an estimate.
+- Run 3's one error (`Unexpected end of JSON input`, es-toolkit, 2026-08-19) was collected again: es-toolkit has every day after run 4.
 
 **If the run failed or published nothing:**
 1. Read the log: `gh run view 43026895799 --repo ojassug/sieve-corpus --log-failed`.
@@ -465,7 +479,7 @@ These are honest limits, not bugs. Each one errs towards running more tests.
   - ADR-0021 now states the cache trust model: a fork or an untrusted author cannot replace the map. Its key layout, `cache-mode` and origin check are M3 work; `sieve.yml` still saves `sieve-map-<sha>` and restores by prefix.
   - The shards run exactly the plan's list, which comes from SIEVE's own discovery. A test that Vitest would run and SIEVE does not find runs only in `ci.yml`. Keep `ci.yml` required until `sieve run` reconciles with the runner (ADR-0004).
   - A directory named by `new URL(…, import.meta.url)` depends on every file below it (DECISIONS 26). In a global input, a URL that names the repository root would select every test on any change, so this repository uses `import.meta.dirname`.
-- **Collector.** See §5.4. The first run's coverage is still unknown.
+- **Collector.** See §5.4. Coverage after four runs is in §5.3; the backlog is not cleared yet.
 - **Found by the foundation review and not fixed** (its M6, L2 and L3; DECISIONS 27; L1 is fixed, DECISIONS 29):
   - An import of a `.vue` or `.svelte` file is a plain target: that file's own imports are not followed, and nothing is flagged.
   - A `file:` link dependency outside the workspace list gets a `p:` node with a constant hash and no edge to its sources.

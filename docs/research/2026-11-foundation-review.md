@@ -11,8 +11,9 @@ The rest of this report is as written on 2026-11-13. Read it with these facts in
 - **The seven ADR edits of §3 are applied.** Ojas approved them on 2026-11-13. One sentence differs from §3: ADR-0009's consequence about the engine id now also allows a recorded reason why older maps stay safe, to agree with [DECISIONS.md](../../DECISIONS.md) entry 26.
 - **The other documents follow.** [architecture.md](../architecture.md), [threat-model.md](../threat-model.md), [roadmap.md](../roadmap.md) §6, [HANDOFF.md](../../HANDOFF.md) §1.1 and §10, and DECISIONS entry 27 carry the corrections. Entry 27 lists where the code still lags.
 - **`main` moved while the review was being written.** Day 10 (#13) and the directory-URL fix (#14, DECISIONS 26) merged. `new URL('.', import.meta.url)` is no longer a cause of uncertainty, and a new file that a mapped glob matches no longer escalates. No finding depends on either. The counts for this repository in "What I ran" are those of `86a995e`.
-- **Line citations were refreshed** to `main` at `acf76c2`. Only `plan.ts` had moved.
-- **Everything not in an ADR is still a recommendation:** findings M6 to M8 and L1 to L7, §4, and the questions in §6.
+- **Line citations were refreshed** to `main` at `acf76c2`. Only `plan.ts` had moved. Later changes to the code are not reflected in them.
+- **Two findings are fixed in code since.** M1, the environment in the static map, by [#16](https://github.com/ojassug/sieve/pull/16) ([DECISIONS.md](../../DECISIONS.md) entry 28). The selector rules of C1 and finding L1, by [#17](https://github.com/ojassug/sieve/pull/17) (entry 29), where Ojas also answered question 3 of §6: a change to a module that no test reaches escalates by default.
+- **Everything not in an ADR or fixed is still a recommendation:** findings M6 to M8 and L2 to L7, §4, and the questions in §6 other than question 3.
 
 ## How to read this
 
