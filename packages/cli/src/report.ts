@@ -25,6 +25,8 @@ export interface PlanReport {
   /** How many tests the static selection would run. */
   readonly wouldRun: number;
   readonly wouldSkip: readonly { readonly test: string; readonly label: string }[];
+  /** Paths of unmapped inputs that `inputs.ignore` exempted from L1. */
+  readonly ignored: readonly string[];
   /** Projects SIEVE does not select for (other runners, results-only); run them as usual. */
   readonly notPlanned: readonly string[];
   /** What runs: in shadow mode, every test. */
@@ -60,6 +62,7 @@ export function buildReport(input: ReportInput): PlanReport {
     forced: selection.forced,
     wouldRun: selection.affected.length + selection.forced.length,
     wouldSkip: selection.wouldSkip.map((test) => ({ test, label: UNPROVEN })),
+    ignored: selection.ignored,
     notPlanned: input.notPlanned,
     run,
     shards: splitShards(run, input.shards),
@@ -115,9 +118,21 @@ export function summaryOf(report: PlanReport): string {
   const forced = report.fallback === undefined ? report.forced.filter((f) => !f.reason.startsWith('L3: ')) : [];
   if (forced.length > 0) {
     lines.push('', `### Also run (${forced.length})`, '');
-    for (const { test, reason } of forced.slice(0, MAX_LISTED)) {
-      lines.push(`- \`${test}\`: ${reason}`);
+    for (const { test, reason, path } of forced.slice(0, MAX_LISTED)) {
+      // An L1 test from another package: show the dependencies that lead into the escalated one.
+      const through = path === undefined || path.length < 2 ? '' : `, through ${path.slice(1).map(shown).join(' → ')}`;
+      lines.push(`- \`${test}\`: ${reason}${through}`);
     }
+  }
+  if (report.ignored.length > 0) {
+    lines.push('', `<details><summary>Ignored by inputs.ignore (${report.ignored.length})</summary>`, '');
+    for (const path of report.ignored.slice(0, MAX_LISTED)) {
+      lines.push(`- \`${path}\``);
+    }
+    if (report.ignored.length > MAX_LISTED) {
+      lines.push(`- … and ${report.ignored.length - MAX_LISTED} more`);
+    }
+    lines.push('', '</details>');
   }
   if (report.wouldSkip.length > 0) {
     lines.push('', `<details><summary>Would skip ${report.wouldSkip.length} (${UNPROVEN})</summary>`, '');
@@ -138,8 +153,12 @@ function whyPath(path: readonly string[], uncertain: PlanReport['uncertain']): s
     if (i === path.length - 1 && node.startsWith('u:')) {
       return `uncertain: ${(uncertain[node] ?? []).join('; ')}`;
     }
-    const shown = `\`${node.startsWith('f:') ? node.slice(2) : node}\``;
-    return i === path.length - 1 ? `${shown} (changed)` : shown;
+    return i === path.length - 1 ? `${shown(node)} (changed)` : shown(node);
   });
   return steps.join(' → ');
+}
+
+/** A node as the summary shows it: a file by its path, anything else by its key. */
+function shown(node: string): string {
+  return `\`${node.startsWith('f:') ? node.slice(2) : node}\``;
 }

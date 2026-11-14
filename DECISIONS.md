@@ -569,3 +569,44 @@ Implementation decisions too small or too local for an ADR, plus session hand-ov
   - **An older map.** A map of this repository relabelled `sieve-static-1` gives a run-all plan with exit 0 and the cause above.
   - **The soundness property** of entry 24 still passes its 2,000 runs. Its oracle never looked at the environment.
   - 449 tests in 31 files pass. Lint, typecheck and the zero-dependency check are clean.
+
+## 29. Unmapped inputs follow the graph, and a changed node that no test reaches escalates (2026-11-14)
+
+- **Context.** ADR-0005, as corrected on 2026-11-13 (entry 27), calls two things unmapped inputs: a changed file that is not a node, and a changed node that no test reaches. Every node of the owning package then counts as changed. The code still did what entry 24 describes.
+  - L1 forced only the tests whose path lay under the owning package. In the review's probe 1, a changed `packages/db/migrations/001.sql` forced `packages/db`'s tests and left the api test that imports `db` a would-skip.
+  - A changed module that no test reached selected nothing. On this repository that was how `packages/cli/src/cli.ts` went unseen until entry 25 declared it by hand.
+  - `parseMap` accepted a `u:` node with no entry in `uncertain`, and plans seeded only the entries (review finding L1).
+  - This is item 1 of [HANDOFF.md](HANDOFF.md) §1.1. Ojas chose on 2026-11-14 to escalate by default rather than only report (§10, question 9).
+- **Decision.**
+  - **A changed node that no test of the map reaches is an unmapped input.**
+    - Reach is judged in the map's graph from the map's tests, not H's, so a deleted test reaches its own node and does not escalate.
+    - Every node kind counts: files, directory listings, globs and packages. A lockfile bump of a package that no test imports (eslint, for one) escalates the root and runs everything. That is the review's probe 4: a runner preset named only in config.
+    - A `u:` node is never a change. It is a seed of every plan regardless (entry 23), and counting it here would escalate every uncertain fixture on every plan.
+  - **The owning package is the deepest workspace member that holds the path, or the root.** `Resolver.packageOf` reads the members from `workspaces` or `pnpm-workspace.yaml`, named or not.
+    - Entry 24 used the nearest `package.json`. That is right for module resolution, which keeps using `ownerDir`, and wrong here: a fixture repository with its own `package.json` became a package with no tests. On this repository's history, `7e7c6c2` modified `packages/core/test/fixtures/resolve/misc/_expected.json`, which `resolver.test.ts` reads through `fs`. The old planner escalated `packages/core/test/fixtures/resolve/misc` and forced no test. The new one escalates `packages/core`.
+    - A `package.json` that is no workspace member (a fixture, a `type` marker, a tool folder) does not start a package. A workspace list that cannot be read gives no members, so everything belongs to the root.
+    - A glob has no path of its own, and its matches can lie anywhere, so an unreached glob belongs to the root.
+  - **L1 seeds the graph.** Every node whose path is the package directory or below it counts as changed: files, listings, `u:` nodes and install locations. A test reached only through them is forced, with the L1 cause and a why-path that ends inside the package. This is a superset of the old rule, since each test's own node lies under its package.
+  - **`inputs.ignore` covers both kinds of unmapped input, by path**: a file's path, a listing's directory, a package's install location (`node_modules/eslint`). A glob cannot be ignored. The plan JSON and the summary list every path it exempted (`ignored`), so nothing escalates or disappears without a line in the summary.
+  - **Every `u:` node seeds the plan**, and `parseMap` rejects a `u:` node without causes and causes for a node that is not `u:`.
+  - **This repository's `inputs.ignore`** is the default list plus `bench/**`, `scripts/check-*.ts` and `eslint.config.js`. Benchmarks, the CI guards' entry points and the lint config are read by no test; the guards' logic in `scripts/lib/` is tested and stays mapped. The declared rule of entry 25 stays: a core change reaches `cli.test.ts` only through it, because core's own tests reach core's nodes.
+  - **The engine stays `sieve-static-2`** (entry 26's rule). The map's bytes and the meaning of every field are unchanged; the planner only escalates more. An older map read by this planner selects at least what the old planner did. The golden hash of entry 28 does not move.
+  - **Not done here:** the review's DECLARED edge from every test to its runner's package node. Vitest is reached through the tests' own imports on this repository, and an unreached runner package now escalates instead of being missed.
+  - **Superseded in earlier entries:** L1 as "every test under the owning package (the nearest `package.json` at H)" (entry 24); the second row of entry 27's table of where the code lags.
+- **Evidence.**
+  - **Examples** in `plan.test.ts`: probe 1 across workspace packages, with why-paths; a fixture `package.json`; an unreached module in a package and at the root; an unreached package and an unreached glob; `inputs.ignore` over all three kinds, with `ignored`; a deleted test; an uncertain file that nothing reaches; a map whose `uncertain` was emptied. `packageOf` has examples of its own, nested members and an unreadable workspace list included. `forwardReach` has a 2,000-run property against the closure oracle of `graph.test.ts`.
+  - **16 hand mutants, all caught:** reach judged from H's tests; `u:` nodes counted as changes; the nearest `package.json` as owner; L1 forcing only tests under the scope; ignore not applied to unreached nodes; unreached globs skipped; packages without a path; the unreached rule removed; seeds only from causes; both `parseMap` checks dropped; the shallowest member winning; unnamed members dropped; `forwardReach` following dependents; the report without the through-path or the ignored list.
+  - **The soundness property** of entry 24 still passes its 2,000 runs. The new rules only add selections.
+  - **This repository's last 70 non-merge commits**, each planned from a map of its parent, with the old planner and the new one on the same map. Of 1,597 possible test-file runs:
+
+    | Planner | Unreached rule fires | Selects more than the old one | Runs everything | Test files selected |
+    |---|---|---|---|---|
+    | Old | — | — | 15 commits | 483 (30%) |
+    | New, default `inputs.ignore` | 5 commits | 6 | 17 | 551 (35%) |
+    | New, this repository's `inputs.ignore` | 3 commits | 4 | 11 | 416 (26%) |
+
+    - With the repository's list, the rule fires on `packages/cli/src/cli.ts` and `main.ts` (two commits from before entry 25's declared rule) and on `tools/corpus/src/main.ts`. Each escalates its own package and adds 2 or 3 tests. The fourth commit that selects more is `7e7c6c2`, the fixture above.
+    - `bench/**` also takes four commits out of the run-all set. Each added a `bench/results/*.json` file, which is not a node, so the old L1 escalated the root.
+    - The review estimated 14 of 70 at `86a995e`, counting commits that touched one of 16 unreached modules. This window ends 23 commits later, and three things keep the rule quieter than that. Entry 25's declared rule now reaches the CLI sources. An added module is not in the map, so it never fires the rule (it is exempt from L1 as in entry 24). And a commit that escalates to L3 stops before L1.
+    - No commit in the window changed `package-lock.json`, so the package rule has no history here.
+  - 473 tests in 31 files pass. Lint, typecheck and the zero-dependency check are clean.

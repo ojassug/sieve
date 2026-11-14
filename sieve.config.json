@@ -3,7 +3,8 @@
   "inputs": {
     "declared": [
       { "match": "packages/cli/src/**", "affects": "packages/cli/test/cli.test.ts" }
-    ]
+    ],
+    "ignore": ["**/*.md", "docs/**", "LICENSE*", "bench/**", "scripts/check-*.ts", "eslint.config.js"]
   },
   "sharding": { "max": 3 }
 }

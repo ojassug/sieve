@@ -1,13 +1,13 @@
-# Hand-off: SIEVE milestone M1, after roadmap day 8
+# Hand-off: SIEVE milestone M1, after roadmap day 10
 
 - **Written:** 2026-11-11 (UTC), at `main` = `00fea91` plus this document.
-- **Updated:** 2026-11-14, after the foundation review and seven ADR corrections. Read §1.1 before anything else: it says where the documents now run ahead of the code. Item 2 of its worklist, the environment out of the map, is done (DECISIONS 28).
+- **Updated:** 2026-11-14, after the foundation review and seven ADR corrections. Read §1.1 before anything else: it says where the documents now run ahead of the code. Items 1 and 2 of its worklist are done: the selector backstops (DECISIONS 29) and the environment out of the map (DECISIONS 28).
 - **For:** whoever continues the implementation, person or agent.
 - **Reading order:** this file, then [DECISIONS.md](DECISIONS.md), then the docs it points to.
 
 ## 1. Where things stand
 
-**Days 1–8 of the M1 roadmap are done and merged.** Days 9 and 10 are not started.
+**Days 1–10 of the M1 roadmap are done and merged.** The rest of M1 (§8) is under way.
 
 | Roadmap day | What it delivered | PR | Its "done when" |
 |---|---|---|---|
@@ -34,9 +34,13 @@
   - The map and the static plan hold nothing about any machine. The engine id is `sieve-static-2`, and `packages/core/test/graph/golden.test.ts` pins a fixture map's SHA-256 on every CI OS.
   - 449 tests pass in 31 files. See §1.1 and DECISIONS 28.
   - **Expect one run-all plan** wherever a cached `sieve-static-1` map meets the new planner, this change's own PR included. The summary gives the engine mismatch as the cause.
+- **Selector backstops (2026-11-14, branch `m1/selector-backstops`):**
+  - An unmapped input (a changed file that is not a node, or a changed node that no test reaches) makes every node of its owning package changed, so the escalation follows the graph across packages. The owning package is the deepest workspace member, else the root. Every `u:` node seeds the plan, and `parseMap` checks causes and nodes both ways.
+  - `sieve.config.json` adds `inputs.ignore` for benchmarks, the CI guards' entry points and the lint config. Its own PR therefore plans run-all once: the config changed (L3).
+  - 473 tests pass in 31 files. See §1.1 and DECISIONS 29.
 
 **First four things to do:**
-1. Read §1.1. Seven ADRs changed on 2026-11-13, and the code has not caught up.
+1. Read §1.1. Seven ADRs changed on 2026-11-13, and the code is catching up: items 1 and 2 of its worklist are done.
 2. Check that the collector is making progress (§5.3): coverage should grow with each daily run.
 3. Start the rest of M1 (§8), in the order §1.1 gives. Every PR now shows SIEVE's shadow summary: read it, and record any would-skip that should have run.
 4. Take the open decisions to Ojas (§10).
@@ -62,7 +66,7 @@
 
 **Where the code lags, and the order to fix it in.** The first four are M1 work and come before SMAP v0, because each changes what a map contains.
 
-1. **Selector backstops** (`core/select/plan.ts`). An unmapped input should make every node of its owning package changed, so the escalation follows the graph. Today L1 forces only the tests under that package's path. A changed module that no test reaches should escalate too. On this repository that rule would have caught the CLI sources, which `cli.test.ts` runs as a child process, without the hand-written rule in `sieve.config.json`. It would have fired on 14 of 70 recent commits, so let `inputs.ignore` cover unreached modules and list them in the summary.
+1. ~~**Selector backstops** (`core/select/plan.ts`).~~ Done on 2026-11-14 (DECISIONS 29). An unmapped input makes every node of its owning package changed, and a changed node that no test reaches is one. The owning package is the deepest workspace member, not the nearest `package.json`, which closed a hole: a fixture repository with its own `package.json` had been a package with no tests. `inputs.ignore` covers both kinds, and the summary lists what it exempted. On this repository's last 70 commits the rule fired on 3, each within one package.
 2. ~~**Environment out of the map** (`core/graph/static.ts`).~~ Done on 2026-11-14 (DECISIONS 28). The `e:` nodes are gone from the map and from static selection, the engine id is `sieve-static-2`, and `golden.test.ts` pins a fixture map's SHA-256 on every CI OS. When a later item changes that hash, it must also say whether the engine id changes.
 3. **Resolution hubs** (`core/resolve`, `core/graph/static.ts`). Probes are 84% of edges at 10,000 files. The soundness property in `plan.test.ts` is the regression test, because its oracle shares no graph code.
 4. **SMAP v0:** the container, the snapshot layer and the static layer only. The record layer is a new section in M3.
@@ -73,7 +77,7 @@
 - four dependencies the static extractor drops without flagging them (M6);
 - K1's wording, and the logs the collector does not keep (M7);
 - `generated` rules, which decide the savings on most of the corpus (M8);
-- seven low-severity items (L1–L7).
+- six low-severity items (L2–L7). L1, the `u:` seeds, is fixed (DECISIONS 29).
 
 **One number to distrust.** The review measured `main` at `86a995e`. Day 10 and the fix of DECISIONS 26 merged after it, so its counts for this repository (1,461 nodes, 2,777 edges, 28 tests) are a day old. Its line citations were refreshed to `main` at `acf76c2`.
 
@@ -132,7 +136,7 @@ npm run typecheck
 npm run check:deps
 ```
 
-Expect `449 passed` from `npm test` (after DECISIONS 28), and no output from lint or typecheck. To reproduce the recorded benchmarks (§9), run `node bench/ls-tree.ts`, `node bench/lex.ts`, `node bench/graph.ts` and `node bench/static-graph.ts`.
+Expect `473 passed` from `npm test` (after DECISIONS 29), and no output from lint or typecheck. To reproduce the recorded benchmarks (§9), run `node bench/ls-tree.ts`, `node bench/lex.ts`, `node bench/graph.ts` and `node bench/static-graph.ts`.
 
 To try the CLI on this repository:
 
@@ -153,21 +157,21 @@ node packages/cli/src/main.ts plan --mode shadow --static --map .sieve/map
 | `packages/core/src/git/diff.ts` | `TreeIndex`; Merkle descent `merkleDiff`; oracle `naiveDiff`. Files added, deleted or modified (mode changes count), plus changed directory listings | `TreeIndex.build`, `merkleDiff`, `naiveDiff` | `test/git/diff.test.ts` (10, includes P10) |
 | `packages/core/src/git/git.ts` | Runs git: `lsTree` (`ls-tree -r -t -z --full-tree`) and `readObjectFormat` | `lsTree(cwd, rev)`, `readObjectFormat(cwd)` | `test/git/git.test.ts` (3, differential against `git diff-tree`) |
 | `packages/core/src/lex/ts.ts` | Import lexer for `.ts`, `.tsx` and JS: 12 record kinds, `typeOnly` and `inlineTypeOnly`, non-literal specifiers as `null`, diagnostics that mark a file uncertain | `lexImports(source, dialect)`, `lexImportsFromBytes`, `dialectOf(path)` | `test/lex/golden.test.ts` (20), `test/lex/lexer.test.ts` (17); fixtures in `test/fixtures/lex/` |
-| `packages/core/src/graph/graph.ts` | CSR graph: nodes numbered in sorted-name order; `STATIC`/`DYNAMIC`/`DECLARED` provenance bits; multi-source reverse BFS; why-paths | `GraphBuilder.addNode/addEdge/build`, `reverseReach`, `whyPath` | `test/graph/graph.test.ts` (13: P1, P3, why-paths, determinism) |
-| `packages/core/src/resolve/resolver.ts` | Resolution over a `Vfs`, the git view of a snapshot. Probes the union of TypeScript, Vite and Jest candidate orders, and records targets, absent paths, `d:` directories, configs and `g:` sets. Covers tsconfig `paths`/`baseUrl`/`extends`, `exports`/`imports`, workspaces, `__mocks__` and symlinks | `Resolver.resolve({from, specifier, kind, patterns?, base?})`, `Resolver.workspaces()`, `Resolver.ownerDir()`, `MemoryVfs`, `exportsTargets`, `joinPath`, `dirname` | `test/resolve/resolver.test.ts` (52: fixtures plus the evidence-completeness property); fixtures in `test/fixtures/resolve/` |
+| `packages/core/src/graph/graph.ts` | CSR graph: nodes numbered in sorted-name order; `STATIC`/`DYNAMIC`/`DECLARED` provenance bits; multi-source reverse BFS; forward reach; why-paths | `GraphBuilder.addNode/addEdge/build`, `reverseReach`, `forwardReach`, `whyPath` | `test/graph/graph.test.ts` (P1, P3, forward reach, why-paths, determinism) |
+| `packages/core/src/resolve/resolver.ts` | Resolution over a `Vfs`, the git view of a snapshot. Probes the union of TypeScript, Vite and Jest candidate orders, and records targets, absent paths, `d:` directories, configs and `g:` sets. Covers tsconfig `paths`/`baseUrl`/`extends`, `exports`/`imports`, workspaces, `__mocks__` and symlinks | `Resolver.resolve({from, specifier, kind, patterns?, base?})`, `Resolver.workspaces()`, `Resolver.ownerDir()` (nearest `package.json`, for resolution), `Resolver.packageOf()` (deepest workspace member, for escalations), `MemoryVfs`, `exportsTargets`, `joinPath`, `dirname` | `test/resolve/resolver.test.ts` (52: fixtures plus the evidence-completeness property); fixtures in `test/fixtures/resolve/` |
 | `packages/core/src/resolve/{jsonc,yaml,glob}.ts` | JSONC (tsconfig), the pnpm-workspace YAML subset, globs | `parseJsonc`, `parsePnpmWorkspace`, `globToRegExp`, `escapeGlob` | `test/resolve/formats.test.ts` (34) |
 | `packages/core/src/lockfile/npm.ts` | package-lock v2/v3 → `p:npm:<install location>`. Node-style `locate`, package-to-package dependencies, diff, lockfile detection; other formats are `unparseable` (L3) | `parseNpmLockfile`, `NpmLockfile.locate/dependencies`, `diffLockfiles`, `detectLockfile` | `test/lockfile/npm.test.ts` (16) |
 | `packages/core/src/index.ts` | The package's public exports. Workspace packages export `./src/*.ts` directly (DECISIONS 3) | — | — |
 | `packages/core/src/git/{cat-file,vfs}.ts` | `git cat-file --batch` parser; `GitVfs`, the resolver's `Vfs` over a `TreeIndex` with blobs from git | `readBlobs(cwd, oids)`, `CatFileParser`, `GitVfs.load`, `repoRoot` | `test/git/cat-file.test.ts`, `test/git/vfs.test.ts`, `test/git/git.test.ts` |
 | `packages/core/src/graph/{static,map}.ts` | The static graph builder and the M1 map (canonical JSON): node keys and hashes, edges, `u:` nodes (DECISIONS 23). A function of the tree, the config and the engine only (DECISIONS 28) | `buildStaticMap`, `ENGINE`, `parseMap`, `mapGraph`, `readLockfile`, `isModule`/`isLexed` | `test/graph/static.test.ts`, `test/graph/map.test.ts`, `test/graph/golden.test.ts` (the pinned fixture hash) |
 | `packages/core/src/environment.ts` | Environment components for the M2 recorder: runtime, platform and tracked variables. No caller yet, and lint keeps it out of the graph and selection modules (DECISIONS 28) | `environment`, `envHash` | `test/environment.test.ts` (6) |
-| `packages/core/src/select/plan.ts` | Δ(S,H) from a map to a head snapshot, escalations L1/L3, reverse BFS with why-paths (DECISIONS 24) | `selectStatic`, `runAll` | `test/select/plan.test.ts` (examples plus the 2,000-run soundness property) |
+| `packages/core/src/select/plan.ts` | Δ(S,H) from a map to a head snapshot, escalations L1/L3, reverse BFS with why-paths (DECISIONS 24). Unmapped inputs seed their owning package (DECISIONS 29) | `selectStatic`, `runAll` | `test/select/plan.test.ts` (examples plus the 2,000-run soundness property) |
 | `packages/cli/src/` | `sieve graph`, `diff`, `plan`: `args.ts` (parseArgs, kickoff gap 1), `config.ts` (§5.1 validation, test discovery), `report.ts` (plan JSON, matrix, summary), `cli.ts`, `main.ts`. `bin: sieve` | `node packages/cli/src/main.ts --help` | `test/{args,config,report,cli}.test.ts` (`cli.test.ts` is end to end) |
 | `packages/vitest`, `packages/jest` | Placeholders for M2 | — | — |
 | `tools/corpus/` | The corpus collector (§5). `repos.json` lists the repositories; `corpus-repo/` is the template for the data repo | `node tools/corpus/src/main.ts …` | `tools/corpus/test/*` (35) |
 | `tools/replay`, `tools/toyrepo` | Placeholders for M4 and M3 | — | — |
 | `scripts/` | CI guards: `check-zero-deps.ts`, `check-dco.ts` (logic in `scripts/lib/`). `lib/test-files.ts` turns a shard's `SIEVE_TEST_FILES` list into Vitest's `include` (DECISIONS 25) | `npm run check:deps`, `npm run check:dco` | `scripts/test/*` (37) |
-| `sieve.config.json` | SIEVE's config for this repository: 3 shards, and one declared input for the CLI end-to-end test | — | — |
+| `sieve.config.json` | SIEVE's config for this repository: 3 shards, one declared input for the CLI end-to-end test, and `inputs.ignore` for benchmarks, CI guard entry points and the lint config (DECISIONS 29) | — | — |
 | `.github/workflows/sieve.yml` | The walking skeleton: `plan`, `test` (one job per shard), `sieve-gate`, and `map` on pushes to `main` (DECISIONS 25) | — | — |
 | `bench/` | `TARGETS.md` (pre-registered), `CORPUS.md` (selection criteria and first-pass vetting), `README.md` (recorded numbers), `results/*.json`, scripts `ls-tree.ts`, `lex.ts`, `graph.ts` | — | — |
 | `.github/workflows/ci.yml` | `static` (deps, lint, typecheck; Node 26), `test` (Ubuntu, Node 22/24/26), `windows` (Node 22), `dco` (PRs only) | — | — |
@@ -375,7 +379,7 @@ These come from the M1 row of [roadmap §1](docs/roadmap.md):
   - 24 of the 26 vetted repositories use them (19 pnpm, 5 yarn), so they gate the replay corpus in M4 ([bench/CORPUS.md](bench/CORPUS.md)).
   - Today `detectLockfile` reports both as unparseable (L3).
   - The YAML subset in `core/resolve/yaml.ts` is too small for `pnpm-lock.yaml`.
-- **The four M1 items of §1.1,** before SMAP: selector backstops, ~~the environment out of the map~~ (done, DECISIONS 28), resolution hubs, then SMAP v0 itself.
+- **The four M1 items of §1.1,** before SMAP: ~~selector backstops~~ (done, DECISIONS 29), ~~the environment out of the map~~ (done, DECISIONS 28), resolution hubs, then SMAP v0 itself.
 - **SMAP v0, byte-identical across OSes.**
   - The JSON map already is: `golden.test.ts` pins one fixture's hash on every CI OS. SMAP v0 takes that fixture over for its static layer.
   - The provenance width is settled: one byte per edge, three bits defined (ADR-0009, DECISIONS 27).
@@ -421,7 +425,7 @@ The review recommends an answer to each of 1, 2, 4 and 5 in its §4. In short: m
 6. Whether an unparseable lockfile escalates to L3 only when it changes (the open day-9 reading). The review says yes.
 7. Whether a collaborator is inside the threat model. It decides how strict the server's lane rules are.
 8. Whether v1 supports a test matrix or one environment cell. This repository's `ci.yml` runs four cells; `sieve.yml` covers one.
-9. Whether a change to a module that no test reaches escalates by default, or is only reported until shadow data is in.
+9. ~~Whether a change to a module that no test reaches escalates by default, or is only reported until shadow data is in.~~ Answered 2026-11-14: it escalates by default, and `inputs.ignore` can exempt it (DECISIONS 29).
 10. Whether Lite mode may enforce skips on GitHub's cache scoping alone, or only with a verified attestation of the map.
 11. Which reading of K1 is the pre-registered one. The review proposes the pooled median, with no miss among at least 300 faulty changes. `bench/TARGETS.md` allows a dated amendment before the first measurement.
 12. Two downloads of data that expires: the logs of failed attempts for the collector, and baserow's test reports.
@@ -440,7 +444,10 @@ These are honest limits, not bugs. Each one errs towards running more tests.
   - **Workspaces.** The root package counts as a workspace member in the `workspaces` name map, for self-reference.
 - **Graph.** The build merges edges through a `Map` (1.6 s at 1M edges). The M3 map decode replaces it.
 - **Static selection (day 9, DECISIONS 23–24).**
-  - Every would-skip is unproven: anything a test reads through `fs` (fixtures, snapshots) is invisible statically. A changed file outside the graph escalates its owning package (L1), which covers most of it.
+  - Every would-skip is unproven: anything a test reads through `fs` (fixtures, snapshots) is invisible statically. An unmapped input escalates its owning package (L1), which covers most of it: the package's own tests, and every test elsewhere that reaches the package (DECISIONS 29).
+  - A lockfile bump of a package that no test imports, such as eslint, runs everything: the package belongs to the root. `inputs.ignore` can name its install location (`node_modules/eslint`). An unreached glob also escalates the root, and cannot be ignored.
+  - An added module is not in the map, so it never counts as unreached (entry 24's exemption). Whatever starts to use it shows up as a change of its own.
+  - The review's DECLARED edge from every test to its runner's package node is not built. A runner package that no test reaches escalates when it changes; one that tests import is reached through them.
   - Every test that reaches an uncertain file always runs, whether or not anything changed.
   - Global inputs are found by conventional names (`vitest.setup.*`, `jest.setup.*` and runner configs). A setup file with another name must be listed in `inputs.global`.
   - Nothing compares environments. The map and the static plan hold nothing about any machine (DECISIONS 28), and the check in the job that runs the test arrives with `sieve run` (M3). Until then a would-skip says nothing about the Node version or the OS, one more reason it stays unproven.
@@ -459,12 +466,11 @@ These are honest limits, not bugs. Each one errs towards running more tests.
   - The shards run exactly the plan's list, which comes from SIEVE's own discovery. A test that Vitest would run and SIEVE does not find runs only in `ci.yml`. Keep `ci.yml` required until `sieve run` reconciles with the runner (ADR-0004).
   - A directory named by `new URL(…, import.meta.url)` depends on every file below it (DECISIONS 26). In a global input, a URL that names the repository root would select every test on any change, so this repository uses `import.meta.dirname`.
 - **Collector.** See §5.4. The first run's coverage is still unknown.
-- **Found by the foundation review and not fixed** (its M6 and L1–L3; DECISIONS 27):
+- **Found by the foundation review and not fixed** (its M6, L2 and L3; DECISIONS 27; L1 is fixed, DECISIONS 29):
   - An import of a `.vue` or `.svelte` file is a plain target: that file's own imports are not followed, and nothing is flagged.
   - A `file:` link dependency outside the workspace list gets a `p:` node with a constant hash and no edge to its sources.
   - A workspace package wins by name even when a nested installed copy would shadow it for that importer.
   - `createRequire` bound to a name other than `require` yields no record.
-  - `parseMap` accepts a map whose `u:` node is missing from `uncertain`, and then never seeds it.
   - Two `import.meta.glob` calls can share one `g:` node when a pattern contains a vertical bar.
 - **Docs that still owe updates:**
   - architecture §3.1 on `generated` files and §3.10 on the enforcement gate, and `bench/TARGETS.md` on K1. The review recommends changes (M7, M8), and they wait on Ojas (§10).
@@ -523,6 +529,7 @@ These are honest limits, not bugs. Each one errs towards running more tests.
 | 26 | Directory URLs as dependencies |
 | 27 | The foundation review and the seven ADR corrections |
 | 28 | The environment out of the static map, engine `sieve-static-2`, the golden map |
+| 29 | Unmapped inputs follow the graph; unreached changed nodes escalate; the owning package is a workspace member |
 
 **Status of the kickoff doc gaps** (DECISIONS 1):
 

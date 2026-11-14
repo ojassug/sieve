@@ -1,7 +1,7 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
-import { DECLARED, DYNAMIC, GraphBuilder, reverseReach, STATIC, whyPath, type Graph } from '../../src/graph/graph.ts';
+import { DECLARED, DYNAMIC, forwardReach, GraphBuilder, reverseReach, STATIC, whyPath, type Graph } from '../../src/graph/graph.ts';
 
 const names = (graph: Graph, ids: Iterable<number>) => [...ids].map((id) => graph.name(id));
 
@@ -98,6 +98,27 @@ describe('reverseReach and whyPath', () => {
   });
 });
 
+describe('forwardReach', () => {
+  it('reaches the seeds and everything they depend on, not their dependents', () => {
+    const graph = login();
+    const reached = forwardReach(graph, [graph.id('src/auth/index.ts')!]);
+    expect(names(graph, [...reached.keys()].filter((id) => reached[id] === 1))).toEqual(['src/auth/index.ts', 'src/auth/token.ts', 'src/util.ts']);
+  });
+
+  it('terminates on cycles', () => {
+    const b = new GraphBuilder();
+    b.addEdge('a', 'b', STATIC);
+    b.addEdge('b', 'a', STATIC);
+    b.addNode('c');
+    const graph = b.build();
+    expect([...forwardReach(graph, [graph.id('a')!])]).toEqual([1, 1, 0]);
+  });
+
+  it('rejects a seed that is not a node', () => {
+    expect(() => forwardReach(login(), [-1])).toThrow(RangeError);
+  });
+});
+
 // Random directed graphs (cycles allowed), random test nodes and change sets.
 const arbGraph = fc
   .integer({ min: 1, max: 30 })
@@ -149,6 +170,20 @@ describe('graph properties', () => {
         for (let i = 0; i < g.n; i++) {
           const affected = [...closure(g.edges, i)].some((node) => g.changed.includes(node));
           expect(reach.reached[graph.id(label(i))!] === 1).toBe(affected);
+        }
+      }),
+      { numRuns: 2000 },
+    );
+  });
+
+  it('forward reach is the union of the seeds\' forward closures', () => {
+    fc.assert(
+      fc.property(arbGraph, (g) => {
+        const graph = build(g);
+        const reached = forwardReach(graph, g.changed.map((i) => graph.id(label(i))!));
+        const oracle = new Set(g.changed.flatMap((i) => [...closure(g.edges, i)]));
+        for (let i = 0; i < g.n; i++) {
+          expect(reached[graph.id(label(i))!] === 1).toBe(oracle.has(i));
         }
       }),
       { numRuns: 2000 },

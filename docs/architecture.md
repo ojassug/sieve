@@ -521,9 +521,11 @@ Each spec covers input, output, algorithm, complexity, the safety or correctness
 
 Every escalation appears in the plan summary with its cause. L0 is file-precise.
 
-**As built in M1**, two rows are narrower than the table ([DECISIONS.md](../DECISIONS.md) entry 27):
-- L1 forces only the tests whose path lies under the owning package, and a changed module that no test reaches does not escalate.
-- An added module, and an added file that a mapped glob matches, are exempt from L1 because their effect already shows in Δ (entries 24 and 26). That exemption is sound only while every uncertain file counts as changed.
+**As built in M1** ([DECISIONS.md](../DECISIONS.md) entries 24, 26 and 29):
+- **The owning package** of an unmapped input is the deepest workspace member that holds its path, else the repository root. A `package.json` that is not a workspace member, such as a test fixture or a `type` marker, does not start a package.
+- **"No test reaches"** is judged in the map's graph from the map's tests. Every node kind counts, so a lockfile bump of a package that no test imports escalates the root. A `u:` node is never a change; it is a seed regardless.
+- **`inputs.ignore`** matches an unmapped input by its path: a file, a listing's directory or a package's install location. An unreached glob belongs to the root and cannot be ignored. The plan lists every path it exempted.
+- **One row is narrower than the table.** An added module, and an added file that a mapped glob matches, are exempt from L1 because their effect already shows in Δ (entries 24 and 26). That exemption is sound only while every uncertain file counts as changed.
 
 ### 3.6 Flake ledger and quarantine
 - **Identical inputs (equivalence class).**
@@ -713,7 +715,7 @@ Node 20 reached end of life on 2026-04-30, and Node 22 does on 2027-04-30, so th
 Notes on the schema, as the M1 CLI implements it ([DECISIONS.md](../DECISIONS.md) entry 24):
 - Unknown keys are errors, and every problem is reported with its path (`projects[0].runner: …`).
 - A project may also give `include` and `exclude`, test-file globs relative to its `root`. Without them, Vitest projects use Vitest's default include and Jest projects Jest's default `testMatch`, both without `**/node_modules/**` and `**/fixtures/**`. SIEVE plans Vitest and Jest projects; the others (and `results-only` ones) are listed in the summary as not planned.
-- `inputs.global` adds to the conventional global inputs (root `package.json`, `.env*`, Vite, Vitest and Jest configs, and `vitest.setup.*`/`jest.setup.*`); `inputs.ignore` replaces the default ignore list of §3.5.
+- `inputs.global` adds to the conventional global inputs (root `package.json`, `.env*`, Vite, Vitest and Jest configs, and `vitest.setup.*`/`jest.setup.*`); `inputs.ignore` replaces the default ignore list of §3.5, so a repository that adds patterns repeats the defaults it wants to keep.
 - In M1 the CLI validates `server`, `generated`, `quarantine`, `auditRate` and `trustPullRequestsFrom` (only `writers` is defined), but does not use them yet.
 - `env.track` is validated and not used either. Tracked variables are environment components, which belong to a record and not to the map (§3.1), so their first reader is the M2 recorder ([DECISIONS.md](../DECISIONS.md) entry 28).
 
