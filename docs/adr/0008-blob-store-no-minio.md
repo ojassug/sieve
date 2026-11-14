@@ -24,6 +24,6 @@ MinIO's status, as of this decision:
 - **Bundle Garage or SeaweedFS:** rejected. Another service to operate.
 
 ## Consequences
-- Compose is the SIEVE image plus Postgres.
+- Compose is the Trommel image plus Postgres.
 - The filesystem backend must write atomically (temp file + rename) and is covered by GC.
 - Hosted mode uses S3.

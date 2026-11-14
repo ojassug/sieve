@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 
-import { canonicalJsonPretty } from '@sieve-ci/core';
+import { canonicalJsonPretty } from '@trommel/core';
 
 import { collectDay, type DayCounts, type RepoConfig } from './collect.ts';
 import { addDays, daysInRange } from './days.ts';

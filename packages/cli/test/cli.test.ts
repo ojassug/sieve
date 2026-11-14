@@ -30,7 +30,7 @@ interface Run {
   readonly stdout: string;
   readonly stderr: string;
 }
-const sieve = (args: string[], env: Record<string, string> = {}): Run => {
+const trommel = (args: string[], env: Record<string, string> = {}): Run => {
   const clean = Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith('GITHUB_')));
   const result = spawnSync(process.execPath, [MAIN, ...args], { cwd: repo, encoding: 'utf8', env: { ...clean, ...env } });
   return { status: result.status, stdout: result.stdout, stderr: result.stderr };
@@ -38,10 +38,10 @@ const sieve = (args: string[], env: Record<string, string> = {}): Run => {
 
 let base: string;
 beforeAll(() => {
-  repo = mkdtempSync(join(tmpdir(), 'sieve-cli-'));
+  repo = mkdtempSync(join(tmpdir(), 'trommel-cli-'));
   git('init', '-q');
   base = commit({
-    '.gitignore': '.sieve/\n',
+    '.gitignore': '.trommel/\n',
     'package.json': '{"name":"demo","type":"module"}\n',
     'package-lock.json': LOCK,
     'src/a.ts': "import { b } from './b';\nexport const a = b;\n",
@@ -56,12 +56,12 @@ afterAll(() => {
   rmSync(repo, { recursive: true, force: true });
 });
 
-describe('sieve graph, then plan', () => {
+describe('trommel graph, then plan', () => {
   it('writes the map of HEAD', () => {
-    const run = sieve(['graph', '--out', '.sieve/map/map.json']);
+    const run = trommel(['graph', '--out', '.trommel/map/map.json']);
     expect(run.stderr).toMatch(/2 tests/);
     expect(run.status).toBe(0);
-    const map = JSON.parse(readFileSync(join(repo, '.sieve/map/map.json'), 'utf8')) as { tests: string[]; rootTree: string };
+    const map = JSON.parse(readFileSync(join(repo, '.trommel/map/map.json'), 'utf8')) as { tests: string[]; rootTree: string };
     expect(map.tests).toEqual(['test/a.test.ts', 'test/c.test.ts']);
     expect(map.rootTree).toBe(git('rev-parse', 'HEAD^{tree}'));
   });
@@ -71,7 +71,7 @@ describe('sieve graph, then plan', () => {
     const outputs = join(repo, '..', `${repo.split(/[\\/]/).at(-1)!}-outputs.txt`);
     const summary = join(repo, '..', `${repo.split(/[\\/]/).at(-1)!}-summary.md`);
     writeFileSync(outputs, 'earlier=1\n');
-    const run = sieve(['plan', '--mode', 'shadow', '--static', '--map', '.sieve/map'], { GITHUB_OUTPUT: outputs, GITHUB_STEP_SUMMARY: summary });
+    const run = trommel(['plan', '--mode', 'shadow', '--static', '--map', '.trommel/map'], { GITHUB_OUTPUT: outputs, GITHUB_STEP_SUMMARY: summary });
     expect(run.status).toBe(0);
     const plan = JSON.parse(run.stdout) as Record<string, unknown>;
     expect(plan['affected']).toEqual([{ test: 'test/a.test.ts', path: ['f:test/a.test.ts', 'f:src/a.ts', 'f:src/b.ts'] }]);
@@ -83,13 +83,13 @@ describe('sieve graph, then plan', () => {
   });
 
   it('accepts --shadow for --mode shadow, and --shards', () => {
-    const run = sieve(['plan', '--shadow', '--static', '--map', '.sieve/map', '--shards', '2']);
+    const run = trommel(['plan', '--shadow', '--static', '--map', '.trommel/map', '--shards', '2']);
     expect(run.status).toBe(0);
     expect((JSON.parse(run.stdout) as { shards: string[][] }).shards).toEqual([['test/a.test.ts'], ['test/c.test.ts']]);
   });
 
   it('prints the snapshot difference between two revisions', () => {
-    const run = sieve(['diff', base, 'HEAD']);
+    const run = trommel(['diff', base, 'HEAD']);
     expect(run.status).toBe(0);
     const delta = JSON.parse(run.stdout) as { files: { path: string; kind: string }[]; listings: string[]; packages: unknown };
     expect(delta.files.map((f) => `${f.kind} ${f.path}`)).toEqual(['modified README.md', 'modified src/b.ts']);
@@ -98,10 +98,10 @@ describe('sieve graph, then plan', () => {
   });
 
   it('takes absolute paths for --out and --map', () => {
-    const dir = mkdtempSync(join(tmpdir(), 'sieve-cli-abs-'));
+    const dir = mkdtempSync(join(tmpdir(), 'trommel-cli-abs-'));
     try {
-      expect(sieve(['graph', '--rev', base, '--out', join(dir, 'map.json')]).status).toBe(0);
-      const run = sieve(['plan', '--shadow', '--static', '--map', dir]);
+      expect(trommel(['graph', '--rev', base, '--out', join(dir, 'map.json')]).status).toBe(0);
+      const run = trommel(['plan', '--shadow', '--static', '--map', dir]);
       expect(run.status).toBe(0);
       expect((JSON.parse(run.stdout) as { fallback?: string }).fallback).toBeUndefined();
     } finally {
@@ -110,13 +110,13 @@ describe('sieve graph, then plan', () => {
   });
 
   it('builds byte-identical maps of the same revision', () => {
-    const run = sieve(['graph', '--rev', base]);
+    const run = trommel(['graph', '--rev', base]);
     expect(run.status).toBe(0);
-    expect(run.stdout).toBe(readFileSync(join(repo, '.sieve/map/map.json'), 'utf8'));
+    expect(run.stdout).toBe(readFileSync(join(repo, '.trommel/map/map.json'), 'utf8'));
   });
 });
 
-describe('sieve plan fallbacks', () => {
+describe('trommel plan fallbacks', () => {
   it.each([
     ['there is no map', [], 'no map at nowhere/map.json'],
     ['the map is not JSON', [['bad/map.json', '{']], 'the map at bad/map.json is invalid: the map is not JSON'],
@@ -126,7 +126,7 @@ describe('sieve plan fallbacks', () => {
     }
     const dir = (files as [string, string][]).length > 0 ? 'bad' : 'nowhere';
     const outputs = join(repo, '..', `${repo.split(/[\\/]/).at(-1)!}-fallback.txt`);
-    const run = sieve(['plan', '--shadow', '--static', '--map', dir], { GITHUB_OUTPUT: outputs });
+    const run = trommel(['plan', '--shadow', '--static', '--map', dir], { GITHUB_OUTPUT: outputs });
     expect(run.status).toBe(0);
     const plan = JSON.parse(run.stdout) as Record<string, unknown>;
     expect(plan['fallback']).toBe(cause);
@@ -134,34 +134,34 @@ describe('sieve plan fallbacks', () => {
     expect(readFileSync(outputs, 'utf8')).toContain('count=2\n');
   });
 
-  it('plans every test when sieve.config.json is invalid', () => {
-    commit({ 'sieve.config.json': '{ "version": 2 }' });
-    const run = sieve(['plan', '--shadow', '--static']);
+  it('plans every test when trommel.config.json is invalid', () => {
+    commit({ 'trommel.config.json': '{ "version": 2 }' });
+    const run = trommel(['plan', '--shadow', '--static']);
     expect(run.status).toBe(0);
-    expect((JSON.parse(run.stdout) as { fallback: string }).fallback).toBe('invalid sieve.config.json: version: must be 1');
-    git('rm', '-q', 'sieve.config.json');
+    expect((JSON.parse(run.stdout) as { fallback: string }).fallback).toBe('invalid trommel.config.json: version: must be 1');
+    git('rm', '-q', 'trommel.config.json');
     git('commit', '-q', '-m', 'c');
   });
 });
 
-describe('sieve usage errors', () => {
+describe('trommel usage errors', () => {
   it('refuses --mode safe with --static (kickoff gap 1)', () => {
-    const run = sieve(['plan', '--mode', 'safe', '--static', '--map', '.sieve/map']);
+    const run = trommel(['plan', '--mode', 'safe', '--static', '--map', '.trommel/map']);
     expect(run.status).toBe(2);
     expect(run.stderr).toMatch(/unproven static reachability/);
     expect(run.stdout).toBe('');
   });
 
   it('exits 2 on an unknown command, and prints help', () => {
-    expect(sieve(['frob']).status).toBe(2);
-    const help = sieve(['--help']);
+    expect(trommel(['frob']).status).toBe(2);
+    const help = trommel(['--help']);
     expect(help.status).toBe(0);
     expect(help.stdout).toContain('plan --mode shadow --static');
   });
 
   it('exits 1 on a revision that does not exist', () => {
-    const run = sieve(['graph', '--rev', 'no-such-rev']);
+    const run = trommel(['graph', '--rev', 'no-such-rev']);
     expect(run.status).toBe(1);
-    expect(run.stderr).toMatch(/sieve: /);
+    expect(run.stderr).toMatch(/trommel: /);
   });
 });

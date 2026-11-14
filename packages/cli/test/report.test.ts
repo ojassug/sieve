@@ -1,4 +1,4 @@
-import { runAll, type Selection } from '@sieve-ci/core';
+import { runAll, type Selection } from '@trommel/core';
 import { describe, expect, it } from 'vitest';
 
 import { buildReport, githubOutputs, splitShards, summaryOf, UNPROVEN } from '../src/report.ts';
@@ -20,7 +20,7 @@ const selection: Selection = {
 };
 const report = buildReport({
   selection,
-  base: { map: '.sieve/map/map.json', rootTree: 'a'.repeat(40) },
+  base: { map: '.trommel/map/map.json', rootTree: 'a'.repeat(40) },
   head: { rev: 'HEAD', rootTree: 'b'.repeat(40) },
   uncertainCauses: { 'u:src/x.ts': ['line 3: ./gone is unresolved (not found)'] },
   notPlanned: ['e2e'],
@@ -90,14 +90,14 @@ describe('summaryOf', () => {
     expect(summary).toContain('`t/b.test.ts` → `src/x.ts` → uncertain: line 3: ./gone is unresolved (not found)');
   });
 
-  it('lists escalations with their causes, and projects SIEVE does not plan', () => {
+  it('lists escalations with their causes, and projects Trommel does not plan', () => {
     expect(summary).toContain('L1 (`pkgs/p`): pkgs/p/data.json was modified and is not in the graph');
     expect(summary).toContain('`t/new.test.ts`: new test file');
-    expect(summary).toContain('Not planned by SIEVE: e2e');
+    expect(summary).toContain('Not planned by Trommel: e2e');
   });
 
   it('says so when it fell back to running everything', () => {
-    const fallback = buildReport({ selection: runAll(['t/a.test.ts'], 'no map at .sieve/map/map.json'), base: null, head: { rev: 'HEAD', rootTree: 'b'.repeat(40) }, notPlanned: [], shards: 1, fallback: 'no map at .sieve/map/map.json' });
-    expect(summaryOf(fallback)).toContain('SIEVE could not use a map (no map at .sieve/map/map.json), so it ran all 1 test files.');
+    const fallback = buildReport({ selection: runAll(['t/a.test.ts'], 'no map at .trommel/map/map.json'), base: null, head: { rev: 'HEAD', rootTree: 'b'.repeat(40) }, notPlanned: [], shards: 1, fallback: 'no map at .trommel/map/map.json' });
+    expect(summaryOf(fallback)).toContain('Trommel could not use a map (no map at .trommel/map/map.json), so it ran all 1 test files.');
   });
 });

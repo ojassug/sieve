@@ -13,7 +13,7 @@
 ## Decision
 **Records.** A record R is one passing execution of test file t. [ADR-0012](0012-ci-auth-and-trust-lanes.md) says which runs make records that others may rely on. A record is self-contained. It stores:
 - its closure C_R(t) as (node, hash) pairs: every node reachable from t in the union graph of the snapshot it ran on. That graph has all static and declared edges of the snapshot plus the dynamic edges this execution recorded, and static edges are followed from modules found at run time too;
-- the closure digest: SHA-256 over the canonical JSON of `["sieve-closure-1", [[node, hash], …]]`, with ⊥ as `null`;
+- the closure digest: SHA-256 over the canonical JSON of `["trommel-closure-1", [[node, hash], …]]`, with ⊥ as `null`;
 - its environment components, measured in the process that ran the test;
 - the versions of the static engine and of the recorder, and the time of the run;
 - completeness flags: anything the recorder saw and could not map, such as a subprocess it could not attach to, an untracked file with no `generated` rule, or a script with no node.
@@ -34,7 +34,7 @@ The planner computes conditions 1 and 4 from a base map M_S and Δ(S, H) by reve
 - A changed file that is not a node, and a changed node that no test reaches, are unmapped inputs. Every node of the owning package then counts as changed.
 - Lockfile, config and map problems run everything ([architecture.md](../architecture.md) §3.5).
 
-Every skip emits a proof that `sieve verify` can recheck from R and a checkout of H. A server signs its proofs. In Lite mode proofs are unsigned and no more trustworthy than the map they came from ([ADR-0021](0021-lite-mode-actions-cache.md)). Safe mode never uses predicted probabilities.
+Every skip emits a proof that `trommel verify` can recheck from R and a checkout of H. A server signs its proofs. In Lite mode proofs are unsigned and no more trustworthy than the map they came from ([ADR-0021](0021-lite-mode-actions-cache.md)). Safe mode never uses predicted probabilities.
 
 **What the guarantee covers.** Under determinism (A1) and capture completeness (A2), a safe skip has the outcome of R. Time, randomness, the network, external services and state shared between test files are outside A1. They are documented, bounded by the record horizon and the nightly full run, and surfaced by the flake ledger.
 

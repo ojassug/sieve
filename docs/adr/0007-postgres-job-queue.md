@@ -31,6 +31,6 @@ Anthropic's 2026-09-14 post ([link](https://claude.com/blog/agentic-coding-is-st
 - **Redis Streams or NATS JetStream:** another service in compose.
 
 ## Consequences
-- About 500 lines of queue code SIEVE must get right. Crash-injection property tests check that no effect is lost or duplicated.
-- Throughput headroom is orders of magnitude above what SIEVE needs.
+- About 500 lines of queue code Trommel must get right. Crash-injection property tests check that no effect is lost or duplicated.
+- Throughput headroom is orders of magnitude above what Trommel needs.
 - A swap to an external queue stays possible behind the queue interface.

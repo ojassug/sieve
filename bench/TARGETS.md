@@ -7,8 +7,8 @@
 ## Definitions
 - **Flaky failure:** a failure that does not reproduce in at least one of 3 reruns at the same commit and environment.
 - **Faulty change:** a commit or PR whose full suite has at least one non-flaky failure. Ground truth comes from re-executing the full suite and, to get enough faulty changes, from mutants seeded into changed functions.
-- **Change-level miss rate:** the share of faulty changes where SIEVE's selection includes none of the failing tests.
-- **Test-level recall:** the share of failing tests that SIEVE's selection includes.
+- **Change-level miss rate:** the share of faulty changes where Trommel's selection includes none of the failing tests.
+- **Test-level recall:** the share of failing tests that Trommel's selection includes.
 - **Savings:** Σ duration of skipped test files ÷ Σ duration of all test files, per run. Reported as the median over runs, per repo and pooled.
 - **Escape (production):** a skipped test that would have failed non-flakily. It is measured by shadow mode, audit sampling (Clopper–Pearson 95% upper bound) and nightly full runs. Definitions are in [../docs/architecture.md](../docs/architecture.md) §3.10.
 
@@ -22,10 +22,10 @@
 | T5 | Cross-tenant access under isolation fuzzing | 0 leaks in ≥ 10⁵ generated requests per release | API, DB and WebSocket fuzzers | M8 |
 | T6 | Static graph build, 10k-file TS repo | < 30 s cold, < 3 s incremental | Golden-graph repos | M1 |
 | T7 | Record-mode overhead vs plain run (Vitest, Jest) | ≤ 25% wall time | Dogfood + 3 OSS repos | M2 |
-| T8 | CI failures caused by SIEVE itself under chaos (server down, timeouts, 5xx) | 0 | Chaos suite | M5 |
+| T8 | CI failures caused by Trommel itself under chaos (server down, timeouts, 5xx) | 0 | Chaos suite | M5 |
 
 ## Kill criterion
-- **K1 (end of M4, 2027-01-24):** if replay shows less than 30% median savings at ≤1% change-level miss rate on at least 5 repos, SIEVE pivots to a flake-ledger-first product. See [../docs/roadmap.md](../docs/roadmap.md) §2.
+- **K1 (end of M4, 2027-01-24):** if replay shows less than 30% median savings at ≤1% change-level miss rate on at least 5 repos, Trommel pivots to a flake-ledger-first product. See [../docs/roadmap.md](../docs/roadmap.md) §2.
 
 ## Protocol
 - **Corpus.**
@@ -39,7 +39,7 @@
   - `jest --findRelatedTests`;
   - a filename heuristic;
   - coverage-only plus "tracked files run all" (Datadog-like);
-  - SIEVE static-only, dynamic-only and union.
+  - Trommel static-only, dynamic-only and union.
 - **Refusal rules.** No number is reported if:
   - the corpus hash mismatches;
   - a sample is empty;

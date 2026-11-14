@@ -1,8 +1,8 @@
-// sieve.config.json (architecture §5.1): parsed with JSON.parse and checked by hand, since the CLI
+// trommel.config.json (architecture §5.1): parsed with JSON.parse and checked by hand, since the CLI
 // has no runtime dependencies. Unknown keys are errors, so a typo never silently changes selection.
-import { matchGlobs, type DeclaredRule } from '@sieve-ci/core';
+import { matchGlobs, type DeclaredRule } from '@trommel/core';
 
-export const CONFIG_FILE = 'sieve.config.json';
+export const CONFIG_FILE = 'trommel.config.json';
 
 export type Runner = 'vitest' | 'jest' | 'playwright' | 'pytest';
 export type Mode = 'safe' | 'shadow' | 'budget';
@@ -20,7 +20,7 @@ export interface Project {
   readonly exclude?: readonly string[];
 }
 
-export interface SieveConfig {
+export interface TrommelConfig {
   readonly version: 1;
   readonly server?: string;
   readonly projects?: readonly Project[];
@@ -59,7 +59,7 @@ export const DEFAULT_GLOBAL: readonly string[] = ['package.json', '.env*', '**/{
 /** Changes that never escalate (architecture §3.5). */
 export const DEFAULT_IGNORE: readonly string[] = ['**/*.md', 'docs/**', 'LICENSE*'];
 
-export function parseConfig(text: string): SieveConfig {
+export function parseConfig(text: string): TrommelConfig {
   let value: unknown;
   try {
     value = JSON.parse(text);
@@ -71,7 +71,7 @@ export function parseConfig(text: string): SieveConfig {
   if (problems.length > 0) {
     throw new ConfigError(problems);
   }
-  return value as SieveConfig;
+  return value as TrommelConfig;
 }
 
 type Check = (value: unknown, path: string, problems: string[]) => void;
@@ -220,8 +220,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-/** Test files of every project SIEVE plans (Vitest and Jest, not results-only), sorted. */
-export function discoverTests(files: readonly string[], config: SieveConfig): { tests: string[]; notPlanned: string[] } {
+/** Test files of every project Trommel plans (Vitest and Jest, not results-only), sorted. */
+export function discoverTests(files: readonly string[], config: TrommelConfig): { tests: string[]; notPlanned: string[] } {
   const projects = config.projects ?? [{ name: 'default', runner: 'vitest' as const }];
   const tests = new Set<string>();
   const notPlanned: string[] = [];
@@ -255,7 +255,7 @@ export interface Rules {
 }
 
 /** The config with defaults applied. Declared global inputs add to the defaults; the rest replace them. */
-export function rulesOf(config: SieveConfig): Rules {
+export function rulesOf(config: TrommelConfig): Rules {
   return {
     global: [...new Set([...DEFAULT_GLOBAL, ...(config.inputs?.global ?? [])])],
     declared: config.inputs?.declared ?? [],

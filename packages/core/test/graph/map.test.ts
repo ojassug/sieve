@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { canonicalJson } from '../../src/canonical-json.ts';
 import { STATIC } from '../../src/graph/graph.ts';
 import { mapGraph, parseMap } from '../../src/graph/map.ts';
-import { buildStaticMap, type SieveMap } from '../../src/graph/static.ts';
+import { buildStaticMap, type TrommelMap } from '../../src/graph/static.ts';
 import { fakeRepo } from './fake-repo.ts';
 
 const repo = fakeRepo({ 'src/a.ts': "import './b';\n", 'src/b.ts': '', 'a.test.ts': "import './src/a';\n" });
@@ -24,7 +24,7 @@ describe('parseMap', () => {
   it.each([
     ['text that is not JSON', '{', /not JSON/],
     ['another map version', edit((m) => (m['version'] = 2)), /version 2/],
-    ['another engine', edit((m) => (m['engine'] = 'sieve-static-0')), /engine/],
+    ['another engine', edit((m) => (m['engine'] = 'trommel-static-0')), /engine/],
     ['an unknown object format', edit((m) => (m['objectFormat'] = 'md5')), /objectFormat/],
     ['a root tree that is not an object id', edit((m) => (m['rootTree'] = 'HEAD')), /rootTree/],
     ['a missing field', edit((m) => delete m['tests']), /tests/],
@@ -49,7 +49,7 @@ describe('mapGraph', () => {
   });
 
   it('is identical however the map was ordered', () => {
-    const shuffled: SieveMap = { ...map, nodes: Object.fromEntries(Object.entries(map.nodes).reverse()), edges: Object.fromEntries(Object.entries(map.edges).reverse()) };
+    const shuffled: TrommelMap = { ...map, nodes: Object.fromEntries(Object.entries(map.nodes).reverse()), edges: Object.fromEntries(Object.entries(map.edges).reverse()) };
     expect(mapGraph(shuffled).forwardTargets()).toEqual(mapGraph(map).forwardTargets());
   });
 });

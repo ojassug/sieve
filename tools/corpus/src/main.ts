@@ -10,7 +10,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { parseArgs } from 'node:util';
 
-import { canonicalJsonPretty } from '@sieve-ci/core';
+import { canonicalJsonPretty } from '@trommel/core';
 
 import type { RepoConfig } from './collect.ts';
 import { GitHubClient } from './github.ts';

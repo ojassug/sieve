@@ -1,4 +1,4 @@
-# SIEVE threat model and adversarial review
+# Trommel threat model and adversarial review
 
 - **Status:** approved 2026-11-11. §1.3 and the table in §2.1 were corrected on 2026-11-13 after the [foundation review](research/2026-11-foundation-review.md), together with ADR-0012, ADR-0014 and ADR-0021.
 - **Related:**
@@ -11,7 +11,7 @@
 
 ### 1.1 Tenancy ([ADR-0011](adr/0011-tenancy-rls.md))
 - Shared schema with `ENABLE` and **`FORCE ROW LEVEL SECURITY`** on every tenant table. Owners otherwise bypass RLS, and superusers and BYPASSRLS roles always do (verified, PostgreSQL docs).
-- Policy `tenant_id = current_setting('sieve.tenant_id')::uuid`.
+- Policy `tenant_id = current_setting('trommel.tenant_id')::uuid`.
 - The app role has no BYPASSRLS; migrations run as the owner role.
 - Every request and job runs in a transaction with `SET LOCAL`. With no policy, RLS defaults to deny (verified).
 - **Covert channels:** unique, PK and FK checks bypass RLS (verified). So uniqueness is tenant-scoped everywhere, except the router-only `routing_installations` table, whose errors are uniform 404s.
@@ -75,10 +75,10 @@
 | Order dependence (`isolate: false`, pytest) | File or module units; OD tagging; warnings |
 | Cached failure masquerading as pass | Only passing trusted records are evidence; known-failing tests always run |
 | Record from an untrusted run | Lanes |
-| SIEVE bug (resolver, mapper, BFS) | Shadow mode for 4 clean weeks before enforcement; audit sampling; nightly full runs; independent naive verifier (P4); seeded-fault replay; incident workflow freezing the package |
+| Trommel bug (resolver, mapper, BFS) | Shadow mode for 4 clean weeks before enforcement; audit sampling; nightly full runs; independent naive verifier (P4); seeded-fault replay; incident workflow freezing the package |
 | External services, network, time | Outside assumption A1 by definition. Documented; these tests show up in the flake ledger; nightly runs keep them exercised; a record older than the configured horizon is no longer evidence |
 | Inputs read outside a test's own worker: transform and plugin configuration, global setup, files and packages the runner config names by a string | Three capture scopes (test file, worker, run), the runner's reported effective configuration, and escalation of any changed node that no test reaches ([ADR-0005](adr/0005-closure-equality-safety-criterion.md)) |
-| A test file the runner would run and SIEVE's own discovery does not find | The runner decides what a test is: `sieve run` also runs every discovered file the plan does not mention ([ADR-0004](adr/0004-test-file-selection-unit.md)) |
+| A test file the runner would run and Trommel's own discovery does not find | The runner decides what a test is: `trommel run` also runs every discovered file the plan does not mention ([ADR-0004](adr/0004-test-file-selection-unit.md)) |
 | An environment that differs between the plan job and the shard, or between matrix cells | Records are per environment, and equality is checked in the job that runs the test |
 | A record made by unreviewed pull-request code, such as a narrowed test command | Only evidence-lane runs change shared state (§1.3); the runner's effective configuration is part of the environment |
 | A module found only at run time that a new file would shadow | An uncertain file always counts as changed, unless the record carries resolution evidence for that importer |
@@ -118,6 +118,6 @@ The last seven rows were added on 2026-11-13. Their mitigations are decided and 
 ### 2.4 The cheapest slice with real value in month 1, given selection-first
 - Per the sequencing decision, month 1 has no ingest or UI. Its value is:
   - the **corpus collector**, started in week 1, an asset that decays at 90 days;
-  - the **walking skeleton** ([roadmap.md](roadmap.md) §5): shadow-mode `sieve plan` with why-paths in job summaries on the dogfood repo.
+  - the **walking skeleton** ([roadmap.md](roadmap.md) §5): shadow-mode `trommel plan` with why-paths in job summaries on the dogfood repo.
 - By week 8, **Lite mode** gives enforced selection in CI with no server.
 - Accepted trade-off: flake value (the fastest-to-value feature) arrives around week 17. If the M4 kill gate fails, the pivot keeps the CLI, the GitHub integration and the map store.

@@ -5,15 +5,15 @@
 - Related: [architecture.md](../architecture.md) §2, [ADR-0002](0002-zero-dependency-cli.md)
 
 ## Context
-SIEVE is built by one developer over 6 months at about 25 commits/week. Several parts have to be JavaScript or TypeScript whatever else is chosen: the Vitest and Jest plugins run inside those runners, the CLI runs in Node-based CI jobs, and the UI runs in browsers.
+Trommel is built by one developer over 6 months at about 25 commits/week. Several parts have to be JavaScript or TypeScript whatever else is chosen: the Vitest and Jest plugins run inside those runners, the CLI runs in Node-based CI jobs, and the UI runs in browsers.
 
 The hot paths are:
-- listing and hashing in the CLI (git already computes blob OIDs; SIEVE hashes the rest with SHA-256);
+- listing and hashing in the CLI (git already computes blob OIDs; Trommel hashes the rest with SHA-256);
 - reverse BFS over CSR graphs;
 - coverage post-processing;
 - streaming XML parsing at ingest (target ≥10k results/s).
 
-The same selector must run in two places: in the CLI (Lite mode, `sieve verify`) and in the server.
+The same selector must run in two places: in the CLI (Lite mode, `trommel verify`) and in the server.
 
 ## Decision
 - TypeScript on Node for the CLI, runner plugins, server, workers and UI build.

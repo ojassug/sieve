@@ -11,7 +11,7 @@ Uploads and selection requests come from CI runners.
 - A workflow started by `workflow_run` can use secrets and write tokens even when the run that triggered it could not (same page).
 
 ## Decision
-- **Authentication.** CI authenticates with GitHub OIDC JWTs whose audience is bound to the SIEVE server and whose claims must match `oidc_trust` rules. The alternative is repo-scoped API tokens stored as hashes.
+- **Authentication.** CI authenticates with GitHub OIDC JWTs whose audience is bound to the Trommel server and whose claims must match `oidc_trust` rules. The alternative is repo-scoped API tokens stored as hashes.
 - **Lanes.** Every run is classified from its verified claims (`event_name`, `ref`, `job_workflow_ref`), never from what the client reports:
   - **evidence:** runs of reviewed code, which are pushes and schedules on the default branch, `workflow_dispatch` on the default branch, and `merge_group`;
   - **pull request:** any pull-request run that can authenticate, whoever its author is;

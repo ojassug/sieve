@@ -22,7 +22,7 @@ Flaky failures drive rerun culture (research report A1). Quarantine decisions ne
 - **Release:** a separate SPRT during Probation with α′ = 0.01 and β′ = 0.10, which takes about 247 clean observations.
 - **Estimation:** a Beta(0.5, 50) prior with exponential decay at a 14-day half-life.
 - **State machine:** Active → Suspect → Quarantined → Probation → Active. Manual overrides are audited.
-- **Quarantine means the test still runs, but its failures don't fail the build.** `sieve run` computes the exit code. Strict mode, which skips quarantined tests, is optional.
+- **Quarantine means the test still runs, but its failures don't fail the build.** `trommel run` computes the exit code. Strict mode, which skips quarantined tests, is optional.
 
 ## Alternatives considered
 - **Fixed thresholds ("k failures in n runs"):** rejected. No error guarantees.

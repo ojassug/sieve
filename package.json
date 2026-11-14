@@ -1,7 +1,7 @@
 {
-  "name": "sieve-monorepo",
+  "name": "trommel-monorepo",
   "private": true,
-  "description": "SIEVE (codename): self-hostable CI test intelligence",
+  "description": "Trommel: self-hostable CI test intelligence",
   "license": "Apache-2.0",
   "type": "module",
   "engines": {

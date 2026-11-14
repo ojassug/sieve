@@ -3,6 +3,7 @@
 **Prepared for:** Ojas Sugur (GitHub `ojassug`), author of TokenDamper and SeamCraft
 **Research date:** 2026-11-04 (all star counts, HN points, and prices are snapshots from this date)
 **Status:** Ready for independent audit. Every evidence row carries a URL or item ID.
+**Renamed 2026-11-14:** the study called Blueprint #1 by the codename SIEVE. This copy uses the project's final name, Trommel, and changes nothing else ([DECISIONS.md](../../DECISIONS.md) entry 30).
 
 ---
 
@@ -31,13 +32,13 @@
 
 ### 1.1 Recommendation
 
-**Build Blueprint #1, SIEVE: a self-hostable CI test-intelligence platform.** It has the largest and most recent volume of user pain. AI coding agents are now multiplying PR volume; one 2026 write-up reports that "One engineer with coding agents was enough to make CI a bottleneck" ([dudzik, 2026](https://humansystems.dudzik.co/p/when-agents-make-ci-the-bottleneck)). SIEVE also has the tightest Day-1 dogfood loop: install it on TokenDamper's own repo and replay public OSS CI history.
+**Build Blueprint #1, Trommel: a self-hostable CI test-intelligence platform.** It has the largest and most recent volume of user pain. AI coding agents are now multiplying PR volume; one 2026 write-up reports that "One engineer with coding agents was enough to make CI a bottleneck" ([dudzik, 2026](https://humansystems.dudzik.co/p/when-agents-make-ci-the-bottleneck)). Trommel also has the tightest Day-1 dogfood loop: install it on TokenDamper's own repo and replay public OSS CI history.
 
-If you would rather optimise for raw systems-engineering growth than near-term users, pick **Blueprint #2, SPLITBRAIN** (Jepsen-grade correctness testing for app teams). It ties SIEVE on total score, has the deepest algorithms, and the incumbent (Antithesis) is closed to small teams.
+If you would rather optimise for raw systems-engineering growth than near-term users, pick **Blueprint #2, SPLITBRAIN** (Jepsen-grade correctness testing for app teams). It ties Trommel on total score, has the deepest algorithms, and the incumbent (Antithesis) is closed to small teams.
 
 | Rank | Codename | One line | Total score /50 |
 |---|---|---|---|
-| 1 | **SIEVE** | Self-hosted test-impact analysis, flake ledger, and merge-safety gate for any forge or CI | 42 |
+| 1 | **Trommel** | Self-hosted test-impact analysis, flake ledger, and merge-safety gate for any forge or CI | 42 |
 | 2 | **SPLITBRAIN** | Fault injection + linearizability/serializability verdicts for docker-compose stacks | 42 |
 | 3 | **PLANWARDEN** | Self-hosted Postgres workload advisor: plan-regression tracking + storage-budgeted index selection | 39 |
 | 4 | **DRIFTLOCK** | Continuous, CDC-aware cross-database reconciliation via incremental Merkle trees | 36 |
@@ -48,21 +49,21 @@ If you would rather optimise for raw systems-engineering growth than near-term u
 
 Columns: **ID · Source · Date · Hard metric · What it shows (paraphrase) · Supports**
 
-#### A. CI / test pain (supports SIEVE)
+#### A. CI / test pain (supports Trommel)
 
 | ID | Source | Date | Metric | What it shows | Supports |
 |---|---|---|---|---|---|
 | A1 | [r/devops: Reduce CI CD pipeline time strategies that actually work? Ours is 47 min](https://www.reddit.com/r/devops/comments/1op2qri/reduce_ci_cd_pipeline_time_strategies_that/) | 2025-11-05 | 137 pts, 139 comments | 47-min suite; OP estimates 15–20% of failures are false; devs rerun until green; some bypass CI and push straight to prod | Flake + selection pain at scale |
 | A2 | [r/devops: QA tests blocking our CI/CD pipeline 45min per run](https://www.reddit.com/r/devops/comments/1p1uh6c/qa_tests_blocking_our_cicd_pipeline_45min_per_run/) | 2025-11-20 | 9 pts, 44 comments | 5–10 random failures per run; their attempt to run only relevant tests per PR missed regressions | Naive selection is unsafe → need provable selection |
-| A3 | [r/devops: Running only the tests a git diff affects in CI — the CI-shareable part is the hard bit](https://www.reddit.com/r/devops/comments/1ubigky/running_only_the_tests_a_git_diff_affects_in_ci/) | 2026-06-21 | — | Most TIA tools keep the test→code map on the developer's laptop. CI needs a shareable map keyed by git ref that still works on `--depth 1` shallow clones | Concrete technical gap SIEVE M2 targets |
+| A3 | [r/devops: Running only the tests a git diff affects in CI — the CI-shareable part is the hard bit](https://www.reddit.com/r/devops/comments/1ubigky/running_only_the_tests_a_git_diff_affects_in_ci/) | 2026-06-21 | — | Most TIA tools keep the test→code map on the developer's laptop. CI needs a shareable map keyed by git ref that still works on `--depth 1` shallow clones | Concrete technical gap Trommel M2 targets |
 | A4 | [r/ExperiencedDevs: At what point do you run e2e tests?](https://www.reddit.com/r/ExperiencedDevs/comments/1pza4pr/at_what_point_do_you_run_e2e_tests/) | 2025-12-30 | — | A team runs affected tests on branches and tracks a roughly 1% chance of missing a failure | Sets the ≤1% miss-rate benchmark target |
 | A5 | [dudzik: When agents make CI the bottleneck](https://humansystems.dudzik.co/p/when-agents-make-ci-the-bottleneck) | 2026-08 | p95 CI incl. queue ≈7h35m → 35m; selector overhead ≈15 s; Actions spend ≈$10→$50/mo | TypeScript dependency graph + runtime tracing selection; conservative policy that runs tests whenever a change can't be confidently mapped; full suite nightly | Validates hybrid static+dynamic design; 2026 agentic-coding tailwind |
-| A6 | [GitHub actions/runner #662](https://github.com/actions/runner/issues/662) — Command to early-exit the job and set check conclusion | open since 2020-08-16 | 930 👍, 69 comments | GitHub Actions still has no native way to end a job early with a chosen conclusion | Skipping tests cleanly needs workarounds SIEVE can package |
+| A6 | [GitHub actions/runner #662](https://github.com/actions/runner/issues/662) — Command to early-exit the job and set check conclusion | open since 2020-08-16 | 930 👍, 69 comments | GitHub Actions still has no native way to end a job early with a chosen conclusion | Skipping tests cleanly needs workarounds Trommel can package |
 | A7 | [tarpas/pytest-testmon #177](https://github.com/tarpas/pytest-testmon/issues/177) — How to use in gitlab CI; [#77](https://github.com/tarpas/pytest-testmon/issues/77) — merge testmon databases | open since 2022-02 / 2017-10 | 10 👍 / 0 👍; repo 1,034★ | The leading OSS Python TIA tool is local-first; CI sharing and DB merging have been open for years | OSS gap is structural, not cosmetic |
 | A8 | [Datadog pricing](https://www.datadoghq.com/pricing/) (Test Optimization) | checked 2026-11-04 | from $20/committer/mo; committer = 3+ commits/mo; test spans kept 3 months | TIA works by recording which files each test covers. Third-party trackers list $24 month-to-month and $29 on-demand, with no free plan ([testdino](https://testdino.com/blog/currents-vs-datadog), [itechguides](https://www.itechguides.com/products/datadog-test-optimization/)) | Pricing wedge (a); coverage-only design |
 | A9 | [Trunk pricing](https://trunk.io/pricing) | checked 2026-11-04 | Free ≤5 committers; Team displayed as $0/committer + $3 per extra 1M spans (FAQ calls Team a paid plan after trial) | Enterprise adds SSO and on-prem/bring-your-own-cloud; the on-prem option is labelled private preview | Strong SaaS competitor; self-host wedge (b) remains |
 | A10 | [Develocity Predictive Test Selection](https://develocity.ai/develocity/product/predictive-test-selection/) | checked 2026-11-04 | No prices on page; 30-day trial | Enterprise sales motion | Wedge (a) |
-| A11 | GitHub repos: [reportportal/reportportal](https://github.com/reportportal/reportportal) 2,042★ (441 open issues); [sorry-cypress](https://github.com/sorry-cypress/sorry-cypress) 2,812★, last push 2025-09-14 | 2026-11-04 | stars / activity | OSS dashboards report results but don't do safe selection; the Cypress-only one is going stale | No OSS kill for SIEVE |
+| A11 | GitHub repos: [reportportal/reportportal](https://github.com/reportportal/reportportal) 2,042★ (441 open issues); [sorry-cypress](https://github.com/sorry-cypress/sorry-cypress) 2,812★, last push 2025-09-14 | 2026-11-04 | stars / activity | OSS dashboards report results but don't do safe selection; the Cypress-only one is going stale | No OSS kill for Trommel |
 
 #### B. Distributed-systems correctness (supports SPLITBRAIN)
 
@@ -177,7 +178,7 @@ Visual regression testing: [Argos](https://github.com/argos-ci/argos) (MIT, acti
 
 ---
 
-### Blueprint #1 — SIEVE
+### Blueprint #1 — Trommel
 
 **Pitch:** A self-hostable test-intelligence service that tells every CI run which tests it can safely skip, which failures are flaky, and *why*. Works on any forge, and each skip comes with a machine-checkable safety argument.
 
@@ -217,16 +218,16 @@ Visual regression testing: [Argos](https://github.com/argos-ci/argos) (MIT, acti
 - Retries-only hides real regressions.
 - Model-only selection can't explain a skip.
 
-SIEVE emits a *proof object* per skip, for example `no path from changed nodes {…} to test T in snapshot H`.
+Trommel emits a *proof object* per skip, for example `no path from changed nodes {…} to test T in snapshot H`.
 
 #### End-to-end deployed architecture
 
 ```mermaid
 flowchart LR
   subgraph RUNNER["CI runner on any forge"]
-    CLI["sieve CLI<br/>hash changed files, request selection,<br/>upload JUnit + per-test coverage"]
+    CLI["trommel CLI<br/>hash changed files, request selection,<br/>upload JUnit + per-test coverage"]
   end
-  subgraph CP["SIEVE control plane - one Docker image"]
+  subgraph CP["Trommel control plane - one Docker image"]
     API["Ingest + REST/WebSocket API<br/>tenancy, auth, idempotency keys"]
     SEL["Selector<br/>reverse BFS + knapsack + safety set"]
     Q[("Job queue<br/>Postgres SKIP LOCKED")]
@@ -282,8 +283,8 @@ flowchart LR
 | | **Total** | | **645** |
 
 #### How to dogfood & benchmark solo
-- **Day 1:** install the SIEVE GitHub App on TokenDamper's repo and on SeamCraft (add a C++ adapter later).
-- **Replay corpus:** pick ≥8 public TS/Python repos that publish JUnit artifacts in GitHub Actions. Start collecting in month 1, because CI artifacts and logs expire under retention windows. For each historical PR, compute SIEVE's selection, then compare it against the full-suite outcome that actually ran.
+- **Day 1:** install the Trommel GitHub App on TokenDamper's repo and on SeamCraft (add a C++ adapter later).
+- **Replay corpus:** pick ≥8 public TS/Python repos that publish JUnit artifacts in GitHub Actions. Start collecting in month 1, because CI artifacts and logs expire under retention windows. For each historical PR, compute Trommel's selection, then compare it against the full-suite outcome that actually ran.
 - **Flake ground truth:** same-commit reruns from the corpus, plus the [IDoFT dataset](https://mir.cs.illinois.edu/flakytests/) where the project language is supported.
 - **Baselines:** run-all, `jest --findRelatedTests`, pytest-testmon, a filename heuristic, and coverage-only TIA (a Datadog-style approximation).
 - **Pre-registered targets (falsifiable):**
@@ -637,7 +638,7 @@ CDC protocols, distributed snapshot and watermark reasoning, cross-engine SQL ge
 
 Scores are 1–10 with equal weights. Rationale is given per cell.
 
-| Criterion | SIEVE | SPLITBRAIN | PLANWARDEN | DRIFTLOCK |
+| Criterion | Trommel | SPLITBRAIN | PLANWARDEN | DRIFTLOCK |
 |---|---|---|---|---|
 | **Algorithmic depth** | 8: graphs + knapsack + SPRT/Bayesian + bisection | **10**: NP-hard linearizability search, SCC anomaly theory, guided search, ddmin | 8: interacting-item knapsack, tree edit distance, change points | 8: Merkle bisection, incremental hash trees, watermarks |
 | **Real-world utility** | **9**: every team with CI; the loudest current pain (A1–A5) | 6: high value, narrower audience | 8: every Postgres team; proven paying market (C2) | 7: data teams with pipelines/migrations |
@@ -646,15 +647,15 @@ Scores are 1–10 with equal weights. Rationale is given per cell.
 | **Resume / portfolio signal** | 9: platform engineering + static analysis + stats | **10**: distributed-systems verification | 8: DB internals | 8: data infra |
 | **Total /50** | **42** | **42** | **39** | **36** |
 
-**Tie-break (SIEVE over SPLITBRAIN):** your brief prioritises *a deployed product that solves a real problem for real users*. SIEVE wins on utility and has a tighter dogfood loop. SPLITBRAIN wins on depth and moat.
+**Tie-break (Trommel over SPLITBRAIN):** your brief prioritises *a deployed product that solves a real problem for real users*. Trommel wins on utility and has a tighter dogfood loop. SPLITBRAIN wins on depth and moat.
 
 **Practical guidance:**
-- **Primary goal = users + product skills:** build SIEVE.
+- **Primary goal = users + product skills:** build Trommel.
 - **Primary goal = distributed-systems mastery + top-tier infra hiring signal:** build SPLITBRAIN.
 - **Lowest-risk ramp (closest to TokenDamper):** PLANWARDEN.
 - **Pick DRIFTLOCK only** if you specifically want data-infra depth.
 
-**Overlap warning:** SIEVE and the killed reachability idea share a code-graph engine. If GitHub later extends reachability to Python or Team plans, nothing in SIEVE depends on that space.
+**Overlap warning:** Trommel and the killed reachability idea share a code-graph engine. If GitHub later extends reachability to Python or Team plans, nothing in Trommel depends on that space.
 
 ---
 

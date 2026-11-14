@@ -5,7 +5,7 @@ import { ConfigError, DEFAULT_GLOBAL, DEFAULT_IGNORE, discoverTests, parseConfig
 // The example from architecture §5.1, verbatim.
 const EXAMPLE = {
   version: 1,
-  server: 'https://sieve.internal.example',
+  server: 'https://trommel.internal.example',
   projects: [
     { name: 'web', runner: 'vitest', root: 'packages/web', command: 'npx vitest run' },
     { name: 'api', runner: 'jest', root: 'packages/api', command: 'npx jest' },
@@ -65,7 +65,7 @@ describe('parseConfig', () => {
     ['an env name with a space', { version: 1, env: { track: ['A B'] } }, 'env.track[0]: must be an environment variable name'],
     ['zero shards', { version: 1, sharding: { max: 0 } }, 'sharding.max: must be an integer from 1 to 256'],
     ['p0 not below p1', { version: 1, quarantine: { sprt: { p0: 0.1, p1: 0.05, alpha: 0.01, beta: 0.05 } } }, 'quarantine.sprt: p0 must be below p1'],
-    ['a server that is not a URL', { version: 1, server: 'sieve.internal' }, 'server: must be an http(s) URL'],
+    ['a server that is not a URL', { version: 1, server: 'trommel.internal' }, 'server: must be an http(s) URL'],
   ])('rejects %s', (_name, value, problem) => {
     expect(errorsOf(value)).toContain(problem);
   });

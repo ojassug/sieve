@@ -16,8 +16,8 @@ import { buildStaticMap, ENGINE } from '../../src/graph/static.ts';
 import { fakeRepo } from './fake-repo.ts';
 
 const GOLDEN = {
-  engine: 'sieve-static-2',
-  sha256: '7ec52403a273beb096dd9715de49e55b826de8bb20f36fcaaec9361b015c7fb7',
+  engine: 'trommel-static-2',
+  sha256: '6ef757a62c02c3814929bf0afe9f796707706b5565fc0b5c9f6c3be4edd14aa1',
 } as const;
 
 const LOCK = JSON.stringify({

@@ -5,7 +5,7 @@
 //   node bench/static-graph.ts                synthetic 10,000-file TS monorepo (git fast-import)
 //   node bench/static-graph.ts <repo> [rev]   an existing repository at rev (default HEAD)
 //
-// "CLI cold" is `sieve graph --out` in a fresh Node process, which is what CI runs; the stage
+// "CLI cold" is `trommel graph --out` in a fresh Node process, which is what CI runs; the stage
 // timings come from one more in-process build. Prints canonical JSON; record results under
 // bench/results/.
 import { execFileSync, spawnSync } from 'node:child_process';
@@ -26,7 +26,7 @@ import {
   readObjectFormat,
   selectStatic,
   TreeIndex,
-} from '@sieve-ci/core';
+} from '@trommel/core';
 
 import { DEFAULT_GLOBAL } from '../packages/cli/src/config.ts';
 
@@ -61,7 +61,7 @@ function body(seed: number): string {
  * and lodash; each test imports its module's first file. A second commit changes one file.
  */
 function syntheticRepo(): { dir: string; base: string; head: string } {
-  const dir = mkdtempSync(join(tmpdir(), 'sieve-bench-graph-'));
+  const dir = mkdtempSync(join(tmpdir(), 'trommel-bench-graph-'));
   git(dir, ['init', '-q', '-b', 'main']);
   const files = new Map<string, string>();
   files.set('package.json', JSON.stringify({ name: 'bench', private: true, workspaces: ['packages/*'] }));
@@ -117,13 +117,13 @@ async function time<T>(run: () => Promise<T> | T): Promise<{ ms: number; result:
 const synthetic = repoArg === undefined ? syntheticRepo() : null;
 const dir = repoArg ?? synthetic!.dir;
 const rev = synthetic === null ? revArg : synthetic.base;
-const out = mkdtempSync(join(tmpdir(), 'sieve-bench-map-'));
+const out = mkdtempSync(join(tmpdir(), 'trommel-bench-map-'));
 
 try {
   // 1. The CLI, cold, in a fresh process: what CI pays.
   const cli = await time(() => spawnSync(process.execPath, [CLI, 'graph', '--rev', rev, '--out', join(out, 'map.json')], { cwd: dir, encoding: 'utf8' }));
   if (cli.result.status !== 0) {
-    throw new Error(`sieve graph failed: ${cli.result.stderr}`);
+    throw new Error(`trommel graph failed: ${cli.result.stderr}`);
   }
   const mapBytes = statSync(join(out, 'map.json')).size;
 

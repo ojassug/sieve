@@ -22,6 +22,6 @@ Import extraction doesn't need a full parser: a lexer that tracks strings, templ
 - **TypeScript compiler API for module resolution:** rejected. A very large dependency, and version coupling with the user's TypeScript.
 
 ## Consequences
-- SIEVE owns lexer and resolver correctness. That means golden fixtures, property tests and the toy-repo seeded-fault gate ([architecture.md](../architecture.md) §7).
+- Trommel owns lexer and resolver correctness. That means golden fixtures, property tests and the toy-repo seeded-fault gate ([architecture.md](../architecture.md) §7).
 - Config and pnpm workspace files need small zero-dependency JSON and YAML-subset parsers.
 - Packages are published with npm provenance.

@@ -1,5 +1,5 @@
 {
-  "name": "@sieve-ci/tool-toyrepo",
+  "name": "@trommel/tool-toyrepo",
   "version": "0.0.0",
   "private": true,
   "description": "Synthetic repo generator and mutator (placeholder until M3).",

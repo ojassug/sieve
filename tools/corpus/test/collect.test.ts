@@ -29,7 +29,7 @@ describe('collectDay', () => {
 
   beforeEach(async () => {
     gh = await startFakeGitHub();
-    out = mkdtempSync(join(tmpdir(), 'sieve-corpus-'));
+    out = mkdtempSync(join(tmpdir(), 'trommel-corpus-'));
     runs = [
       { id: 101, run_attempt: 1, status: 'completed', created_at: '2026-11-10T01:00:00Z', check_suite_id: 1001 },
       { id: 102, run_attempt: 2, status: 'completed', created_at: '2026-11-10T13:00:00Z', check_suite_id: 1002 },

@@ -16,17 +16,17 @@ export class UsageError extends Error {
 
 const MODES: readonly string[] = ['safe', 'shadow', 'budget'];
 
-export const USAGE = `Usage: sieve <command> [options]
+export const USAGE = `Usage: trommel <command> [options]
 
 Commands:
   graph [--rev <rev>] [--out <file>]
       Build the static impact graph of a revision (default HEAD) and print it, or write it to
-      <file>, as canonical JSON. Day-to-day: sieve graph --out .sieve/map/map.json
+      <file>, as canonical JSON. Day-to-day: trommel graph --out .trommel/map/map.json
   diff <base> <head>
       Print the snapshot difference between two revisions: files, directory listings and
       packages, as canonical JSON.
   plan --mode shadow --static [--map <dir>] [--head <rev>] [--shards <n>]
-      Select the tests a change can affect, from the map in <dir> (default .sieve/map) to
+      Select the tests a change can affect, from the map in <dir> (default .trommel/map) to
       <head> (default HEAD). --shadow is short for --mode shadow. With GITHUB_OUTPUT set it
       writes the outputs matrix and count; with GITHUB_STEP_SUMMARY, a summary. Without a
       usable map it plans every test and exits 0.
@@ -64,7 +64,7 @@ export function parseCommand(argv: readonly string[]): Command {
     case 'diff': {
       const { positionals } = parse(rest, {});
       if (positionals.length !== 2) {
-        throw new UsageError('diff takes two revisions: sieve diff <base> <head>');
+        throw new UsageError('diff takes two revisions: trommel diff <base> <head>');
       }
       return { name: 'diff', base: positionals[0]!, head: positionals[1]! };
     }
@@ -97,7 +97,7 @@ export function parseCommand(argv: readonly string[]): Command {
         name: 'plan',
         mode: values.shadow === true ? 'shadow' : ((values.mode as Mode | undefined) ?? null),
         static: values.static === true,
-        map: values.map ?? '.sieve/map',
+        map: values.map ?? '.trommel/map',
         head: values.head ?? 'HEAD',
         shards,
       };

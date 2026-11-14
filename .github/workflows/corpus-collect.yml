@@ -1,4 +1,4 @@
-# The corpus collector, as a reusable workflow. ojassug/sieve-corpus calls this on a schedule; its
+# The corpus collector, as a reusable workflow. trommelci/trommel-corpus calls this on a schedule; its
 # own file is a stub that only says when to run. Everything a run does lives here, so changing how
 # collection works is a merge to this repository and never a hand push to the data repository
 # (DECISIONS 22).

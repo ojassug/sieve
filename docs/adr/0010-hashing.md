@@ -9,7 +9,7 @@ File content hashes have to be available cheaply in shallow clones. Proofs have 
 
 ## Decision
 - **File content:** the git blob OID as the repository stores it. Both SHA-1 and SHA-256 object formats are supported; the format is detected and recorded.
-- **Everything SIEVE computes** (directory-name digests, closure fingerprints, environment fingerprints, CAS keys, proof digests): SHA-256 via node:crypto.
+- **Everything Trommel computes** (directory-name digests, closure fingerprints, environment fingerprints, CAS keys, proof digests): SHA-256 via node:crypto.
 - **Proof signatures:** ed25519 via node:crypto, with key ids so keys can be rotated.
 
 ## Alternatives considered

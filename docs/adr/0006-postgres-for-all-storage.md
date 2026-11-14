@@ -17,11 +17,11 @@ Execution volume can be large. But the flake ledger, durations and savings all u
 
 ## Alternatives considered
 - **ClickHouse:** rejected for v1. Excellent analytics, but a heavy second service for a single-box self-host. The official sizing guidance wasn't retrieved; third-party sources cite 32 GB for production. Revisit for the hosted tier.
-- **DuckDB embedded:** rejected for the server. Only one process can open a database read-write, and multi-process writers need Quack server mode or DuckLake ([concurrency](https://duckdb.org/docs/2.0/connect/concurrency.html)). SIEVE's API and workers are separate processes.
+- **DuckDB embedded:** rejected for the server. Only one process can open a database read-write, and multi-process writers need Quack server mode or DuckLake ([concurrency](https://duckdb.org/docs/2.0/connect/concurrency.html)). Trommel's API and workers are separate processes.
 - **TimescaleDB:** rejected. Extension availability and licensing vary across managed Postgres offerings.
 - **Parquet files + DuckDB for analytics:** possible later as an export path.
 
 ## Consequences
 - Compose has one required dependency, and RLS covers all data.
-- SIEVE needs partition-management code: create partitions ahead, drop them behind.
+- Trommel needs partition-management code: create partitions ahead, drop them behind.
 - A ClickHouse adapter stays possible behind `ExecutionStore` if hosted volume demands it.

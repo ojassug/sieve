@@ -16,7 +16,7 @@ describe('runCollection', () => {
 
   beforeEach(async () => {
     gh = await startFakeGitHub();
-    out = mkdtempSync(join(tmpdir(), 'sieve-run-'));
+    out = mkdtempSync(join(tmpdir(), 'trommel-run-'));
     const runsOfB = [
       { id: 7, run_attempt: 1, status: 'completed', created_at: '2026-11-08T05:00:00Z', check_suite_id: 70 },
       { id: 9, run_attempt: 1, status: 'completed', created_at: '2026-11-10T05:00:00Z', check_suite_id: 90 },

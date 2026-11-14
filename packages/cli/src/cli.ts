@@ -1,4 +1,4 @@
-// The `sieve` commands. Everything is read from git objects at a revision (never the working
+// The `trommel` commands. Everything is read from git objects at a revision (never the working
 // tree), and everything printed is canonical JSON, so the same inputs give the same bytes.
 //
 // Exit codes: 0 success (a plan that fell back to running everything is a success: it must never
@@ -27,11 +27,11 @@ import {
   type LockfileState,
   type ObjectFormat,
   type Selection,
-  type SieveMap,
-} from '@sieve-ci/core';
+  type TrommelMap,
+} from '@trommel/core';
 
 import { parseCommand, planMode, USAGE, UsageError, type Command } from './args.ts';
-import { CONFIG_FILE, ConfigError, discoverTests, parseConfig, rulesOf, type SieveConfig } from './config.ts';
+import { CONFIG_FILE, ConfigError, discoverTests, parseConfig, rulesOf, type TrommelConfig } from './config.ts';
 import { buildReport, githubOutputs, summaryOf } from './report.ts';
 
 export interface Io {
@@ -67,13 +67,13 @@ export async function run(argv: readonly string[], io: Io): Promise<number> {
     if (error instanceof UsageError) {
       return usage(error, io);
     }
-    io.stderr(`sieve: ${error instanceof Error ? error.message : String(error)}\n`);
+    io.stderr(`trommel: ${error instanceof Error ? error.message : String(error)}\n`);
     return 1;
   }
 }
 
 function usage(error: unknown, io: Io): number {
-  io.stderr(`sieve: ${(error as Error).message}\nRun sieve --help for usage.\n`);
+  io.stderr(`trommel: ${(error as Error).message}\nRun trommel --help for usage.\n`);
   return 2;
 }
 
@@ -88,7 +88,7 @@ interface Snapshot {
   readonly objectFormat: ObjectFormat;
   readonly index: TreeIndex;
   readonly vfs: GitVfs;
-  /** sieve.config.json at this revision. */
+  /** trommel.config.json at this revision. */
   readonly config: { readonly oid: string; readonly text: string } | null;
 }
 
@@ -100,7 +100,7 @@ async function snapshotAt(root: string, rev: string): Promise<Snapshot> {
   return { root, rev, objectFormat, index, vfs, config: oid === null ? null : { oid, text: vfs.read(CONFIG_FILE) ?? '' } };
 }
 
-function configOf(snapshot: Snapshot): SieveConfig {
+function configOf(snapshot: Snapshot): TrommelConfig {
   return snapshot.config === null ? { version: 1 } : parseConfig(snapshot.config.text);
 }
 
@@ -133,7 +133,7 @@ async function graph(command: Extract<Command, { name: 'graph' }>, io: Io): Prom
   }
   const edges = Object.values(map.edges).reduce((sum, out) => sum + Object.keys(out).length, 0);
   io.stderr(
-    `sieve graph: ${files.length} files, ${lexed.length} lexed; ${Object.keys(map.nodes).length} nodes, ${edges} edges; ` +
+    `trommel graph: ${files.length} files, ${lexed.length} lexed; ${Object.keys(map.nodes).length} nodes, ${edges} edges; ` +
       `${map.tests.length} tests, ${Object.keys(map.uncertain).length} uncertain files; ${text.length} bytes in ${Math.round(performance.now() - started)} ms\n`,
   );
   return 0;
@@ -167,7 +167,7 @@ function describe(lockfile: LockfileState): string {
 
 async function plan(command: Extract<Command, { name: 'plan' }>, io: Io): Promise<number> {
   const head = await snapshotAt(await repoRoot(io.cwd), command.head);
-  let config: SieveConfig = { version: 1 };
+  let config: TrommelConfig = { version: 1 };
   let fallback: string | undefined;
   try {
     config = configOf(head);
@@ -182,7 +182,7 @@ async function plan(command: Extract<Command, { name: 'plan' }>, io: Io): Promis
   const { tests, notPlanned } = discoverTests(head.vfs.files(), config);
   const mapPath = `${command.map.replace(/[\\/]+$/, '')}/map.json`;
 
-  let map: SieveMap | null = null;
+  let map: TrommelMap | null = null;
   if (fallback === undefined) {
     try {
       map = parseMap(readFileSync(resolve(io.cwd, mapPath), 'utf8'));
@@ -205,7 +205,7 @@ async function plan(command: Extract<Command, { name: 'plan' }>, io: Io): Promis
       selection = selectStatic(map, state, { ignore: rules.ignore, alwaysRun: rules.alwaysRun });
     } catch (error) {
       // A bug must not block CI either: run everything and say why.
-      io.stderr(`sieve: ${error instanceof Error ? (error.stack ?? error.message) : String(error)}\n`);
+      io.stderr(`trommel: ${error instanceof Error ? (error.stack ?? error.message) : String(error)}\n`);
       fallback = `internal error: ${error instanceof Error ? error.message : String(error)}`;
       selection = runAll(tests, fallback);
     }
@@ -231,8 +231,8 @@ async function plan(command: Extract<Command, { name: 'plan' }>, io: Io): Promis
   }
   io.stderr(
     fallback === undefined
-      ? `sieve plan: shadow mode runs all ${report.run.length} test files; static reachability would run ${report.wouldRun} and skip ${report.wouldSkip.length} (unproven)\n`
-      : `sieve plan: running all ${report.run.length} test files: ${fallback}\n`,
+      ? `trommel plan: shadow mode runs all ${report.run.length} test files; static reachability would run ${report.wouldRun} and skip ${report.wouldSkip.length} (unproven)\n`
+      : `trommel plan: running all ${report.run.length} test files: ${fallback}\n`,
   );
   return 0;
 }
