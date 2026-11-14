@@ -18,7 +18,7 @@ const files: { path: string; source: string; bytes: number }[] = [];
 for (const root of roots) {
   for (const entry of readdirSync(root, { recursive: true, withFileTypes: true })) {
     // Skip the workspace links: they point back at this repository, including deliberately broken fixtures.
-    if (entry.isFile() && EXTENSIONS.has(extname(entry.name)) && !entry.parentPath.includes('@trommel-ci')) {
+    if (entry.isFile() && EXTENSIONS.has(extname(entry.name)) && !entry.parentPath.includes('@trommel')) {
       const path = join(entry.parentPath, entry.name);
       const source = readFileSync(path, 'utf8');
       files.push({ path, source, bytes: Buffer.byteLength(source) });
