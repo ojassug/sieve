@@ -1,6 +1,6 @@
 # ADR-0020: Merge gate after launch; `merge_group` support in v1
 
-- Status: Accepted (2026-11-11)
+- Status: Accepted (2026-11-11); corrected in place on 2026-11-14: the commit figure is gone, and the decision is unchanged ([DECISIONS.md](../../DECISIONS.md) entry 31)
 - Deciders: Ojas Sugur (decided in the planning session)
 - Related: [architecture.md](../architecture.md) §2.7, [roadmap.md](../roadmap.md) §3
 
@@ -24,4 +24,4 @@ Trommel's own queue (speculative batches, binary-search bisection, flake posteri
 
 ## Consequences
 - Dogfooding the merge queue needs a public repository owned by a GitHub organization.
-- About 70 commits go to selection safety and the UI instead.
+- That effort goes to selection safety and the UI instead.

@@ -25,12 +25,12 @@
 | T8 | CI failures caused by Trommel itself under chaos (server down, timeouts, 5xx) | 0 | Chaos suite | M5 |
 
 ## Kill criterion
-- **K1 (end of M4, 2027-01-24):** if replay shows less than 30% median savings at ≤1% change-level miss rate on at least 5 repos, Trommel pivots to a flake-ledger-first product. See [../docs/roadmap.md](../docs/roadmap.md) §2.
+- **K1 (end of M4):** if replay shows less than 30% median savings at ≤1% change-level miss rate on at least 5 repos, Trommel pivots to a flake-ledger-first product. See [../docs/roadmap.md](../docs/roadmap.md) §2.
 
 ## Protocol
 - **Corpus.**
   - At least 8 repos (at least 5 for the kill gate) with at least 200 historical commits or PRs each, re-executed in pinned containers.
-  - Selection criteria go in `bench/CORPUS.md` (week 1).
+  - Selection criteria go in `bench/CORPUS.md`.
   - Manifests are frozen and hashed; the engine is pinned (dist hash, `dirty` flag).
 - **Baselines.**
   - run-all;

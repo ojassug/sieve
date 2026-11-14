@@ -1,10 +1,10 @@
 # ADR-0019: Forge scope — GitHub only in v1
 
-- Status: Accepted (2026-11-11)
+- Status: Accepted (2026-11-11); corrected in place on 2026-11-14: the schedule figure is gone, and the decision is unchanged ([DECISIONS.md](../../DECISIONS.md) entry 31)
 - Deciders: Ojas Sugur (decided in the planning session)
 
 ## Context
-A 6-month solo plan needs focus, and the dogfood repositories are on GitHub.
+A solo project needs focus, and the dogfood repositories are on GitHub.
 
 ## Decision
 - GitHub (App + Action) is the only native integration in v1.

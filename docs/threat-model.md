@@ -115,9 +115,9 @@ The last seven rows were added on 2026-11-13. Their mitigations are decided and 
 | Record overhead on huge suites | Record only what trusted lanes already run; nightly full record; function-level (not block-level) coverage |
 | GC mark phase | Per-repo bounded GC, two-phase deletes |
 
-### 2.4 The cheapest slice with real value in month 1, given selection-first
-- Per the sequencing decision, month 1 has no ingest or UI. Its value is:
-  - the **corpus collector**, started in week 1, an asset that decays at 90 days;
+### 2.4 The cheapest slice with real value in M1, given selection-first
+- Per the sequencing decision, M1 has no ingest or UI. Its value is:
+  - the **corpus collector**, started first, an asset that decays at 90 days;
   - the **walking skeleton** ([roadmap.md](roadmap.md) §5): shadow-mode `trommel plan` with why-paths in job summaries on the dogfood repo.
-- By week 8, **Lite mode** gives enforced selection in CI with no server.
-- Accepted trade-off: flake value (the fastest-to-value feature) arrives around week 17. If the M4 kill gate fails, the pivot keeps the CLI, the GitHub integration and the map store.
+- Once M3 is done, **Lite mode** gives enforced selection in CI with no server.
+- Accepted trade-off: flake value (the fastest-to-value feature) arrives only in M7. If the M4 kill gate fails, the pivot keeps the CLI, the GitHub integration and the map store.

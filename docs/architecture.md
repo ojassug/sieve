@@ -5,7 +5,7 @@
 - **Companion documents:**
   - [research/2026-11-foundation-review.md](research/2026-11-foundation-review.md): the review of 2026-11-13, with its evidence and the findings still open;
   - [threat-model.md](threat-model.md): security model and adversarial review;
-  - [roadmap.md](roadmap.md): milestones and the first two weeks;
+  - [roadmap.md](roadmap.md): milestones with their exit criteria, and M1's first steps;
   - [adr/](adr/README.md): decision records;
   - [../bench/TARGETS.md](../bench/TARGETS.md): pre-registered targets;
   - [research/RESEARCH_REPORT.md](research/RESEARCH_REPORT.md): the study that chose Trommel.
@@ -25,12 +25,12 @@
 | Forges | GitHub is the only native integration in v1. Any other CI uses the generic CLI plus an API token, without native statuses or comments. |
 | Runners | Vitest and Jest get selection. Playwright gets results, flake ledger and quarantine only. pytest selection comes late (M8). Go comes after launch. |
 | Sequencing | Selection engine first (graph, snapshots, coverage, selector) and the kill test early; ingest and UI after. |
-| Pace | 6 months at about 25 commits/week. Start Mon 2026-11-16; launch (Show HN) around 2027-05-16. |
+| Pace | No dates or commit budgets: a milestone is done when its exit criteria are met, in the order of [roadmap.md](roadmap.md) §1 (changed 2026-11-14, [DECISIONS.md](../DECISIONS.md) entry 31). |
 
 **What the research changed in the starting hypothesis**
 1. **The safety criterion is content-addressed closure equality, not a commit diff.** A test is skipped only if every node it depends on has the same content hash as in a trusted passing record (Ekstazi-style, extended). Soundness then no longer depends on which base commit is chosen; the base affects only precision. Rebases, force-pushes, merge commits and shallow clones are handled by construction.
 2. **Dynamic capture is the backbone. The static graph is one of three sources, not the source.** Static analysis covers what runtime capture cannot see: transform-time inputs in the Vite server process, cold start before any record exists, and the UI explorer.
-3. **GitHub now caps history at 90 days.** From 2026-10-01, checks, workflow runs and statuses follow the Actions retention setting: default 90 days, maximum 90 for public repos. So the replay corpus is **re-executed** at historical commits, and an artifact collector starts in week 1.
+3. **GitHub now caps history at 90 days.** From 2026-10-01, checks, workflow runs and statuses follow the Actions retention setting: default 90 days, maximum 90 for public repos. So the replay corpus is **re-executed** at historical commits, and an artifact collector starts first, at the beginning of M1.
 4. **The baselines got stronger.** Vitest 5.1 shipped `experimental.recordDependencies` (local dynamic module records). Datadog TIA already skips when "covered + tracked files" match a passing run, and any tracked-file change runs everything. Trommel's edge narrows to: self-hosting, CI-shareable content-addressed maps, non-code inputs at per-package and per-directory precision instead of "run all", proofs, and flake detection without reruns.
 5. **Merge queue availability is limited.** It works only on org-owned public repos and Enterprise Cloud private repos, so dogfooding needs a GitHub org. MinIO is in maintenance and archived, so the compose file ships no MinIO. coverage.py's `sysmon` core cannot record per-test contexts. 59% of Python flaky tests are order-dependent (FlaPy). GitHub limits content-creating requests to 500 per hour. Sources are in §9.
 6. **Trommel does not depend on TokenDamper.** The research report presents TokenDamper reuse as a strength. Planning found the only real head start is a lexer worth porting, and even that is optional (§3.2).
@@ -656,7 +656,7 @@ Every escalation appears in the plan summary with its cause. L0 is file-precise.
   - **Container:** a header (magic, format version, hash algorithm, static engine id), a section table with a version per section, and a SHA-256 trailer. A map that fails any check is invalid, and the plan runs everything.
   - **Three layers, each with its own content address:** the snapshot (the tree listing); the static graph, which is a function of the tree, the config and the engine alone and so has the same bytes on every OS; and, from M3, the records, per test and environment cell.
   - **Encoding:** a node's identity is its key string, and numeric ids never leave one file. Keys are sorted by UTF-16 code units and front-coded. Adjacency is stored forward only, and the decoder derives the reverse index. Provenance is one byte per edge: bit 0 static, bit 1 dynamic, bit 2 declared.
-  - **Until SMAP v0 is built** (M1, week 3), the map is the canonical JSON of [DECISIONS.md](../DECISIONS.md) entry 23, without its `e:` nodes (entry 28). It already has the same bytes on every OS, and a pinned fixture hash checks that in CI.
+  - **Until SMAP v0 is built** (later in M1), the map is the canonical JSON of [DECISIONS.md](../DECISIONS.md) entry 23, without its `e:` nodes (entry 28). It already has the same bytes on every OS, and a pinned fixture hash checks that in CI.
 - **Chunking** per workspace package, with chunk-local ids and an import table, is defined when the server needs it (M5). Until then a map is one file.
 - **Hashing** ([ADR-0010](adr/0010-hashing.md)). Git's object hash for file contents. SHA-256 (node:crypto) for everything Trommel computes: digests, fingerprints, CAS keys.
 - **GC.** Per-repo mark-and-sweep.
@@ -917,16 +917,16 @@ A mutator flips conditionals, constants and calls in changed functions; ground t
 | 3 | Stronger free baselines: Vitest `recordDependencies` (5.1), Datadog, Trunk free tier | H/M | Compete on CI-shareable content-addressed maps, non-code input precision, proofs, self-host, flake-without-reruns; publish head-to-head replay numbers |
 | 4 | Runner API churn (Vitest 3→5 provider changes; Jest) | M/M | Thin adapters + version-matrix tests; fallback per-process `NODE_V8_COVERAGE` with per-file runs in record mode; decide the supported floor in M2 |
 | 5 | Record overhead (V8 precise coverage disables optimized code; no authoritative public overhead figure) | M/M | Record on trusted lanes only; binary function coverage; measured in M2 (T7) |
-| 6 | 6-month pace (25 commits/week, December holidays) | H/M | Cut list, weekly milestone burn-down, no buffer assumed |
-| 7 | GitHub platform constraints: 90-day retention, secondary write limits, merge queue limited to org or GHEC | H/M | Collector from week 1 plus re-execution replay; ≤3 writes per run; dogfood org |
+| 6 | Scope: 10 milestones for one developer | H/M | The cut list ([roadmap.md](roadmap.md) §2); a milestone is done by its exit criteria, not by a date |
+| 7 | GitHub platform constraints: 90-day retention, secondary write limits, merge queue limited to org or GHEC | H/M | Collector from the start of M1 plus re-execution replay; ≤3 writes per run; dogfood org |
 | 8 | Poisoning or tenant leak in hosted beta | L/H | Lanes, RLS + FORCE, fuzzing, lint, invite-only beta |
 | 9 | Python order-dependence (59% of Python flakes) breaks subset determinism | M/M | Module units, OD tagging, Python late |
 | 10 | Name collision: npm `sieve` taken; SIEVE (NSDI'24 cache algorithm); RFC 5228 Sieve mail filter | H/L | Resolved 2026-11-14: renamed Trommel after a trademark screen (DECISIONS 30); scoped packages `@trommel/*`; formal trademark clearance before launch (M10) |
 
 ### 8.2 Kill and pivot criteria
-- **K1 (M4, Jan 24, 2027):** <30% median savings at ≤1% change-level miss on ≥5 repos → pivot to a flake-ledger-first product.
+- **K1 (end of M4):** <30% median savings at ≤1% change-level miss on ≥5 repos → pivot to a flake-ledger-first product.
 - **K2:** any shadow or audit escape not root-caused and fixed within 7 days → enforcement frozen (shadow only) until fixed.
-- **K3 (M9):** fewer than 2 of 3 non-author users succeed → M10 becomes onboarding work and launch slips.
+- **K3 (M9):** fewer than 2 of 3 non-author users succeed → M10 becomes onboarding work, and launch waits for it.
 - **K4:** quarantine precision <0.9 → ship the ledger as advisory, with no automatic quarantine.
 
 ### 8.3 Open questions
@@ -1016,7 +1016,7 @@ A mutator flips conditionals, constants and calls in changed functions; ground t
 8. **Replay candidates.**
    - Workflows matching `--reporter=junit` plus `upload-artifact` (code search): electron/forge, PostHog/posthog, baserow/baserow, visgl/luma.gl, Significant-Gravitas/AutoGPT (frontend), mariadb-corporation/mariadb-connector-nodejs, meshery/meshery.
    - Python matching `--junitxml` plus `upload-artifact`: Azure/azure-iot-sdk-python, mozilla-conduit/review, NatLabRockies/buildstockbatch, jborean93/ansibug.
-   - The re-execution set (≥8, Vitest/Jest-heavy, runnable offline in under 10 min) is vetted in week 1 against the `bench/CORPUS.md` criteria. *Not verified yet.*
+   - The re-execution set (≥8, Vitest/Jest-heavy, runnable offline in under 10 min) is vetted against the `bench/CORPUS.md` criteria before M4. *Not verified yet.*
 9. **Name:**
    - npm `sieve` is taken (Sieve of Eratosthenes, v0.0.4, 2014) ([registry](https://registry.npmjs.org/sieve));
    - SIEVE is an NSDI'24 cache eviction algorithm ([USENIX](https://www.usenix.org/conference/nsdi24/presentation/zhang-yazhuo));

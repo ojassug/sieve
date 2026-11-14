@@ -1,11 +1,11 @@
 # ADR-0001: TypeScript on Node end to end
 
-- Status: Accepted (2026-11-11)
+- Status: Accepted (2026-11-11); corrected in place on 2026-11-14: the schedule figures are gone, and the decision is unchanged ([DECISIONS.md](../../DECISIONS.md) entry 31)
 - Deciders: Ojas Sugur
 - Related: [architecture.md](../architecture.md) §2, [ADR-0002](0002-zero-dependency-cli.md)
 
 ## Context
-Trommel is built by one developer over 6 months at about 25 commits/week. Several parts have to be JavaScript or TypeScript whatever else is chosen: the Vitest and Jest plugins run inside those runners, the CLI runs in Node-based CI jobs, and the UI runs in browsers.
+Trommel is built by one developer. Several parts have to be JavaScript or TypeScript whatever else is chosen: the Vitest and Jest plugins run inside those runners, the CLI runs in Node-based CI jobs, and the UI runs in browsers.
 
 The hot paths are:
 - listing and hashing in the CLI (git already computes blob OIDs; Trommel hashes the rest with SHA-256);

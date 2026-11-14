@@ -1,7 +1,7 @@
 # Hand-off: Trommel milestone M1, after roadmap day 10
 
 - **Written:** 2026-11-11 (UTC), at `main` = `00fea91` plus this document.
-- **Updated:** 2026-11-14, after the foundation review and seven ADR corrections. Read §1.1 before anything else: it says where the documents now run ahead of the code. Items 1 and 2 of its worklist are done: the selector backstops (DECISIONS 29) and the environment out of the map (DECISIONS 28). Updated again on 2026-11-14 for the rename to Trommel (DECISIONS 30).
+- **Updated:** 2026-11-14, after the foundation review and seven ADR corrections. Read §1.1 before anything else: it says where the documents now run ahead of the code. Items 1 and 2 of its worklist are done: the selector backstops (DECISIONS 29) and the environment out of the map (DECISIONS 28). Updated again on 2026-11-14 for the rename to Trommel (DECISIONS 30), and once more when the roadmap dropped its dates and commit counts (DECISIONS 31): a milestone is done when its exit criteria are met.
 - **For:** whoever continues the implementation, person or agent.
 - **Reading order:** this file, then [DECISIONS.md](DECISIONS.md), then the docs it points to.
 
@@ -341,7 +341,7 @@ GH_TOKEN="$(gh auth token)" node tools/corpus/src/main.ts --config tools/corpus/
    6. **Test files.** Use the `projects` in `trommel.config.json` when present. Otherwise use Vitest's default include, `**/*.{test,spec}.?(c|m)[jt]s?(x)`, excluding `node_modules` and `**/fixtures/**`. For this repository that is `packages/*/test/**/*.test.ts`, `tools/*/test/**/*.test.ts` and `scripts/test/**/*.test.ts`.
    7. **Δ(S,H).** Use `merkleDiff` for files and listings, recompute the hashes of the `d:`, `g:` and `p:` nodes, and compare them with the map's.
    8. **Selection.** Run `reverseReach(graph, Δ ∪ u-nodes)`. The affected tests run; give each a `whyPath`.
-5. **The map file.** For M1 it is canonical JSON (SMAP binary arrives in week 3): `version`, `objectFormat`, `rootTree`, sorted `nodes` (key → hash), sorted `edges` as `[from, to, provenance]`, `tests`, and the uncertain nodes. Store it at `.trommel/map/map.json`; `.trommel/` is already in `.gitignore`.
+5. **The map file.** Until SMAP v0 replaces it later in M1, it is canonical JSON: `version`, `objectFormat`, `rootTree`, sorted `nodes` (key → hash), sorted `edges` as `[from, to, provenance]`, `tests`, and the uncertain nodes. Store it at `.trommel/map/map.json`; `.trommel/` is already in `.gitignore`.
 
 ### 6.2 The CLI (`packages/cli`, zero runtime dependencies)
 
@@ -390,7 +390,7 @@ The spec is [roadmap §5](docs/roadmap.md) plus architecture §5.3 and §5.4. Bu
 
 PRs can restore caches saved on the base branch. Verifying the trust rules for `actions/cache` is M3 work (ADR-0021).
 
-## 8. After day 10: the rest of M1 (weeks 2–3)
+## 8. After day 10: the rest of M1
 
 These come from the M1 row of [roadmap §1](docs/roadmap.md):
 - **pnpm and yarn lockfile parsers.**
@@ -549,6 +549,7 @@ These are honest limits, not bugs. Each one errs towards running more tests.
 | 28 | The environment out of the static map, engine `trommel-static-2`, the golden map |
 | 29 | Unmapped inputs follow the graph; unreached changed nodes escalate; the owning package is a workspace member |
 | 30 | The name is Trommel: every identifier renamed, the `trommelci` org, the trademark screen |
+| 31 | The roadmap has no dates or commit budgets: a milestone is done when its exit criteria are met |
 
 **Status of the kickoff doc gaps** (DECISIONS 1):
 
