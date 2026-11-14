@@ -82,8 +82,14 @@ export function parseMap(text: string): SieveMap {
   }
   const uncertain = record(map['uncertain'], 'uncertain');
   for (const [key, causes] of Object.entries(uncertain)) {
-    if (!has(key) || !list(causes, `causes of ${key}`).every((c) => typeof c === 'string')) {
+    if (!key.startsWith('u:') || !has(key) || !list(causes, `causes of ${key}`).every((c) => typeof c === 'string')) {
       throw new MapError(`uncertain ${key} must list causes of a u: node`);
+    }
+  }
+  // A plan seeds every u: node; causes and nodes must agree, or a damaged map could hide one.
+  for (const key of Object.keys(nodes)) {
+    if (key.startsWith('u:') && !Object.hasOwn(uncertain, key)) {
+      throw new MapError(`node ${key} has no causes in uncertain`);
     }
   }
   return {

@@ -32,6 +32,9 @@ describe('parseMap', () => {
     ['a provenance outside the three bits', edit((m) => ((m['edges'] as Record<string, Record<string, number>>)['f:src/a.ts']!['f:src/b.ts'] = 8)), /provenance/],
     ['a test that is not a node', edit((m) => (m['tests'] = ['nope.test.ts'])), /nope\.test\.ts/],
     ['a snapshot entry that is malformed', edit((m) => (m['snapshot'] = [['100644', 'x']])), /snapshot/],
+    // A plan seeds every u: node, so a map whose causes and nodes disagree is damaged.
+    ['a u: node without causes', edit((m) => ((m['nodes'] as Record<string, string>)['u:src/b.ts'] = 'a'.repeat(64))), /u:src\/b\.ts/],
+    ['causes for a node that is not a u: node', edit((m) => (m['uncertain'] = { 'f:src/b.ts': ['x'] })), /f:src\/b\.ts/],
   ])('rejects %s', (_name, input, message) => {
     expect(() => parseMap(input)).toThrow(message);
   });
