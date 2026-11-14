@@ -58,7 +58,7 @@ describe('checkRepo', () => {
   });
 
   function repoWith(manifests: Record<string, object>): string {
-    const root = mkdtempSync(join(tmpdir(), 'sieve-zero-deps-'));
+    const root = mkdtempSync(join(tmpdir(), 'trommel-zero-deps-'));
     roots.push(root);
     for (const [dir, manifest] of Object.entries(manifests)) {
       mkdirSync(join(root, dir), { recursive: true });

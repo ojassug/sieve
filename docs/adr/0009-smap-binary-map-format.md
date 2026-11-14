@@ -5,7 +5,7 @@
 - Related: [architecture.md](../architecture.md) §4.2, [ADR-0002](0002-zero-dependency-cli.md), [ADR-0010](0010-hashing.md)
 
 ## Context
-Maps must be decoded both by the zero-dependency CLI (Lite mode, `sieve verify`) and by the server. They must stay compact for graphs of 100k nodes and deduplicate across snapshots.
+Maps must be decoded both by the zero-dependency CLI (Lite mode, `trommel verify`) and by the server. They must stay compact for graphs of 100k nodes and deduplicate across snapshots.
 
 ## Decision
 SMAP is a little-endian binary container, encoded and decoded with `DataView`.

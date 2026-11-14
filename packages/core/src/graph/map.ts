@@ -2,7 +2,7 @@
 // another version, so every field is checked; anything wrong is a MapError, which the CLI turns
 // into a run-all plan (L3, architecture §3.5) instead of a guess.
 import { GraphBuilder, type Graph } from './graph.ts';
-import { ENGINE, MAP_VERSION, type MapLockfile, type SieveMap } from './static.ts';
+import { ENGINE, MAP_VERSION, type MapLockfile, type TrommelMap } from './static.ts';
 
 export class MapError extends Error {
   override readonly name = 'MapError';
@@ -10,7 +10,7 @@ export class MapError extends Error {
 
 const OID = { sha1: /^[0-9a-f]{40}$/, sha256: /^[0-9a-f]{64}$/ } as const;
 
-export function parseMap(text: string): SieveMap {
+export function parseMap(text: string): TrommelMap {
   let raw: unknown;
   try {
     raw = JSON.parse(text);
@@ -110,7 +110,7 @@ export function parseMap(text: string): SieveMap {
 }
 
 /** The map's graph; node ids follow sorted key order whatever order the map was written in. */
-export function mapGraph(map: SieveMap): Graph {
+export function mapGraph(map: TrommelMap): Graph {
   const builder = new GraphBuilder();
   for (const key of Object.keys(map.nodes)) {
     builder.addNode(key);

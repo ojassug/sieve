@@ -1,7 +1,7 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
-import { buildStaticMap, fileHash, isLexed, readLockfile, type SieveMap, type StaticInput } from '../../src/graph/static.ts';
+import { buildStaticMap, fileHash, isLexed, readLockfile, type TrommelMap, type StaticInput } from '../../src/graph/static.ts';
 import { dialectOf, lexImportsFromBytes } from '../../src/lex/ts.ts';
 import { matchGlobs } from '../../src/resolve/glob.ts';
 import { Resolver } from '../../src/resolve/resolver.ts';
@@ -11,7 +11,7 @@ import { fakeRepo, type FakeRepo } from '../graph/fake-repo.ts';
 type Files = Record<string, string>;
 const isTest = (path: string) => /\.test\.[jt]s$/.test(path);
 
-function mapOf(repo: FakeRepo, options: Partial<StaticInput> = {}): SieveMap {
+function mapOf(repo: FakeRepo, options: Partial<StaticInput> = {}): TrommelMap {
   return buildStaticMap({ objectFormat: 'sha1', index: repo.index, vfs: repo.vfs, sources: repo.sources, tests: repo.vfs.files().filter(isTest), ...options });
 }
 
@@ -249,7 +249,7 @@ describe('selectStatic', () => {
   });
 
   it.each([
-    ['the config changed', {}, { config: 'b'.repeat(40) }, 'sieve.config.json changed'],
+    ['the config changed', {}, { config: 'b'.repeat(40) }, 'trommel.config.json changed'],
     ['the object format differs', {}, { objectFormat: 'sha256' as const }, 'the map is for sha1 objects, the repository uses sha256'],
   ])('runs everything when %s (L3)', (_name, mapOptions, headOptions, cause) => {
     const selection = plan(BASE, BASE, {}, { config: 'a'.repeat(40), ...mapOptions }, { config: 'a'.repeat(40), ...headOptions });

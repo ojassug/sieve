@@ -12,6 +12,6 @@ export { parseJsonc } from './resolve/jsonc.ts';
 export { dirname, exportsTargets, joinPath, MemoryVfs, Resolver, type EntryKind, type GlobEvidence, type Resolution, type ResolutionKind, type ResolveRequest, type Vfs } from './resolve/resolver.ts';
 export { parsePnpmWorkspace } from './resolve/yaml.ts';
 export { detectLockfile, diffLockfiles, LOCKFILE_PATHS, NpmLockfile, parseNpmLockfile, type DetectedLockfile, type LockedPackage, type Unparseable } from './lockfile/npm.ts';
-export { buildStaticMap, ENGINE, fileHash, globHash, isLexed, isModule, listingHash, MAP_VERSION, readLockfile, sha256, type DeclaredRule, type LockfileState, type MapLockfile, type SieveMap, type StaticInput } from './graph/static.ts';
+export { buildStaticMap, ENGINE, fileHash, globHash, isLexed, isModule, listingHash, MAP_VERSION, readLockfile, sha256, type DeclaredRule, type LockfileState, type MapLockfile, type TrommelMap, type StaticInput } from './graph/static.ts';
 export { MapError, mapGraph, parseMap } from './graph/map.ts';
 export { CONFIG_PATH, runAll, selectStatic, type Escalation, type HeadState, type PlanRules, type Selection } from './select/plan.ts';

@@ -12,7 +12,7 @@ import { publish, pushIndex, runCommand, stageAssets, type CommandResult, type I
  * for whoever else pushes to main while the run is collecting.
  */
 function repos() {
-  const root = mkdtempSync(join(tmpdir(), 'sieve-publish-'));
+  const root = mkdtempSync(join(tmpdir(), 'trommel-publish-'));
   const remote = join(root, 'remote.git');
   const work = join(root, 'work');
   const rival = join(root, 'rival');
@@ -27,7 +27,7 @@ function repos() {
   git(root, ['clone', '-q', remote, work]);
   // A clone of an empty repository leaves HEAD unborn; name the branch so every git version agrees.
   git(work, ['symbolic-ref', 'HEAD', 'refs/heads/main']);
-  writeFileSync(join(work, 'README.md'), 'sieve-corpus\n');
+  writeFileSync(join(work, 'README.md'), 'trommel-corpus\n');
   git(work, ['add', 'README.md']);
   git(work, ['commit', '-qm', 'chore: start the corpus repository']);
   git(work, ['push', '-q', 'origin', 'HEAD:refs/heads/main']);
@@ -85,7 +85,7 @@ describe('pushIndex', () => {
 
   beforeEach(() => {
     repo = repos();
-    staged = mkdtempSync(join(tmpdir(), 'sieve-staged-'));
+    staged = mkdtempSync(join(tmpdir(), 'trommel-staged-'));
     files = [
       { path: 'manifests/2026/2026-11-12-7.json', source: stage('manifest.json', '{"run":7}\n') },
       { path: 'state/collector-state.json', source: stage('state.json', '{"days":["2026-11-12"]}\n') },
@@ -214,7 +214,7 @@ describe('publish', () => {
 
   beforeEach(() => {
     repo = repos();
-    out = mkdtempSync(join(tmpdir(), 'sieve-out-'));
+    out = mkdtempSync(join(tmpdir(), 'trommel-out-'));
     assets = join(out, 'assets');
     writeFileSync(join(out, 'manifest.json'), '{"items":[],"requests":12}\n');
     mkdirSync(join(out, 'raw', 'o__a'), { recursive: true });
@@ -237,8 +237,8 @@ describe('publish', () => {
     statePath: 'state/collector-state.json',
     day: '2026-11-12',
     runNumber: '7',
-    repo: 'ojassug/sieve-corpus',
-    collector: { repo: 'ojassug/sieve', sha: 'abc1234' },
+    repo: 'trommelci/trommel-corpus',
+    collector: { repo: 'trommelci/trommel', sha: 'abc1234' },
     retryDelayMs: 0,
   });
 
@@ -324,7 +324,7 @@ describe('stageAssets', () => {
   let statePath: string;
 
   beforeEach(() => {
-    out = mkdtempSync(join(tmpdir(), 'sieve-stage-'));
+    out = mkdtempSync(join(tmpdir(), 'trommel-stage-'));
     assets = join(out, 'assets');
     statePath = join(out, 'collector-state.json');
     writeFileSync(statePath, '{"repos":{}}\n');

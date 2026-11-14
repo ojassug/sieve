@@ -4,7 +4,7 @@
 - Deciders: Ojas Sugur (decided in the planning session)
 
 ## Context
-Self-hosting in regulated organizations is SIEVE's wedge, and their legal teams often block copyleft licenses. A hosted beta comes later.
+Self-hosting in regulated organizations is Trommel's wedge, and their legal teams often block copyleft licenses. A hosted beta comes later.
 
 ## Decision
 - Apache-2.0 for every package: CLI, runner plugins, server and UI.

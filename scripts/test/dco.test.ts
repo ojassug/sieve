@@ -36,7 +36,7 @@ describe('signoffProblem', () => {
 });
 
 describe('unsignedCommits', () => {
-  const repo = mkdtempSync(join(tmpdir(), 'sieve-dco-'));
+  const repo = mkdtempSync(join(tmpdir(), 'trommel-dco-'));
   afterAll(() => {
     rmSync(repo, { recursive: true, force: true });
   });

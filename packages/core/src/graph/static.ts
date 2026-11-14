@@ -1,5 +1,5 @@
 // The static impact graph of one snapshot (architecture §3.1, §3.2), stored as the M1 map: canonical
-// JSON at .sieve/map/map.json until SMAP replaces it. Every module file is lexed from its git blob,
+// JSON at .trommel/map/map.json until SMAP replaces it. Every module file is lexed from its git blob,
 // every import resolved, and everything a resolution recorded becomes an edge, so a test depends
 // on every file, absent path, directory listing, glob, config and package that could change what
 // it loads. What cannot be decided is not dropped: it becomes a `u:` node, always treated as changed
@@ -23,9 +23,9 @@ import { DECLARED, STATIC } from './graph.ts';
 export const MAP_VERSION = 1;
 /**
  * What builds the graph and how a plan reads it; a map built by another engine is invalid (L3).
- * `sieve-static-2` has no `e:` nodes: a plan no longer compares the environment (DECISIONS 28).
+ * `trommel-static-2` has no `e:` nodes: a plan no longer compares the environment (DECISIONS 28).
  */
-export const ENGINE = 'sieve-static-2';
+export const ENGINE = 'trommel-static-2';
 
 const MODULE = /\.(?:[cm]?[jt]s|[jt]sx)$/;
 /** `.d.ts`, `.d.mts`, `.d.cts` and arbitrary-extension declarations such as `.d.css.ts`. */
@@ -62,14 +62,14 @@ export function readLockfile(vfs: Vfs): LockfileState {
 
 export type MapLockfile = { readonly kind: 'npm'; readonly path: string } | { readonly kind: 'unparseable'; readonly paths: readonly string[]; readonly reason: string } | { readonly kind: 'none' };
 
-export interface SieveMap {
+export interface TrommelMap {
   readonly version: number;
   readonly engine: string;
   readonly objectFormat: ObjectFormat;
   readonly rootTree: string;
   /** Paths that are not valid UTF-8; non-zero makes every plan from this map run everything. */
   readonly undecodable: number;
-  /** The blob id of sieve.config.json, or null without one. */
+  /** The blob id of trommel.config.json, or null without one. */
   readonly config: string | null;
   readonly lockfile: MapLockfile;
   /** Every `ls-tree -r -t` entry as [mode, oid, path], sorted by path: the base of the next diff. */
@@ -177,7 +177,7 @@ class MapBuilder {
   }
 }
 
-export function buildStaticMap(input: StaticInput): SieveMap {
+export function buildStaticMap(input: StaticInput): TrommelMap {
   const { index, vfs } = input;
   const resolver = new Resolver(vfs);
   const lockfile = readLockfile(vfs);

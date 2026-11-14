@@ -63,7 +63,7 @@ export class GitHubClient {
     this.headers = {
       accept: 'application/vnd.github+json',
       authorization: `Bearer ${options.token}`,
-      'user-agent': options.userAgent ?? 'sieve-corpus-collector',
+      'user-agent': options.userAgent ?? 'trommel-corpus-collector',
       'x-github-api-version': '2022-11-28',
     };
   }

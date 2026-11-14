@@ -12,7 +12,7 @@ The rest of this report is as written on 2026-11-13. Read it with these facts in
 - **The other documents follow.** [architecture.md](../architecture.md), [threat-model.md](../threat-model.md), [roadmap.md](../roadmap.md) §6, [HANDOFF.md](../../HANDOFF.md) §1.1 and §10, and DECISIONS entry 27 carry the corrections. Entry 27 lists where the code still lags.
 - **`main` moved while the review was being written.** Day 10 (#13) and the directory-URL fix (#14, DECISIONS 26) merged. `new URL('.', import.meta.url)` is no longer a cause of uncertainty, and a new file that a mapped glob matches no longer escalates. No finding depends on either. The counts for this repository in "What I ran" are those of `86a995e`.
 - **Line citations were refreshed** to `main` at `acf76c2`. Only `plan.ts` had moved. Later changes to the code are not reflected in them.
-- **Two findings are fixed in code since.** M1, the environment in the static map, by [#16](https://github.com/ojassug/sieve/pull/16) ([DECISIONS.md](../../DECISIONS.md) entry 28). The selector rules of C1 and finding L1, by [#17](https://github.com/ojassug/sieve/pull/17) (entry 29), where Ojas also answered question 3 of §6: a change to a module that no test reaches escalates by default.
+- **Two findings are fixed in code since.** M1, the environment in the static map, by [#16](https://github.com/trommelci/trommel/pull/16) ([DECISIONS.md](../../DECISIONS.md) entry 28). The selector rules of C1 and finding L1, by [#17](https://github.com/trommelci/trommel/pull/17) (entry 29), where Ojas also answered question 3 of §6: a change to a module that no test reaches escalates by default.
 - **Everything not in an ADR or fixed is still a recommendation:** findings M6 to M8 and L2 to L7, §4, and the questions in §6 other than question 3.
 
 ## How to read this
@@ -39,7 +39,7 @@ The rest of this report is as written on 2026-11-13. Read it with these facts in
 | GitHub documentation, read on 2026-11-13 | Cache scoping and `cache-mode`; job outputs; fork tokens. Quoted in finding M5 and in §5 |
 
 Three limits on these results:
-- This worktree has no `node_modules`, so `@sieve-ci/core` resolved to the main checkout. That checkout was clean and at the same commit, so the tests and the CLI ran the committed code.
+- This worktree has no `node_modules`, so `@trommel/core` resolved to the main checkout. That checkout was clean and at the same commit, so the tests and the CLI ran the committed code.
 - Everything ran on Windows 11 with Node 26.4. Statements about other operating systems come from reading the code and from one simulated build (finding M1).
 - The probe scripts are not in the repository. They are small enough to rebuild as tests from the inputs given.
 
@@ -47,7 +47,7 @@ Three limits on these results:
 
 ## 1. Verdict
 
-**The foundation is sound enough to build M2 on, if seven contracts are corrected before records exist.** The central idea holds: a skip is justified by content equality of a recorded closure, not by a commit diff, so the choice of base cannot affect safety. The merged M1 code implements it with care. Snapshots come from git objects only. Absent paths and directory listings are nodes. Whatever cannot be decided runs. I could not make the selector miss a change to anything it had resolved statically. What is not yet right is the boundary of the guarantee. Three paths skip or never run a test that should run, and the planned per-test recording closes none of them: inputs read outside a test's own worker, tests that SIEVE's own discovery does not find, and an environment compared in the wrong job. Four more contracts are too loose to build records on: what a record contains, which runs count as evidence, how flake observations are scoped, and what a map's static layer may hold. All seven are cheap to fix this week and expensive after M2 writes its first record.
+**The foundation is sound enough to build M2 on, if seven contracts are corrected before records exist.** The central idea holds: a skip is justified by content equality of a recorded closure, not by a commit diff, so the choice of base cannot affect safety. The merged M1 code implements it with care. Snapshots come from git objects only. Absent paths and directory listings are nodes. Whatever cannot be decided runs. I could not make the selector miss a change to anything it had resolved statically. What is not yet right is the boundary of the guarantee. Three paths skip or never run a test that should run, and the planned per-test recording closes none of them: inputs read outside a test's own worker, tests that Trommel's own discovery does not find, and an environment compared in the wrong job. Four more contracts are too loose to build records on: what a record contains, which runs count as evidence, how flake observations are scoped, and what a map's static layer may hold. All seven are cheap to fix this week and expensive after M2 writes its first record.
 
 ---
 
@@ -58,7 +58,7 @@ Three limits on these results:
 | ID | Severity | Finding | Category |
 |---|---|---|---|
 | C1 | Critical | Capture completeness has no evidence source for inputs read outside a test's worker or named by string in runner config, and the L1 backstop misses unreached modules and other packages | Correct ADR-0005 in place; fix in code now; new DECISIONS entry at M2 |
-| C2 | Critical | A plan is an allowlist built from SIEVE's own test discovery, so a test the runner would run but SIEVE does not find never runs | Correct ADR-0004 in place; fix in code now; defer the rest to M3 |
+| C2 | Critical | A plan is an allowlist built from Trommel's own test discovery, so a test the runner would run but Trommel does not find never runs | Correct ADR-0004 in place; fix in code now; defer the rest to M3 |
 | C3 | Critical | The environment is compared in the plan job, not where tests run, and a test can hold only one record | Correct ADR-0005, 0009 and 0021 in place; fix in code now; defer the rest to M3 |
 | H1 | High | A record is under-specified: what its closure is, what it stores and what validity compares | Correct ADR-0005 and 0009 in place |
 | H2 | High | Runs of unreviewed pull-request code count as shared evidence | Correct ADR-0012 in place; defer to M3 and M5 |
@@ -96,10 +96,10 @@ This table answers the first review question. "Static" is what the merged code d
 | An external package that a module imports | `p:` per install location, with package-to-package edges | Scripts under `node_modules` | An unparseable lockfile runs everything when it changes | **Caught** |
 | A package loaded by name or implicitly: the runner under globals, presets, transformers | No | Only if it executes in the worker | None | **Missed** (C1, probe 4) |
 | The toolchain outside the lockfile: Node patch, package manager, runner image | No | No | `.npmrc`, `.nvmrc` and workflow files are non-module root files, so L1 runs everything | **Escalated** when a tracked file changes. **Missed** when a floating version moves (C3) |
-| Which files are tests | SIEVE's own globs | — | — | **Missed** (C2) |
+| Which files are tests | Trommel's own globs | — | — | **Missed** (C2) |
 | The merge commit against the head | The plan hashes the tree it checked out | — | — | **Caught by construction.** C3 adds a check that each shard runs that tree |
 | Workflow files | Non-module file at the root, so L1 runs everything | — | — | **Escalated** |
-| `sieve.config.json`, the object format, a non-UTF-8 path | L3 | — | — | **Caught.** Verified |
+| `trommel.config.json`, the object format, a non-UTF-8 path | L3 | — | — | **Caught.** Verified |
 
 ---
 
@@ -138,38 +138,38 @@ L1 is meant to be the net for "a changed file not in V(G_S)". It has two holes. 
 
 **Cost if deferred.** M2 records would have no place for worker-scoped or run-scoped evidence, so every one would be discarded when the scope is added. Shadow data from M3 would under-count escapes for exactly these classes. Enforcement would ship with a whole-suite skip on a config edit.
 
-#### C2. A plan is an allowlist built from SIEVE's own test discovery
+#### C2. A plan is an allowlist built from Trommel's own test discovery
 
-**Claim.** `sieve run` gives the runner "the shard's exact file list" (architecture §5.1), and [ADR-0004](../adr/0004-test-file-selection-unit.md) says plugins "apply the plan's exact file list". The list comes from SIEVE's own globs, which approximate the runner's. A test the runner would run and SIEVE does not find is in no list. It never runs, in shadow mode or in safe mode. It is in neither the run set nor the would-skip set, so audit sampling and escape accounting never see it.
+**Claim.** `trommel run` gives the runner "the shard's exact file list" (architecture §5.1), and [ADR-0004](../adr/0004-test-file-selection-unit.md) says plugins "apply the plan's exact file list". The list comes from Trommel's own globs, which approximate the runner's. A test the runner would run and Trommel does not find is in no list. It never runs, in shadow mode or in safe mode. It is in neither the run set nor the would-skip set, so audit sampling and escape accounting never see it.
 
 **Evidence.**
-- **Verified.** In shadow mode `run` is SIEVE's discovered set ([report.ts:47](../../packages/cli/src/report.ts#L47)).
-- **Verified.** SIEVE's default exclude adds `**/fixtures/**` ([config.ts:55](../../packages/cli/src/config.ts#L55)). Vitest 5.1's default exclude is `**/node_modules/**` and `**/.git/**` only, read from the installed package. `discoverTests` on `test/fixtures/b.test.ts` and `e2e/fixtures/d.test.tsx` finds neither; Vitest's defaults would run both.
+- **Verified.** In shadow mode `run` is Trommel's discovered set ([report.ts:47](../../packages/cli/src/report.ts#L47)).
+- **Verified.** Trommel's default exclude adds `**/fixtures/**` ([config.ts:55](../../packages/cli/src/config.ts#L55)). Vitest 5.1's default exclude is `**/node_modules/**` and `**/.git/**` only, read from the installed package. `discoverTests` on `test/fixtures/b.test.ts` and `e2e/fixtures/d.test.tsx` finds neither; Vitest's defaults would run both.
 - **Verified.** [DECISIONS.md](../../DECISIONS.md) entry 24 already records a mismatch on hono, whose Vitest projects select tests differently.
 - **Verified.** When nothing is discovered, `count` is 0, the test job is skipped, and the day-10 gate passes (`TEST = skipped` and `COUNT = 0`).
 - **Inferred.** Jest 30's default `testMatch` also matches `.mjs`, `.cjs`, `.mts` and `.cts` files, which [config.ts:54](../../packages/cli/src/config.ts#L54) does not. Jest is not installed here.
 
-**Failure scenario.** A repository keeps a regression test at `test/fixtures/regression.test.ts`, or selects tests with a Vitest `projects` include that `sieve.config.json` does not mirror. After it adopts the workflow, that file is in no shard. A pull request that breaks it merges green. Nothing reports a skip, because none was planned.
+**Failure scenario.** A repository keeps a regression test at `test/fixtures/regression.test.ts`, or selects tests with a Vitest `projects` include that `trommel.config.json` does not mirror. After it adopts the workflow, that file is in no shard. A pull request that breaks it merges green. Nothing reports a skip, because none was planned.
 
 **Recommended change.**
-1. **ADR-0004:** the runner, not SIEVE, decides what a test file is. A plan selects among the tests SIEVE knows. `sieve run` asks the runner for the files it discovers and also runs every discovered file the plan does not mention, each in exactly one shard, assigned by a stable hash.
+1. **ADR-0004:** the runner, not Trommel, decides what a test file is. A plan selects among the tests Trommel knows. `trommel run` asks the runner for the files it discovers and also runs every discovered file the plan does not mention, each in exactly one shard, assigned by a stable hash.
 2. Record runs report the runner's discovered set and the map stores it, so a plan can warn when its own discovery disagrees.
 3. A plan that knows no tests runs the project's command unfiltered. It does not emit `count=0`.
-4. **Code now:** make default discovery mirror the runner's defaults, and move this repository's `**/fixtures/**` into its own `sieve.config.json`.
-5. Until `sieve run` exists, keep the full run in `ci.yml` as a required check (HANDOFF §10, item 2).
+4. **Code now:** make default discovery mirror the runner's defaults, and move this repository's `**/fixtures/**` into its own `trommel.config.json`.
+5. Until `trommel run` exists, keep the full run in `ci.yml` as a required check (HANDOFF §10, item 2).
 
 **Category.** Correct ADR-0004 in place. Fix in code now (items 3 and 4). Defer items 1 and 2 to M3.
 
-**Cost if deferred.** The first foreign repository silently loses tests. The M4 replay compares SIEVE's selection against a full run that the runner discovers by itself, so every undiscovered failing test counts as a miss against K1. Once `sieve-gate` is the only required check, those tests stop gating anything.
+**Cost if deferred.** The first foreign repository silently loses tests. The M4 replay compares Trommel's selection against a full run that the runner discovers by itself, so every undiscovered failing test counts as a miss against K1. Once `trommel-gate` is the only required check, those tests stop gating anything.
 
 #### C3. The environment is compared in the plan job, and a test can hold only one record
 
 **Claim.** A safe skip needs "the env components are equal" (§3.3; ADR-0005, item 2). Neither text says whose environment. The built code and the planned workflow measure it in the plan job. The tests run in other jobs, often on several images. Separately, Lite mode keeps one map per commit and SMAP's test table has one record per test, so records from two environments cannot coexist. The server model is already right on this point: `snapshots` is unique on `(repo_id, tree_oid, env_fp)`.
 
 **Evidence.**
-- **Verified.** The plan computes the environment from its own process ([cli.ts:207](../../packages/cli/src/cli.ts#L207)). HANDOFF §11 says so: "`e:runtime` and `e:platform` describe the machine that runs `sieve plan`, not the test shards'".
+- **Verified.** The plan computes the environment from its own process ([cli.ts:207](../../packages/cli/src/cli.ts#L207)). HANDOFF §11 says so: "`e:runtime` and `e:platform` describe the machine that runs `trommel plan`, not the test shards'".
 - **Verified.** This repository's own [ci.yml](../../.github/workflows/ci.yml) runs four cells: Ubuntu on Node 22, 24 and 26, and Windows on Node 22. The workflow in §5.3 has one plan job.
-- **Verified in GitHub's documentation.** "You cannot change the contents of an existing cache." So with the key `sieve-map-<sha>`, the first cell to save wins and the others cannot save (inferred from that sentence; not run).
+- **Verified in GitHub's documentation.** "You cannot change the contents of an existing cache." So with the key `trommel-map-<sha>`, the first cell to save wins and the others cannot save (inferred from that sentence; not run).
 - **Verified.** [ADR-0009](../adr/0009-smap-binary-map-format.md) gives the test table one "record reference, environment fingerprint, closure digest".
 
 **Failure scenarios.**
@@ -178,7 +178,7 @@ L1 is meant to be the net for "a changed file not in V(G_S)". It has two holes. 
 
 **Recommended change.**
 1. **ADR-0005:** the environment that must match is that of the job that would run the test, and the check happens in that job.
-2. **Plan and `sieve run`, in M3.** The plan gives each shard its run list and a fallback list: the skipped tests assigned to it, each with the environment fingerprint its record needs. `sieve run` computes the shard's real fingerprint, runs every fallback test whose fingerprint differs, and runs everything if the shard's tree is not the planned tree.
+2. **Plan and `trommel run`, in M3.** The plan gives each shard its run list and a fallback list: the skipped tests assigned to it, each with the environment fingerprint its record needs. `trommel run` computes the shard's real fingerprint, runs every fallback test whose fingerprint differs, and runs everything if the shard's tree is not the planned tree.
 3. **Keys.** Records and maps are keyed by environment cell. The SMAP test table allows several records per test. The Lite cache key carries the cell.
 4. **Components**, decided at M2: the full runtime version, the runner's name and version, a digest of the runner's effective configuration, and the runner image (`ImageOS`). The configuration digest also stops a record made under one command from matching a run under another (H2).
 5. **Code now:** take `e:` nodes out of the static map (M1 explains why they also break determinism).
@@ -210,7 +210,7 @@ L1 is meant to be the net for "a changed file not in V(G_S)". It has two holes. 
 - **C_R(t)** is everything reachable from t in the union graph of the snapshot the record ran on: all static and declared edges, plus the dynamic edges of that execution.
 - **A record is self-contained.** It stores its closure as (node, hash) pairs, its environment components, the engine and recorder versions, its completeness flags and its time.
 - **Validity is base-free.** R is valid at H when every pair has the same hash at H, the environment matches at the executor, the versions match, no flag is set, and R is younger than the horizon. The map, Δ and the reverse search are how the planner computes this. They are not a second definition, and a proof never names S.
-- **The digest** is SHA-256 over the canonical JSON of `["sieve-closure-1", [[node, hash], …]]`, with ⊥ as `null`.
+- **The digest** is SHA-256 over the canonical JSON of `["trommel-closure-1", [[node, hash], …]]`, with ⊥ as `null`.
 
 **Category.** Correct ADR-0005 in place, with ADR-0009's test table.
 
@@ -222,7 +222,7 @@ L1 is meant to be the net for "a changed file not in V(G_S)". It has two holes. 
 
 **Evidence.**
 - **Verified.** ADR-0012, Decision; threat-model §1.3. `workflow_dispatch` "by writers" has no restriction on the ref.
-- **Verified.** `sieve record` uploads "graph segments (trusted lanes)" (§5.1), and extraction results are cached by blob id and extractor version (§3.2). The server never sees file contents, so it cannot check either.
+- **Verified.** `trommel record` uploads "graph segments (trusted lanes)" (§5.1), and extraction results are cached by blob id and extractor version (§3.2). The server never sees file contents, so it cannot check either.
 - **Verified by reading.** A changed workflow file is in no test's closure. It escalates L1 at the root, which forces every test to run on that pull request ([plan.ts:100](../../packages/core/src/select/plan.ts#L100)). Probe 1 exercises the same code path with another file.
 
 **Failure scenario, with no bad intent.** A work-in-progress pull request narrows its test command to `-t smoke` in the workflow file to get feedback sooner. L1 forces every test file to run. Each passes in seconds, having run almost nothing, and each record's closure equals `main`'s. Those records are trusted. From then on every pull request skips those tests on the strength of runs that tested nothing. A compromised account can do the same on purpose, or upload forged extraction results for `main`'s blob ids. Neither needs a review.
@@ -285,7 +285,7 @@ L1 is meant to be the net for "a changed file not in V(G_S)". It has two holes. 
 
 #### M1. The static map embeds the builder's OS and Node version
 
-**Claim.** The map holds `e:runtime` and `e:platform`, measured on the machine that ran `sieve graph`. The same tree therefore gives different bytes on Linux and Windows. That breaks M1's exit criterion, "byte-identical SMAP across OSes", by construction.
+**Claim.** The map holds `e:runtime` and `e:platform`, measured on the machine that ran `trommel graph`. The same tree therefore gives different bytes on Linux and Windows. That breaks M1's exit criterion, "byte-identical SMAP across OSes", by construction.
 
 **Evidence.**
 - **Verified.** [static.ts:134](../../packages/core/src/graph/static.ts#L134) and [static.ts:254](../../packages/core/src/graph/static.ts#L254).
@@ -355,7 +355,7 @@ L1 is meant to be the net for "a changed file not in V(G_S)". It has two holes. 
 **Evidence.**
 - **Verified.** [graph.ts:7](../../packages/core/src/graph/graph.ts#L7) defines the three bits, duplicate edges merge by OR ([graph.ts:44](../../packages/core/src/graph/graph.ts#L44)), and `parseMap` accepts 1 to 7 ([map.ts:66](../../packages/core/src/graph/map.ts#L66)).
 - **Verified by reading.** A module that a test both imports statically and executes is static and dynamic at once. That is the common case, not an exception.
-- **Verified by reading.** The baselines in [TARGETS.md](../../bench/TARGETS.md) include "SIEVE static-only, dynamic-only and union" from one map, so neither source can be dropped.
+- **Verified by reading.** The baselines in [TARGETS.md](../../bench/TARGETS.md) include "Trommel static-only, dynamic-only and union" from one map, so neither source can be dropped.
 - **Verified by measurement.** One byte per edge is 0.68 MB of 2.20 MB at 10,000 files before compression, and it is long runs of one value.
 
 **Recommended change.** ADR-0009: provenance is a bitmask per edge, one byte, with bit 0 static, bit 1 dynamic, bit 2 declared, and the rest zero. In the layered format the static layer's edges are static or declared and the record layer's are dynamic by construction, so the byte is mostly an in-memory notion.
@@ -376,7 +376,7 @@ L1 is meant to be the net for "a changed file not in V(G_S)". It has two holes. 
 - **Verified.** The day-10 workflow saves the map only in a job that runs on pushes to `main`, and the plan uses the restore-only action.
 
 **Failure scenarios.**
-- An unrelated workflow that runs on pushes or a schedule on `main` uses a compromised third-party action. It saves `sieve-map-zzz`. Every pull-request plan restores it by prefix until the next push to `main` saves a newer one. In safe mode it can skip anything.
+- An unrelated workflow that runs on pushes or a schedule on `main` uses a compromised third-party action. It saves `trommel-map-zzz`. Every pull-request plan restores it by prefix until the next push to `main` saves a newer one. In safe mode it can skip anything.
 - A repository grants `cache-mode: write` to a `pull_request_target` workflow. The poisoning path that GitHub closed is open again.
 - Anyone who can open a pull request can fill the 10 GB quota and evict the map. The plan then runs everything: a cost, not a safety failure.
 
@@ -386,7 +386,7 @@ L1 is meant to be the net for "a changed file not in V(G_S)". It has two holes. 
 - The key carries the format version and the environment cell. A pull request restores its base commit's map by exact key first.
 - The map names its origin, and a plan runs everything when the origin is not this repository's default branch.
 - A pull request's own cache scope carries its pull-request-only evidence (H2).
-- Lite proofs are unsigned. `sieve verify` there is a recomputation, not an attestation.
+- Lite proofs are unsigned. `trommel verify` there is a recomputation, not an attestation.
 - Lite mode does not enforce skips in a repository that grants cache writes to low-trust triggers.
 
 **Category.** Correct ADR-0021 in place. Defer the implementation to M3.
@@ -453,7 +453,7 @@ L1 is meant to be the net for "a changed file not in V(G_S)". It has two holes. 
 
 **Recommended change.**
 - Specify `generated` as outputs to inputs only. An output's hash is the digest of its inputs' hashes and of the generator's package nodes. The planner never hashes an output.
-- `sieve run` may compare the outputs it finds with a hash taken at record time. A mismatch means the inputs were under-declared: run the test and open an incident.
+- `trommel run` may compare the outputs it finds with a hash taken at record time. A mismatch means the inputs were under-declared: run the test and open an incident.
 - When a workspace package's `exports` point at an absent path that a rule covers, the resolver depends on the rule's inputs.
 - Build this before M4.
 
@@ -470,10 +470,10 @@ L1 is meant to be the net for "a changed file not in V(G_S)". It has two holes. 
 | L1 | `parseMap` checks that every key of `uncertain` is a node, not the reverse ([map.ts:83](../../packages/core/src/graph/map.ts#L83)), and seeds come from `uncertain` ([plan.ts:94](../../packages/core/src/select/plan.ts#L94)). Verified, probe 11 | A map whose `uncertain` was emptied still holds its `u:` node; it is accepted and the test is a would-skip | Seed every node whose key starts with `u:`, and check both directions | Fix in code now | A writer bug or a damaged map becomes a wrong skip without any error |
 | L2 | Glob node keys join the patterns with a vertical bar ([resolver.ts:615](../../packages/core/src/resolve/resolver.ts#L615)). Verified, probe 9: `import.meta.glob(['./p/*.ts', './q/*.ts'])` and a single pattern containing a vertical bar share one node, which keeps the first hash and the last pattern list | A file that matches only the first importer's patterns is added; the plan recomputes with the other list and sees no change | Key the node by a digest of the canonical JSON of the pattern list | Fix in code now | Contrived today; permanent once keys are inside records |
 | L3 | `Resolver.resolve` records no `package.json` probe for the root that a leading-slash specifier, a root mock or a glob base resolves against ([resolver.ts:198](../../packages/core/src/resolve/resolver.ts#L198)). Verified, probe 8. It is sound today only because the builder adds each file's own config chain ([static.ts:225](../../packages/core/src/graph/static.ts#L225)) | A refactor that moves config edges into hubs (M3) drops the accidental cover | Record the probes in `resolve`, and add a leading-slash case to the evidence property | Fix in code now, with M3 | A latent miss introduced by an optimization |
-| L4 | "Outputs can be a maximum of 1 MB per job" (GitHub workflow syntax reference, read 2026-11-13). The M1 matrix carries the file lists ([report.ts:80](../../packages/cli/src/report.ts#L80)). This closes open question 6 of architecture §8.3 | A run-all fallback on a repository with about 15,000 test files overflows the output, exactly when SIEVE has degraded | Keep the lists out of the matrix: pass shard numbers, as §5.3 already does, and let `sieve run` read the plan file | Defer to M3 | The fallback breaks on large repositories |
+| L4 | "Outputs can be a maximum of 1 MB per job" (GitHub workflow syntax reference, read 2026-11-13). The M1 matrix carries the file lists ([report.ts:80](../../packages/cli/src/report.ts#L80)). This closes open question 6 of architecture §8.3 | A run-all fallback on a repository with about 15,000 test files overflows the output, exactly when Trommel has degraded | Keep the lists out of the matrix: pass shard numbers, as §5.3 already does, and let `trommel run` read the plan file | Defer to M3 | The fallback breaks on large repositories |
 | L5 | Document drift. ADR-0003 and §3.1 list `sm:` nodes; the code has none, and a submodule path is unresolved or L1. §4.2 says "SMAP v1" where the roadmap says v0. §3.5's lockfile row says "everything that reaches any `p:` node"; the code runs everything, which is stricter. Open question 7 of §8.3 can be closed: fork tokens have write permissions reduced to read, and an OIDC token "requires `id-token: write`" (same reference) | None | Correct the documents; reserve the `sm:` kind in SMAP | With the ADR edits | Confusion only |
 | L6 | Each file depends on its whole nearest `package.json`, so a version bump reruns everything. Verified on hono (DECISIONS 24); already listed in HANDOFF §11 | Every release commit in a replay history is a run-all | Hash only the fields that affect loading | Fix in code before M4 | Lower measured savings |
-| L7 | No environment variable is tracked by default ([config.ts:264](../../packages/cli/src/config.ts#L264)) | A test that depends on `TZ` or `NODE_OPTIONS` is skipped across a change to it | Choose a default list at M2, and have the recorder report which variables each test read as a `sieve doctor` suggestion, not as closure nodes | New DECISIONS entry at M2 | Missed inputs that need no declaration to prevent |
+| L7 | No environment variable is tracked by default ([config.ts:264](../../packages/cli/src/config.ts#L264)) | A test that depends on `TZ` or `NODE_OPTIONS` is skipped across a change to it | Choose a default list at M2, and have the recorder report which variables each test read as a `trommel doctor` suggestion, not as closure nodes | New DECISIONS entry at M2 | Missed inputs that need no declaration to prevent |
 
 ---
 
@@ -502,7 +502,7 @@ Leave out the hub bullet if finding M3 is not accepted.
 
 ```markdown
 - Runner plugins apply the plan's file list. There are no command-line substring filters.
-- The runner, not SIEVE, decides what a test file is. A plan selects among the test files SIEVE knows. `sieve run` asks the runner which files it discovers and also runs every discovered file the plan does not mention, each in exactly one shard. A plan that knows no test files runs the project's command unfiltered.
+- The runner, not Trommel, decides what a test file is. A plan selects among the test files Trommel knows. `trommel run` asks the runner which files it discovers and also runs every discovered file the plan does not mention, each in exactly one shard. A plan that knows no test files runs the project's command unfiltered.
 ```
 
 ### ADR-0005: replace "Decision" and "Consequences"
@@ -511,7 +511,7 @@ Leave out the hub bullet if finding M3 is not accepted.
 ## Decision
 **Records.** A record R is one passing execution of test file t. [ADR-0012](0012-ci-auth-and-trust-lanes.md) says which runs make records that others may rely on. A record is self-contained. It stores:
 - its closure C_R(t) as (node, hash) pairs: every node reachable from t in the union graph of the snapshot it ran on. That graph has all static and declared edges of the snapshot plus the dynamic edges this execution recorded, and static edges are followed from modules found at run time too;
-- the closure digest: SHA-256 over the canonical JSON of `["sieve-closure-1", [[node, hash], …]]`, with ⊥ as `null`;
+- the closure digest: SHA-256 over the canonical JSON of `["trommel-closure-1", [[node, hash], …]]`, with ⊥ as `null`;
 - its environment components, measured in the process that ran the test;
 - the versions of the static engine and of the recorder, and the time of the run;
 - completeness flags: anything the recorder saw and could not map, such as a subprocess it could not attach to, an untracked file with no `generated` rule, or a script with no node.
@@ -532,7 +532,7 @@ The planner computes conditions 1 and 4 from a base map M_S and Δ(S, H) by reve
 - A changed file that is not a node, and a changed node that no test reaches, are unmapped inputs. Every node of the owning package then counts as changed.
 - Lockfile, config and map problems run everything ([architecture.md](../architecture.md) §3.5).
 
-Every skip emits a proof that `sieve verify` can recheck from R and a checkout of H. A server signs its proofs. In Lite mode proofs are unsigned and no more trustworthy than the map they came from ([ADR-0021](0021-lite-mode-actions-cache.md)). Safe mode never uses predicted probabilities.
+Every skip emits a proof that `trommel verify` can recheck from R and a checkout of H. A server signs its proofs. In Lite mode proofs are unsigned and no more trustworthy than the map they came from ([ADR-0021](0021-lite-mode-actions-cache.md)). Safe mode never uses predicted probabilities.
 
 **What the guarantee covers.** Under determinism (A1) and capture completeness (A2), a safe skip has the outcome of R. Time, randomness, the network, external services and state shared between test files are outside A1. They are documented, bounded by the record horizon and the nightly full run, and surfaced by the flake ledger.
 
@@ -613,8 +613,8 @@ Add under "Consequences":
 
 ```markdown
 ## Decision
-- On the default branch, a job triggered by `push` builds the map and saves it with `actions/cache/save` under `sieve-map-v<format>-<cell>-<sha>`. It is the only job of the workflow with `cache-mode: write`; every other job is read-only.
-- A pull-request run restores the map of its base commit by exact key, or else the newest map of that format and cell, and runs `sieve plan --map .sieve/map`. That computes Δ, the reverse search, proofs and shards locally.
+- On the default branch, a job triggered by `push` builds the map and saves it with `actions/cache/save` under `trommel-map-v<format>-<cell>-<sha>`. It is the only job of the workflow with `cache-mode: write`; every other job is read-only.
+- A pull-request run restores the map of its base commit by exact key, or else the newest map of that format and cell, and runs `trommel plan --map .trommel/map`. That computes Δ, the reverse search, proofs and shards locally.
 - The map names its origin: repository id, ref, commit and workflow. A plan runs everything if the origin is not the default branch of this repository.
 - A pull-request run may save a map of its own. GitHub scopes it to that pull request's merge ref, so it is evidence for that pull request only ([ADR-0012](0012-ci-auth-and-trust-lanes.md)).
 - Lite mode has no flake ledger, ingest or UI, and its proofs are unsigned.
@@ -634,7 +634,7 @@ A fork or an untrusted author therefore cannot replace the map. Lite mode trusts
 
 ### Sections of architecture.md that follow from these edits
 
-The architecture is a living document, so these need no ADR: the glossary (record, map); §3.1 (`e:` and `generated`); §3.3 (definitions and the algorithm's place); §3.5 (the first two rows); §3.6 (observations); §4.2 (SMAP); §5.1 (`sieve run`); §5.4 (keys); §6; and threat-model §1.3.
+The architecture is a living document, so these need no ADR: the glossary (record, map); §3.1 (`e:` and `generated`); §3.3 (definitions and the algorithm's place); §3.5 (the first two rows); §3.6 (observations); §4.2 (SMAP); §5.1 (`trommel run`); §5.4 (keys); §6; and threat-model §1.3.
 
 ---
 
@@ -659,7 +659,7 @@ The architecture is a living document, so these need no ADR: the glossary (recor
 ### HANDOFF §10
 
 1. **Mirroring policy.** Keep the public corpus metadata-only for the NOASSERTION and LGPL repositories. baserow is the exception worth acting on: it is the only source with test-level reruns, T3 needs exactly that, and the data expires. Mirror its test reports to private storage now, and decide about publishing after reading its licence files. This is not legal advice, and the download needs your go-ahead.
-2. **`sieve-gate` as a required check.** Require it now, alongside the existing `ci.yml` jobs. It runs everything SIEVE discovers, it is reversible in one setting, and it starts the count for T8 (zero CI failures caused by SIEVE). Do not make it the only required check until C2 and C3 are built: the gate covers one of this repository's four cells, and only the tests SIEVE finds.
+2. **`trommel-gate` as a required check.** Require it now, alongside the existing `ci.yml` jobs. It runs everything Trommel discovers, it is reversible in one setting, and it starts the count for T8 (zero CI failures caused by Trommel). Do not make it the only required check until C2 and C3 are built: the gate covers one of this repository's four cells, and only the tests Trommel finds.
 3. Answered on 2026-11-12.
 4. **The GitHub organization.** Create it and move both repositories before M5, not at M6. The App, the OIDC trust rules, cache scopes and branch protection all bind to the repository's identity. Do it in one planned hour, straight after a collector run finishes, and update the corpus repository's caller stub at the same time, because a missed night is a lost day of history. I did not verify how `uses:` behaves across a transfer.
 5. **When would-skips become enforceable.** By evidence, not by date. All of these: records with the per-shard environment check and test reconciliation (C2, C3); the independent verifier passing (P4); at least 10,000 seeded mutants with no unsafe skip; and zero shadow escapes over at least 300 faulty changes on the repository, real or seeded. Four weeks is a floor. Start with a high audit rate and lower it as the bound tightens.
@@ -667,7 +667,7 @@ The architecture is a living document, so these need no ADR: the glossary (recor
 ### Sequencing and technology
 
 **Sequencing (M1 to M10).** The order is right. Four adjustments:
-- **Rest of M1:** the selector and extraction fixes (C1, M6, L1 to L3), `e:` out of the map with the golden test (M1), hubs (M3), then SMAP v0 as container and static layer only (M2), then the pnpm and yarn parsers. `sieve explain` can wait.
+- **Rest of M1:** the selector and extraction fixes (C1, M6, L1 to L3), `e:` out of the map with the golden test (M1), hubs (M3), then SMAP v0 as container and static layer only (M2), then the pnpm and yarn parsers. `trommel explain` can wait.
 - **M2:** Vitest first. 13 of the 15 replay candidates use it, so the Jest reporter can follow the kill gate if time is short. Add the three capture scopes, the reported configuration and resolution evidence to its scope. Start the replay container here.
 - **M3:** it carries too much for three weeks over the holidays. M4 needs union assembly, validity, escalations, `plan` and `run` with reconciliation, the verifier and `generated` rules. Ratio-rule ordering needs failure history (M7), and proof signing needs a server key (M5); move both.
 - **Before M4:** amend K1, time R2, and archive failed-attempt logs (M7).
@@ -706,7 +706,7 @@ The architecture is a living document, so these need no ADR: the glossary (recor
 ## 6. Open questions for the owner
 
 1. **Is a collaborator inside the threat model?** H2 holds either way, because the honest case is enough. The answer decides how strict the server's lane rules must be, and whether Lite mode may ever enforce without an attestation.
-2. **Does v1 support a test matrix, or one cell?** One cell makes C3's mechanism simpler: a single fingerprint check in `sieve run`. Several cells need per-cell records and keys. This repository runs four.
+2. **Does v1 support a test matrix, or one cell?** One cell makes C3's mechanism simpler: a single fingerprint check in `trommel run`. Several cells need per-cell records and keys. This repository runs four.
 3. **Should a change to a module that no test reaches escalate by default?** It is the safe default, and it is how `cli.ts` would have been caught. On this repository it would have fired on 14 of the last 70 commits. The alternative is to report without escalating until the shadow data is in.
 4. **May Lite mode enforce skips on scope-based trust alone?** Or only with a verified attestation of the map, leaving enforcement to the server otherwise.
 5. **Which reading of K1 is the pre-registered one?** M7 proposes pooled, with 300 faulty changes. It is your threshold to set, and it should be set before the first measurement.

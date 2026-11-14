@@ -15,9 +15,9 @@ describe('parseCommand', () => {
   });
 
   it('reads plan, with --shadow as an alias of --mode shadow', () => {
-    const plan = { name: 'plan', mode: 'shadow', static: true, map: '.sieve/map', head: 'HEAD', shards: null };
-    expect(parseCommand(['plan', '--mode', 'shadow', '--static', '--map', '.sieve/map'])).toEqual(plan);
-    expect(parseCommand(['plan', '--shadow', '--static', '--map', '.sieve/map'])).toEqual(plan);
+    const plan = { name: 'plan', mode: 'shadow', static: true, map: '.trommel/map', head: 'HEAD', shards: null };
+    expect(parseCommand(['plan', '--mode', 'shadow', '--static', '--map', '.trommel/map'])).toEqual(plan);
+    expect(parseCommand(['plan', '--shadow', '--static', '--map', '.trommel/map'])).toEqual(plan);
     expect(parseCommand(['plan', '--static'])).toEqual({ ...plan, mode: null });
     expect(parseCommand(['plan', '--static', '--shards', '4', '--head', 'abc'])).toEqual({ ...plan, mode: null, shards: 4, head: 'abc' });
   });

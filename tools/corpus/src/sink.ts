@@ -1,7 +1,7 @@
 import { appendFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { canonicalJson } from '@sieve-ci/core';
+import { canonicalJson } from '@trommel/core';
 
 export type Stream = 'runs' | 'jobs' | 'check-runs' | 'artifacts';
 

@@ -108,7 +108,7 @@ describe('GitVfs.load', () => {
   });
 
   it('reads configs from one batch and any other blob on demand', async () => {
-    const dir = mkdtempSync(join(tmpdir(), 'sieve-vfs-'));
+    const dir = mkdtempSync(join(tmpdir(), 'trommel-vfs-'));
     dirs.push(dir);
     const git = (args: string[], input?: string): string =>
       execFileSync('git', ['-c', 'user.name=T', '-c', 'user.email=t@example.com', ...args], { cwd: dir, encoding: 'utf8', ...(input === undefined ? {} : { input }) }).trim();

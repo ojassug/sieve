@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Timing for the snapshot path of `sieve plan` (architecture §3.1, roadmap open item "measure
+// Timing for the snapshot path of `trommel plan` (architecture §3.1, roadmap open item "measure
 // git ls-tree at 10k files"). Correctness lives in the test suite; this only measures.
 //
 //   node bench/ls-tree.ts            synthetic 10,000-file repo built with git fast-import
@@ -11,7 +11,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { cpus, platform, release, tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { canonicalJsonPretty, lsTree, merkleDiff, TreeIndex } from '@sieve-ci/core';
+import { canonicalJsonPretty, lsTree, merkleDiff, TreeIndex } from '@trommel/core';
 
 const RUNS = 15;
 const repoArg = process.argv[2];
@@ -22,7 +22,7 @@ function git(cwd: string, args: string[], input?: string): string {
 
 /** 20 packages × 25 modules × 20 files = 10,000 files, then two follow-up commits. */
 function syntheticRepo(): { dir: string; base: string; oneFile: string; hundredFiles: string } {
-  const dir = mkdtempSync(join(tmpdir(), 'sieve-bench-'));
+  const dir = mkdtempSync(join(tmpdir(), 'trommel-bench-'));
   git(dir, ['init', '-q', '-b', 'main']);
   const paths: string[] = [];
   for (let p = 0; p < 20; p++) {

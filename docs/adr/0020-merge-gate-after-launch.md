@@ -16,7 +16,7 @@ v1 does not implement its own merge queue. It makes GitHub's queue faster and to
 - Suspect-state failures get one bounded retry;
 - budget-mode deferred tests run there.
 
-SIEVE's own queue (speculative batches, binary-search bisection, flake posteriors) is the first post-launch milestone that touches merging (M12), aimed at forges without a native queue.
+Trommel's own queue (speculative batches, binary-search bisection, flake posteriors) is the first post-launch milestone that touches merging (M12), aimed at forges without a native queue.
 
 ## Alternatives considered
 - **Own queue inside the 10 milestones:** rejected. Needs write access to repositories, and competes with the GitHub, Trunk and Mergify queues.

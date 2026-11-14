@@ -18,7 +18,7 @@ interface PlumbingFile {
  * commit-tree), so modes, symlinks and gitlinks are exact on every OS and nothing is checked out.
  */
 function plumbingRepo(format: 'sha1' | 'sha256') {
-  const dir = mkdtempSync(join(tmpdir(), `sieve-git-${format}-`));
+  const dir = mkdtempSync(join(tmpdir(), `trommel-git-${format}-`));
   const git = (args: string[], input?: string): string =>
     execFileSync('git', ['-c', 'user.name=T', '-c', 'user.email=t@example.com', ...args], {
       cwd: dir,
@@ -91,7 +91,7 @@ describe('git snapshots', () => {
 
     const delta = merkleDiff(TreeIndex.build(base), TreeIndex.build(head));
     const ours = delta.files.map((change) => `${kindLetter[change.kind]} ${change.path}`).sort();
-    // git reports blob→symlink as T (type change); SIEVE reports every in-place change as modified.
+    // git reports blob→symlink as T (type change); Trommel reports every in-place change as modified.
     const theirs = repo
       .diffTree(before, after)
       .map((line) => line.replace(/^T /, 'M '))
@@ -141,7 +141,7 @@ describe('git snapshots', () => {
   it("reports git's own error when git exits without reading its input", async () => {
     // Several megabytes of oids into a git that fails at once: writing to its closed stdin gets
     // EPIPE, which must not hide why git failed.
-    const dir = mkdtempSync(join(tmpdir(), 'sieve-not-a-repo-'));
+    const dir = mkdtempSync(join(tmpdir(), 'trommel-not-a-repo-'));
     repos.push(dir);
     const oids = Array.from({ length: 200_000 }, (_, i) => i.toString(16).padStart(40, '0'));
     await expect(readBlobs(dir, oids)).rejects.toThrow(/not a git repository/i);

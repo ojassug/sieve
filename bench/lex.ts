@@ -8,7 +8,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { cpus, platform, release } from 'node:os';
 import { extname, join, relative } from 'node:path';
 
-import { canonicalJsonPretty, dialectOf, lexImports } from '@sieve-ci/core';
+import { canonicalJsonPretty, dialectOf, lexImports } from '@trommel/core';
 
 const RUNS = 5;
 const EXTENSIONS = new Set(['.js', '.mjs', '.cjs', '.jsx', '.ts', '.mts', '.cts', '.tsx']);
@@ -18,7 +18,7 @@ const files: { path: string; source: string; bytes: number }[] = [];
 for (const root of roots) {
   for (const entry of readdirSync(root, { recursive: true, withFileTypes: true })) {
     // Skip the workspace links: they point back at this repository, including deliberately broken fixtures.
-    if (entry.isFile() && EXTENSIONS.has(extname(entry.name)) && !entry.parentPath.includes('@sieve-ci')) {
+    if (entry.isFile() && EXTENSIONS.has(extname(entry.name)) && !entry.parentPath.includes('@trommel-ci')) {
       const path = join(entry.parentPath, entry.name);
       const source = readFileSync(path, 'utf8');
       files.push({ path, source, bytes: Buffer.byteLength(source) });

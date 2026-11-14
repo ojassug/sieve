@@ -107,7 +107,7 @@ The list lives in [`tools/corpus/repos.json`](../tools/corpus/repos.json). For e
 - After the fourth run, 11 of the 25 repositories have every day of the 87-day window (89 to 3 days ago). The slowest eight (AutoGPT, baserow, meshery, prettier, TanStack/query, lexical, luma.gl, vuejs/core) have 30 or 31 days, typescript-eslint 35, vite 36, trpc 49, svelte 50, zod 54 and babel 75.
 - The fourth run added 8 to 16 days to each of the slowest eight. At that pace, by estimate, the backlog clears in four to eight more daily runs: faster than the 2–3 weeks estimated from the first run. Collection goes oldest day first, so what is still missing is mostly the recent end of the window, the furthest from expiring.
 
-**Where the data lives.** It goes in a separate public repository, [ojassug/sieve-corpus](https://github.com/ojassug/sieve-corpus), created on 2026-11-11. Its template is in [`tools/corpus/corpus-repo/`](../tools/corpus/corpus-repo/README.md).
+**Where the data lives.** It goes in a separate public repository, [trommelci/trommel-corpus](https://github.com/trommelci/trommel-corpus), created on 2026-11-11. Its template is in [`tools/corpus/corpus-repo/`](../tools/corpus/corpus-repo/README.md).
 - Daily manifests and the collector state are committed to git.
 - Raw NDJSON and artifact archives are uploaded as release assets. Releases have no retention limit, and keeping the data out of git keeps the repository small.
 - The workflow writes with its own `GITHUB_TOKEN`, so no secret is needed (DECISIONS.md entry 9).

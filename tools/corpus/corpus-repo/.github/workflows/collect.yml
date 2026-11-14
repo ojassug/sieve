@@ -1,8 +1,8 @@
-# Daily corpus collection for ojassug/sieve-corpus. Everything a run does lives in ojassug/sieve,
+# Daily corpus collection for trommelci/trommel-corpus. Everything a run does lives in trommelci/trommel,
 # in .github/workflows/corpus-collect.yml; this file only says when to run and with what budget, so
-# changing how collection works never needs a push to this repository (DECISIONS 22 in sieve).
+# changing how collection works never needs a push to this repository (DECISIONS 22 in trommel).
 #
-# ojassug/sieve keeps the source copy of this file at
+# trommelci/trommel keeps the source copy of this file at
 # tools/corpus/corpus-repo/.github/workflows/collect.yml, where GitHub ignores it: workflows run
 # only from a repository's own root .github/workflows. Every run checks that the two copies still
 # match, and turns red if they have drifted.
@@ -23,8 +23,8 @@ concurrency:
 
 jobs:
   collect:
-    # Pinned to main: sieve's CI gates main, and every manifest records the commit a run used.
-    uses: ojassug/sieve/.github/workflows/corpus-collect.yml@main
+    # Pinned to main: trommel's CI gates main, and every manifest records the commit a run used.
+    uses: trommelci/trommel/.github/workflows/corpus-collect.yml@main
     # The called workflow's token can only be narrower than what this grants, never wider.
     permissions:
       actions: read

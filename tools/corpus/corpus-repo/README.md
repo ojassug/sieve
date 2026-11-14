@@ -1,10 +1,10 @@
-# sieve-corpus
+# trommel-corpus
 
-A daily archive of GitHub Actions history for the [SIEVE](https://github.com/ojassug/sieve) replay corpus and flake ground truth. GitHub keeps workflow runs, check runs and artifacts of public repositories for at most 90 days. This repository keeps them for longer.
+A daily archive of GitHub Actions history for the [Trommel](https://github.com/trommelci/trommel) replay corpus and flake ground truth. GitHub keeps workflow runs, check runs and artifacts of public repositories for at most 90 days. This repository keeps them for longer.
 
-- **Collector:** [`tools/corpus`](https://github.com/ojassug/sieve/tree/main/tools/corpus) in ojassug/sieve. The repositories and their workflows are listed in its `repos.json`.
-- **How a run starts:** the workflow here only sets the schedule. It calls [`corpus-collect.yml`](https://github.com/ojassug/sieve/blob/main/.github/workflows/corpus-collect.yml) in ojassug/sieve, pinned to `main`, and that workflow collects with the collector from its own commit. Each manifest records the commit its run used, so runs stay reproducible without this repository pinning a version. Nothing here needs a push to change how collection works.
-- **Selection criteria:** [`bench/CORPUS.md`](https://github.com/ojassug/sieve/blob/main/bench/CORPUS.md).
+- **Collector:** [`tools/corpus`](https://github.com/trommelci/trommel/tree/main/tools/corpus) in trommelci/trommel. The repositories and their workflows are listed in its `repos.json`.
+- **How a run starts:** the workflow here only sets the schedule. It calls [`corpus-collect.yml`](https://github.com/trommelci/trommel/blob/main/.github/workflows/corpus-collect.yml) in trommelci/trommel, pinned to `main`, and that workflow collects with the collector from its own commit. Each manifest records the commit its run used, so runs stay reproducible without this repository pinning a version. Nothing here needs a push to change how collection works.
+- **Selection criteria:** [`bench/CORPUS.md`](https://github.com/trommelci/trommel/blob/main/bench/CORPUS.md).
 - **Schedule:** daily at 03:17 UTC, plus manual runs.
 
 ## Layout

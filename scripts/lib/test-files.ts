@@ -1,4 +1,4 @@
-// The exact test files one CI shard runs. The `sieve` plan job hands each shard its file list,
+// The exact test files one CI shard runs. The `trommel` plan job hands each shard its file list,
 // and vitest.config.ts turns the list into its `include`. Until the runner plugin arrives in M3,
 // this is how a shard runs its list and nothing else: ADR-0004 rules out Vitest's positional
 // filters, which match substrings, so `a.test.ts` would also run `data.test.ts`.
@@ -9,7 +9,7 @@ import { statSync } from 'node:fs';
 import { join } from 'node:path';
 
 /** JSON array of repository-relative POSIX paths. Unset or empty: the configured include applies. */
-export const TEST_FILES_ENV = 'SIEVE_TEST_FILES';
+export const TEST_FILES_ENV = 'TROMMEL_TEST_FILES';
 
 /** Validates the list: a non-empty JSON array of repository-relative POSIX paths. */
 export function parseTestFiles(text: string): string[] {

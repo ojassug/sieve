@@ -14,11 +14,11 @@
 
 ## Decision
 - **Workflow shape:**
-  - a `plan` job (SIEVE CLI) that outputs `matrix` and `count`;
+  - a `plan` job (Trommel CLI) that outputs `matrix` and `count`;
   - a `test` matrix job with `if: count != '0'` and `fromJSON(matrix)`;
-  - a `sieve-gate` job with `if: always()`, which is the single required check.
+  - a `trommel-gate` job with `if: always()`, which is the single required check.
 - The CLI writes job summaries, which cost no API calls.
-- The App owns one canonical "SIEVE" check run per head SHA, with at most 3 writes per run (create, final update, optional sticky comment), coalesced.
+- The App owns one canonical "Trommel" check run per head SHA, with at most 3 writes per run (create, final update, optional sticky comment), coalesced.
 - Workflows trigger on `pull_request`, `push` and `merge_group`.
 - A single-job mode (plan and run in one job) is offered for small repos.
 
@@ -28,6 +28,6 @@
 - **One check run per shard:** rejected. Rate-limit pressure.
 
 ## Consequences
-- Users restructure their test workflow once; `sieve init` generates it.
+- Users restructure their test workflow once; `trommel init` generates it.
 - Plans that select zero tests finish cleanly.
 - API usage per run is bounded.

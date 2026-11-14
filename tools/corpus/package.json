@@ -1,5 +1,5 @@
 {
-  "name": "@sieve-ci/tool-corpus",
+  "name": "@trommel/tool-corpus",
   "version": "0.0.0",
   "private": true,
   "description": "Corpus collector: archives GitHub CI history before the 90-day retention drops it.",
@@ -12,6 +12,6 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@sieve-ci/core": "0.0.0"
+    "@trommel/core": "0.0.0"
   }
 }

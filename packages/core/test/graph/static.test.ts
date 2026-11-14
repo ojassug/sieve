@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { canonicalJson } from '../../src/canonical-json.ts';
 import { DECLARED, STATIC } from '../../src/graph/graph.ts';
-import { buildStaticMap, isLexed, isModule, listingHash, type SieveMap, type StaticInput } from '../../src/graph/static.ts';
+import { buildStaticMap, isLexed, isModule, listingHash, type TrommelMap, type StaticInput } from '../../src/graph/static.ts';
 import { fakeRepo, type FakeRepo } from './fake-repo.ts';
 
 const LOCK = JSON.stringify({
@@ -14,12 +14,12 @@ const LOCK = JSON.stringify({
   },
 });
 
-function build(repo: FakeRepo, options: Partial<StaticInput> = {}): SieveMap {
+function build(repo: FakeRepo, options: Partial<StaticInput> = {}): TrommelMap {
   const tests = repo.vfs.files().filter((path) => /\.test\.[jt]s$/.test(path));
   return buildStaticMap({ objectFormat: 'sha1', index: repo.index, vfs: repo.vfs, sources: repo.sources, tests, ...options });
 }
 
-const edgesFrom = (map: SieveMap, from: string) => map.edges[from] ?? {};
+const edgesFrom = (map: TrommelMap, from: string) => map.edges[from] ?? {};
 
 describe('module files', () => {
   it.each([

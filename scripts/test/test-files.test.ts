@@ -13,7 +13,7 @@ const vitestBin = join(dirname(createRequire(import.meta.url).resolve('vitest/pa
 
 /** Runs `vitest list --filesOnly` and returns the files it would run, relative to `root`, sorted. */
 function vitestList(root: string, args: readonly string[], env: Record<string, string> = {}): string[] {
-  const out = join(mkdtempSync(join(tmpdir(), 'sieve-list-')), 'list.json');
+  const out = join(mkdtempSync(join(tmpdir(), 'trommel-list-')), 'list.json');
   try {
     // Leave the parent run's VITEST* variables behind, so the child is a fresh, top-level Vitest.
     const inherited = Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith('VITEST')));
@@ -108,7 +108,7 @@ describe('Vitest runs exactly the listed files', () => {
   });
 
   it('with names that glob syntax would otherwise widen or narrow', () => {
-    scratch = mkdtempSync(join(tmpdir(), 'sieve-escape-'));
+    scratch = mkdtempSync(join(tmpdir(), 'trommel-escape-'));
     // Each listed name has an unlisted twin that the unescaped name, read as a glob, would match.
     const listed = ['a[1].test.ts', 'b(x).test.ts', 'c{d,e}.test.ts', '!f.test.ts', 'g+(h).test.ts', 'i@(j).test.ts', 'sub dir/k.test.ts'];
     const twins = ['a1.test.ts', 'bx.test.ts', 'cd.test.ts', 'ce.test.ts', 'f.test.ts', 'gh.test.ts', 'ghh.test.ts', 'ij.test.ts'];

@@ -1,6 +1,6 @@
-# Contributing to SIEVE
+# Contributing to Trommel
 
-SIEVE is pre-release. The architecture is in [docs/architecture.md](docs/architecture.md), the plan in [docs/roadmap.md](docs/roadmap.md), and the decisions in [docs/adr/](docs/adr/README.md) and [DECISIONS.md](DECISIONS.md).
+Trommel is pre-release. The architecture is in [docs/architecture.md](docs/architecture.md), the plan in [docs/roadmap.md](docs/roadmap.md), and the decisions in [docs/adr/](docs/adr/README.md) and [DECISIONS.md](DECISIONS.md).
 
 ## Setup
 
@@ -17,10 +17,10 @@ SIEVE is pre-release. The architecture is in [docs/architecture.md](docs/archite
 ## Ground rules
 
 - **Zero runtime dependencies** in `packages/core`, `packages/cli`, `packages/vitest` and `packages/jest` ([ADR-0002](docs/adr/0002-zero-dependency-cli.md)). devDependencies are fine. CI enforces this.
-- **Uncertainty means run.** Anything SIEVE cannot resolve becomes an explicit node (`u:`, absent) or an escalation. Nothing is dropped silently.
+- **Uncertainty means run.** Anything Trommel cannot resolve becomes an explicit node (`u:`, absent) or an escalation. Nothing is dropped silently.
 - **Same input, same bytes out.** Outputs are canonical JSON with sorted keys and explicit tie-breaks, and never contain timestamps or random values.
-- **Paths** inside SIEVE are POSIX-style, repo-relative and case-sensitive, on every OS.
-- **Tests first** for core algorithms. Property tests are seeded and deterministic; set `SIEVE_FC_SEED` to explore other cases. Timing runs separately from correctness tests, and benchmark numbers are recorded under [bench/](bench/).
+- **Paths** inside Trommel are POSIX-style, repo-relative and case-sensitive, on every OS.
+- **Tests first** for core algorithms. Property tests are seeded and deterministic; set `TROMMEL_FC_SEED` to explore other cases. Timing runs separately from correctness tests, and benchmark numbers are recorded under [bench/](bench/).
 
 ## Workflow
 
@@ -78,4 +78,4 @@ By making a contribution to this project, I certify that:
 
 ## License
 
-SIEVE is licensed under [Apache-2.0](LICENSE). Contributions are accepted under the same license.
+Trommel is licensed under [Apache-2.0](LICENSE). Contributions are accepted under the same license.

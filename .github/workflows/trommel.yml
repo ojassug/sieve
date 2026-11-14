@@ -1,12 +1,12 @@
-name: sieve
+name: trommel
 
-# The walking skeleton (roadmap §5, architecture §5.3): plan → matrix of shards → gate, on SIEVE's
+# The walking skeleton (roadmap §5, architecture §5.3): plan → matrix of shards → gate, on Trommel's
 # own tests, in shadow mode.
 # - The plan diffs HEAD against the map of the last push to main, kept in actions/cache. It
 #   writes the job summary: what static reachability would have run and skipped, with why-paths.
 #   Every would-skip is unproven (DECISIONS 1 and 24), so in shadow mode every test file runs.
 # - With no usable map, the plan runs every test file and the summary says why.
-# - sieve-gate fails unless the plan and every shard succeeded.
+# - trommel-gate fails unless the plan and every shard succeeded.
 # - A push to main builds the next map and caches it.
 # See DECISIONS 25.
 
@@ -20,7 +20,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: sieve-${{ github.event.pull_request.number || github.ref }}
+  group: trommel-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 # One Node version for every job, to keep the workflow simple. The map does not depend on it, nor
@@ -45,11 +45,11 @@ jobs:
       - run: npm ci --omit=dev --ignore-scripts
       - uses: actions/cache/restore@v6
         with:
-          path: .sieve/map
-          key: sieve-map-${{ github.sha }}
-          restore-keys: sieve-map-
+          path: .trommel/map
+          key: trommel-map-${{ github.sha }}
+          restore-keys: trommel-map-
       - id: plan
-        run: node packages/cli/src/main.ts plan --mode shadow --static --map .sieve/map
+        run: node packages/cli/src/main.ts plan --mode shadow --static --map .trommel/map
 
   test:
     name: test (shard ${{ matrix.shard }})
@@ -69,10 +69,10 @@ jobs:
       # vitest.config.ts turns this list into its include: the shard runs exactly these files.
       - run: npx vitest run
         env:
-          SIEVE_TEST_FILES: ${{ toJSON(matrix.files) }}
+          TROMMEL_TEST_FILES: ${{ toJSON(matrix.files) }}
 
   # The check to require on main: a job skipped by `if` reports success, so this one always runs.
-  sieve-gate:
+  trommel-gate:
     needs: [plan, test]
     if: always()
     runs-on: ubuntu-latest
@@ -103,8 +103,8 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
       - run: npm ci --omit=dev --ignore-scripts
-      - run: node packages/cli/src/main.ts graph --out .sieve/map/map.json
+      - run: node packages/cli/src/main.ts graph --out .trommel/map/map.json
       - uses: actions/cache/save@v6
         with:
-          path: .sieve/map
-          key: sieve-map-${{ github.sha }}
+          path: .trommel/map
+          key: trommel-map-${{ github.sha }}

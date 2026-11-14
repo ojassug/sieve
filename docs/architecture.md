@@ -1,4 +1,4 @@
-# SIEVE architecture
+# Trommel architecture
 
 - **Status:** approved 2026-11-11 in the planning session. It is a living document: decisions change through new ADRs in [adr/](adr/README.md).
 - **Corrected 2026-11-13.** Seven ADRs were corrected in place after the [foundation review](research/2026-11-foundation-review.md), and the sections they touch are updated here: the glossary, §3.1, §3.2, §3.3, §3.5, §3.6, §3.9, §4.2, §5.1, §5.3, §5.4, §6 and §8.3. Where a correction is decided and not yet built, the text says so. [DECISIONS.md](../DECISIONS.md) entry 27 lists what the code still has to catch up on.
@@ -8,19 +8,19 @@
   - [roadmap.md](roadmap.md): milestones and the first two weeks;
   - [adr/](adr/README.md): decision records;
   - [../bench/TARGETS.md](../bench/TARGETS.md): pre-registered targets;
-  - [research/RESEARCH_REPORT.md](research/RESEARCH_REPORT.md): the study that chose SIEVE.
+  - [research/RESEARCH_REPORT.md](research/RESEARCH_REPORT.md): the study that chose Trommel.
 
 ---
 
 ## 0. Context
 
-**Why SIEVE.** The 2026-11-04 study ranked SIEVE first (42/50): a self-hostable CI test-intelligence service. It answers three questions on every CI run: which tests can this change affect, which failures are flaky, and how much did skipping save (with a measured escape rate)? Pain evidence: rerun culture and 15–20% false failures (A1); naive selection missing regressions (A2); test-to-code maps stuck on laptops and broken by `--depth 1` clones (A3); about a 1% miss tolerance (A4); agent-driven PR volume making CI the bottleneck (A5). Incumbents are SaaS-only or gated (Datadog, Trunk on-prem private preview, Develocity), and the OSS tools are local-first (testmon).
+**Why Trommel.** The 2026-11-04 study ranked Trommel first (42/50): a self-hostable CI test-intelligence service. It answers three questions on every CI run: which tests can this change affect, which failures are flaky, and how much did skipping save (with a measured escape rate)? Pain evidence: rerun culture and 15–20% false failures (A1); naive selection missing regressions (A2); test-to-code maps stuck on laptops and broken by `--depth 1` clones (A3); about a 1% miss tolerance (A4); agent-driven PR volume making CI the bottleneck (A5). Incumbents are SaaS-only or gated (Datadog, Trunk on-prem private preview, Develocity), and the OSS tools are local-first (testmon).
 
 **Decisions made in the planning session (2026-11-11)**
 | Topic | Decision |
 |---|---|
 | Hosting | Self-host first. Multi-tenancy (RLS) is built and fuzzed from day 1. An invite-only hosted beta for public repos opens around launch. |
-| Merge gate | After launch. v1 speeds up GitHub's native merge queue (`merge_group` runs, flake-tolerant results). SIEVE's own batching/bisection queue is the first post-launch milestone. |
+| Merge gate | After launch. v1 speeds up GitHub's native merge queue (`merge_group` runs, flake-tolerant results). Trommel's own batching/bisection queue is the first post-launch milestone. |
 | License | Apache-2.0 everywhere. |
 | Forges | GitHub is the only native integration in v1. Any other CI uses the generic CLI plus an API token, without native statuses or comments. |
 | Runners | Vitest and Jest get selection. Playwright gets results, flake ledger and quarantine only. pytest selection comes late (M8). Go comes after launch. |
@@ -31,9 +31,9 @@
 1. **The safety criterion is content-addressed closure equality, not a commit diff.** A test is skipped only if every node it depends on has the same content hash as in a trusted passing record (Ekstazi-style, extended). Soundness then no longer depends on which base commit is chosen; the base affects only precision. Rebases, force-pushes, merge commits and shallow clones are handled by construction.
 2. **Dynamic capture is the backbone. The static graph is one of three sources, not the source.** Static analysis covers what runtime capture cannot see: transform-time inputs in the Vite server process, cold start before any record exists, and the UI explorer.
 3. **GitHub now caps history at 90 days.** From 2026-10-01, checks, workflow runs and statuses follow the Actions retention setting: default 90 days, maximum 90 for public repos. So the replay corpus is **re-executed** at historical commits, and an artifact collector starts in week 1.
-4. **The baselines got stronger.** Vitest 5.1 shipped `experimental.recordDependencies` (local dynamic module records). Datadog TIA already skips when "covered + tracked files" match a passing run, and any tracked-file change runs everything. SIEVE's edge narrows to: self-hosting, CI-shareable content-addressed maps, non-code inputs at per-package and per-directory precision instead of "run all", proofs, and flake detection without reruns.
+4. **The baselines got stronger.** Vitest 5.1 shipped `experimental.recordDependencies` (local dynamic module records). Datadog TIA already skips when "covered + tracked files" match a passing run, and any tracked-file change runs everything. Trommel's edge narrows to: self-hosting, CI-shareable content-addressed maps, non-code inputs at per-package and per-directory precision instead of "run all", proofs, and flake detection without reruns.
 5. **Merge queue availability is limited.** It works only on org-owned public repos and Enterprise Cloud private repos, so dogfooding needs a GitHub org. MinIO is in maintenance and archived, so the compose file ships no MinIO. coverage.py's `sysmon` core cannot record per-test contexts. 59% of Python flaky tests are order-dependent (FlaPy). GitHub limits content-creating requests to 500 per hour. Sources are in §9.
-6. **SIEVE does not depend on TokenDamper.** The research report presents TokenDamper reuse as a strength. Planning found the only real head start is a lexer worth porting, and even that is optional (§3.2).
+6. **Trommel does not depend on TokenDamper.** The research report presents TokenDamper reuse as a strength. Planning found the only real head start is a lexer worth porting, and even that is optional (§3.2).
 
 **Glossary.**
 - **Snapshot** `S`: a repo tree OID plus an environment fingerprint.
@@ -51,25 +51,25 @@
 ## 1. v1 product definition
 
 ### 1.1 Personas
-| Persona | Situation | What they need from SIEVE |
+| Persona | Situation | What they need from Trommel |
 |---|---|---|
 | **Red-check developer** (primary; wedge d) | IC on a 5–200-person team, 15–60 min suite, reruns until green (A1) | In the PR: "is this failure mine or a known flake?" and "why did or didn't this test run?" in one click |
-| **CI owner / platform engineer** (installer) | Owns CI cost and speed; regulated, air-gapped or SaaS-averse; cannot ship test telemetry out | Self-host in under 15 min, a risk-free rollout (shadow mode), minutes saved with a bounded escape rate, and CI that never blocks if SIEVE is down |
+| **CI owner / platform engineer** (installer) | Owns CI cost and speed; regulated, air-gapped or SaaS-averse; cannot ship test telemetry out | Self-host in under 15 min, a risk-free rollout (shadow mode), minutes saved with a bounded escape rate, and CI that never blocks if Trommel is down |
 | **Agent-heavy team lead** (2026 tailwind, A5 and Anthropic's post) | PR volume multiplied by coding agents; CI queue is the bottleneck | Per-PR selection, flake-tolerant merge queue runs, burst handling |
 | **OSS maintainer** (beta) | Public repo, fork PRs with no secrets | Selection and flake data that cannot be poisoned by fork PRs |
 
 ### 1.2 Top user journeys
 1. **First install (target ≤15 min to first map).**
-   - Run `docker compose up` (one SIEVE image plus Postgres 18), open the UI, create the org.
+   - Run `docker compose up` (one Trommel image plus Postgres 18), open the UI, create the org.
    - Install the GitHub App through the manifest flow, then pick repos.
-   - `sieve init` in the repo detects Vitest or Jest and the workspaces, and writes `sieve.config.json` plus the workflow (plan → matrix → gate).
+   - `trommel init` in the repo detects Vitest or Jest and the workspaces, and writes `trommel.config.json` plus the workflow (plan → matrix → gate).
    - The first push to the default branch runs a recorded full suite, and the map becomes ready.
    - Before the server exists (M1–M4), the same journey works in **Lite mode**: CLI only, map stored with `actions/cache`.
 2. **First selection (PR).**
-   - The `plan` job (≤5 s p95) emits shard matrix → test shards run only selected files → the `sieve-gate` job is the single required check.
+   - The `plan` job (≤5 s p95) emits shard matrix → test shards run only selected files → the `trommel-gate` job is the single required check.
    - The check run reads "Ran 238 / 1,420 test files (83% skipped; 0 escapes in 1,104 audited skips)".
-   - It lists affected tests with **why-paths** (`src/auth/token.ts → src/auth/index.ts → test/login.test.ts`), the skipped count, and a `sieve verify` command.
-   - New installs start in **shadow mode**: SIEVE computes skips but runs everything, and reports would-be escapes.
+   - It lists affected tests with **why-paths** (`src/auth/token.ts → src/auth/index.ts → test/login.test.ts`), the skipped count, and a `trommel verify` command.
+   - New installs start in **shadow mode**: Trommel computes skips but runs everything, and reports would-be escapes.
 3. **First quarantine.**
    - A test fails and passes on identical inputs, so its state goes Active → Suspect.
    - SPRT accepts "flaky", so the state becomes Quarantined. The check shows "1 quarantined failure (non-blocking)" with the evidence, for example: "failed 3, passed 41 on identical inputs; estimated 6.8% (90% CI 2.4–14%)".
@@ -85,13 +85,13 @@
 - Vitest and Jest selection with recording.
 - Playwright and any JUnit producer: results, flake ledger, quarantine.
 - pytest selection (M8).
-- Safe, shadow and budget modes; proofs and `sieve verify`; audit sampling; nightly escape measurement.
+- Safe, shadow and budget modes; proofs and `trommel verify`; audit sampling; nightly escape measurement.
 - Flake ledger (SPRT plus decayed Beta) with quarantine; CUSUM duration alarms; LPT sharding.
 - Self-host compose (single image); optional Helm; hosted invite-only beta.
 - Real-time UI: live run view, impact explorer, proofs, flake heatmap, savings ledger.
 
 ### 1.4 Explicit non-goals (v1)
-- SIEVE's own merge queue (post-launch M12).
+- Trommel's own merge queue (post-launch M12).
 - Native GitLab or Forgejo integration (post-launch).
 - Go, Java and C++ selection (post-launch; C++ via the SeamCraft adapter).
 - Playwright/e2e selection.
@@ -104,7 +104,7 @@
 
 **Anti-goals** (failure even if it "works"):
 - a skip without a checkable proof;
-- SIEVE downtime failing a CI run;
+- Trommel downtime failing a CI run;
 - an unmapped input silently dropped instead of flagged;
 - any cross-tenant read;
 - "safety" achieved by blanket retries.
@@ -124,31 +124,31 @@ flowchart LR
     checks["Checks API and merge queue"]
   end
   subgraph CUST["Customer infrastructure (self-hosted)"]
-    sieve["SIEVE server<br/>one Docker image"]
+    trommel["Trommel server<br/>one Docker image"]
     pg[("Postgres 18")]
     blob[("Blob store<br/>volume or S3-compatible")]
   end
   otel["OpenTelemetry collector (optional)"]
   dev -->|"pushes, opens PRs, reads checks"| repo
-  dev -->|"why did this test run?"| sieve
-  owner -->|"installs, configures, reads savings"| sieve
-  repo -->|"webhooks"| sieve
-  actions -->|"sieve CLI: select, upload"| sieve
-  sieve -->|"check runs, artifacts"| checks
-  sieve --> pg
-  sieve --> blob
-  sieve -.->|"traces, metrics, logs"| otel
+  dev -->|"why did this test run?"| trommel
+  owner -->|"installs, configures, reads savings"| trommel
+  repo -->|"webhooks"| trommel
+  actions -->|"trommel CLI: select, upload"| trommel
+  trommel -->|"check runs, artifacts"| checks
+  trommel --> pg
+  trommel --> blob
+  trommel -.->|"traces, metrics, logs"| otel
 ```
 
 ### 2.2 Containers
 ```mermaid
 flowchart TB
   subgraph RUNNER["CI runner (GitHub Actions native, any CI via token)"]
-    cli["sieve CLI (zero-dep Node)<br/>ls-tree, Merkle frontier, plan, run, upload, verify, gate"]
-    plug["Runner plugins<br/>vitest coverage provider + fs hooks<br/>jest reporter + setup<br/>sieve-pytest (M8)"]
-    lite[(".sieve/map via actions/cache<br/>Lite mode, no server")]
+    cli["trommel CLI (zero-dep Node)<br/>ls-tree, Merkle frontier, plan, run, upload, verify, gate"]
+    plug["Runner plugins<br/>vitest coverage provider + fs hooks<br/>jest reporter + setup<br/>trommel-pytest (M8)"]
+    lite[(".trommel/map via actions/cache<br/>Lite mode, no server")]
   end
-  subgraph IMG["SIEVE image: SIEVE_ROLE is api, worker, scheduler or all"]
+  subgraph IMG["Trommel image: TROMMEL_ROLE is api, worker, scheduler or all"]
     api["HTTP API + WebSocket gateway<br/>auth, RLS tenant context"]
     hooks["Webhook receiver<br/>HMAC, dedup, enqueue"]
     sel["Selector pool (worker_threads)<br/>Merkle diff, reverse BFS, proofs, LPT, knapsack"]
@@ -177,7 +177,7 @@ flowchart TB
 
 **Responsibilities.**
 - **The Action/CLI is the data plane.** It plans, runs and uploads, and it writes `$GITHUB_OUTPUT` and the job summary at zero API cost. It never needs the App.
-- **The App is the control plane.** It handles webhooks, the canonical "SIEVE" check run, artifact pull-ingest for fork PRs, and merge-queue bookkeeping.
+- **The App is the control plane.** It handles webhooks, the canonical "Trommel" check run, artifact pull-ingest for fork PRs, and merge-queue bookkeeping.
 - **Workers communicate only through Postgres.** That means jobs plus an events outbox. No worker holds authoritative state in memory, which is the lesson of Anthropic's 2026-09-14 post, where single-writer in-memory history fell over at 25× CI growth.
 
 ### 2.3 Sequence: selection (PR or push)
@@ -185,11 +185,11 @@ flowchart TB
 sequenceDiagram
   autonumber
   participant J as plan job
-  participant C as sieve CLI
-  participant A as SIEVE API
+  participant C as trommel CLI
+  participant A as Trommel API
   participant S as Selector
   participant B as Blob store
-  J->>C: sieve plan --mode safe
+  J->>C: trommel plan --mode safe
   C->>C: git ls-tree -r -t -d HEAD (dir tree OIDs), event payload base sha, env fingerprint
   C->>A: POST /api/v1/select/frontier (repo, head tree, dir OIDs, base hint)
   A->>A: verify OIDC JWT, SET LOCAL tenant, choose base snapshot S
@@ -209,7 +209,7 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
   autonumber
-  participant R as test job (sieve run)
+  participant R as test job (trommel run)
   participant A as API
   participant P as Postgres
   participant B as Blob store
@@ -225,7 +225,7 @@ sequenceDiagram
   P-->>W: dequeue FOR UPDATE SKIP LOCKED
   W->>B: stream-parse blob
   W->>P: COPY executions into daily partition, upsert test entities, enqueue ledger + map-build
-  W->>P: INSERT event, NOTIFY sieve_events with event id only
+  W->>P: INSERT event, NOTIFY trommel_events with event id only
   P-->>U: API node LISTENs, re-reads event under subscriber tenant, pushes to socket
   P-->>L: ledger job, partitioned by hash(test) so one writer per test
   L->>P: flake_state (SPRT, Beta), duration_state (CUSUM), flake_events
@@ -250,7 +250,7 @@ stateDiagram-v2
 ```mermaid
 sequenceDiagram
   autonumber
-  participant R as sieve run (trusted lane)
+  participant R as trommel run (trusted lane)
   participant L as Ledger worker
   participant P as Postgres
   participant N as Notifier
@@ -264,7 +264,7 @@ sequenceDiagram
   L->>P: state change event, enqueue notify
   P-->>N: notify
   N->>G: check summary names T as quarantined (non-blocking), owners from CODEOWNERS
-  Note over R: next runs: T still runs, sieve run exit code ignores T failures
+  Note over R: next runs: T still runs, trommel run exit code ignores T failures
   R->>P: T closure fingerprint changes (fix attempt)
   L->>L: Quarantined to Probation, release SPRT starts
   L->>L: about 247 clean observations, Probation to Active
@@ -284,7 +284,7 @@ sequenceDiagram
   H->>P: INSERT delivery ON CONFLICT DO NOTHING, enqueue pr-sync with dedup key repo:pr
   H-->>G: 202 immediately
   P-->>N: pr-sync marks plans for H1 superseded
-  N->>G: create check run SIEVE in_progress for H2, store check_run_id, seq 1
+  N->>G: create check run Trommel in_progress for H2, store check_run_id, seq 1
   N->>G: update check run completed with conclusion, summary, up to 50 annotations, seq 3
   Note over N: a late result for H1 arrives, head or seq mismatch, dropped
 ```
@@ -295,13 +295,13 @@ sequenceDiagram
   autonumber
   participant Q as GitHub merge queue
   participant J as merge_group workflow
-  participant C as sieve CLI
-  participant A as SIEVE API
+  participant C as trommel CLI
+  participant A as Trommel API
   Q->>J: merge_group checks_requested on gh-readonly-queue branch
-  J->>C: sieve plan (base = merge_group.base_sha, head = group tree)
+  J->>C: trommel plan (base = merge_group.base_sha, head = group tree)
   C->>A: select, same protocol
   A-->>C: plan covers combined Delta of queued PRs plus deferred budget-mode tests
-  J->>C: sieve run, quarantine semantics, one retry for Suspect tests only
+  J->>C: trommel run, quarantine semantics, one retry for Suspect tests only
   C->>A: upload results
   C-->>J: exit non-zero only for non-quarantined failures
   J-->>Q: required check result, merge or evict
@@ -313,7 +313,7 @@ Self-host:
 flowchart LR
   subgraph HOST["Self-host: one VM or laptop, docker compose up"]
     caddy["caddy (optional TLS)"]
-    app["sieve image, SIEVE_ROLE=all<br/>api + workers + scheduler + UI"]
+    app["trommel image, TROMMEL_ROLE=all<br/>api + workers + scheduler + UI"]
     db[("postgres:18, volume pgdata")]
     vol[("volume blobs")]
   end
@@ -385,7 +385,7 @@ Each spec covers input, output, algorithm, complexity, the safety or correctness
   - `p:eco:location`: an external package. Hash = the lockfile's integrity/version for that install location (npm `packages["node_modules/x"]`, pnpm `name@version(peer)`, yarn berry descriptor).
   - `g:glob@base`: hash of the sorted matched paths (`import.meta.glob`, declared globs).
   - `r:path` and `c:dir`: resolution hubs ([ADR-0003](adr/0003-file-level-graph-granularity.md)). `r:` stands for the probes of one resolved path and `c:` for one directory's config chain, so an importer has one edge per import, not one per probe. Decided on 2026-11-13 and not built yet: the M1 code records each probe as its own edge.
-  - **Environment components are not nodes.** OS and architecture, the runtime version, declared env vars, the runner and its effective configuration, the matrix cell and TZ/locale belong to a record, and are compared in the job that runs the test (§3.3). **As built:** the M1 map has had no `e:` node since 2026-11-14, and a static plan compares no environment at all until `sieve run` does it in the shard (M3). `packages/core/test/graph/golden.test.ts` pins one fixture map's SHA-256, and CI runs it on Ubuntu and Windows ([DECISIONS.md](../DECISIONS.md) entry 28).
+  - **Environment components are not nodes.** OS and architecture, the runtime version, declared env vars, the runner and its effective configuration, the matrix cell and TZ/locale belong to a record, and are compared in the job that runs the test (§3.3). **As built:** the M1 map has had no `e:` node since 2026-11-14, and a static plan compares no environment at all until `trommel run` does it in the shard (M3). `packages/core/test/graph/golden.test.ts` pins one fixture map's SHA-256, and CI runs it on Ubuntu and Windows ([DECISIONS.md](../DECISIONS.md) entry 28).
   - `sm:path`: submodule gitlink, hash = commit OID.
 - **Snapshot** = (repo, root tree OID, env fingerprint). Git's tree objects *are* the Merkle tree: equal tree OIDs prove equal subtrees, and they are available in `--depth 1` clones.
 - **Diff protocol (2 round trips).**
@@ -514,7 +514,7 @@ Each spec covers input, output, algorithm, complexity, the safety or correctness
 |---|---|---|
 | Uncertain file: an unresolved or non-literal import, a lexer diagnostic, a config that cannot be read | seed | Its `u:` node counts as changed in every plan, so every test that reaches the file runs. A record may discharge it for its own test only with resolution evidence for that importer |
 | Unmapped input: a changed file that is not a node, or a changed node that no test reaches. Not ignorable (default ignorable: `**/*.md`, `docs/**`, `LICENSE*`) | L1 | Every node of the owning package counts as changed, so the escalation follows dependencies into other packages |
-| Untracked dynamic dependency with no `generated` rule, or a subprocess or worker not captured | test | That test always runs, and `sieve doctor` suggests a rule |
+| Untracked dynamic dependency with no `generated` rule, or a subprocess or worker not captured | test | That test always runs, and `trommel doctor` suggests a rule |
 | Runner config, global setup, `.env*` (global nodes) | L2 | All tests of that runner project (falls out of global edges) |
 | Lockfile changed but unparseable or of unknown format | L3 | Run all |
 | Missing or invalid map, schema or engine mismatch, map older than the configured horizon | L3 | Run all |
@@ -553,7 +553,7 @@ Every escalation appears in the plan summary with its cause. L0 is file-precise.
 - **Release.** Probation starts when the closure fingerprint changes (a fix attempt) or after a 7-day cool-off. A separate release SPRT tests "still flaky" (p₁) vs "fixed" (p₀) with α′ = 0.01 (false release) and β′ = 0.10. Release needs about 247 clean observations, and one flaky failure sends the test back. This asymmetry is the hysteresis.
 - **Parameters.** Defaults are per repo and configurable. They are validated by simulation (P9) and against rerun ground truth (target precision ≥ 0.9).
 - **Quarantine UX: the test still runs but cannot fail the build.**
-  - `sieve run` computes the effective exit code: non-zero only for non-quarantined failures or a runner crash. The raw exit code is preserved in the report.
+  - `trommel run` computes the effective exit code: non-zero only for non-quarantined failures or a runner crash. The raw exit code is preserved in the report.
   - The check shows quarantined failures as non-blocking, with evidence: the classes with mixed outcomes and the LLR trace against A/B.
   - Optional strict mode skips quarantined tests entirely (off by default).
   - CODEOWNERS owners are named in the summary; issue creation is optional.
@@ -584,7 +584,7 @@ Every escalation appears in the plan summary with its cause. L0 is file-precise.
 
 ### 3.9 Proof objects
 - **Format.** Canonical JSON (sorted keys). It names: the head (tree OID and the executor's environment fingerprint); the record (run, commit, outcome = pass, lane, environment, engine and recorder versions); the closure (node count, SHA-256 digest, source counts by provenance); the claim that every (node, hash) pair of the closure has the same hash at the head; and the config hash. A proof never names the base snapshot, which is the planner's route and not part of the claim ([ADR-0005](adr/0005-closure-equality-safety-criterion.md)). A server signs proofs with ed25519 (node:crypto). Lite-mode proofs are unsigned ([ADR-0021](adr/0021-lite-mode-actions-cache.md)).
-- **`sieve verify <proof|plan>`.** Fetches the closure node list by digest. Recomputes head hashes from the local checkout (`ls-tree`, lockfile parse, env). Checks the claim, checks that the record exists and its lane, and checks the signature where there is one. A third party with the repository and the record can recheck any skip.
+- **`trommel verify <proof|plan>`.** Fetches the closure node list by digest. Recomputes head hashes from the local checkout (`ls-tree`, lockfile parse, env). Checks the claim, checks that the record exists and its lane, and checks the signature where there is one. A third party with the repository and the record can recheck any skip.
 - **Cost.** Verifying one proof is O(|C(t)|) hash lookups plus one signature check. A whole plan is verified in one pass over the union of closures.
 - **Failure modes.** Map GC'd before verification (prevented by keeping proofs and their snapshots for 90 days); signing key rotation (the key id is carried in the proof, and old public keys stay published).
 - **Why-run explanations.** BFS parent pointers give the shortest path from a changed node to each affected test (static, dynamic or declared hop types). This is the impact explorer's core datum.
@@ -658,7 +658,7 @@ Every escalation appears in the plan summary with its cause. L0 is file-precise.
   - **Encoding:** a node's identity is its key string, and numeric ids never leave one file. Keys are sorted by UTF-16 code units and front-coded. Adjacency is stored forward only, and the decoder derives the reverse index. Provenance is one byte per edge: bit 0 static, bit 1 dynamic, bit 2 declared.
   - **Until SMAP v0 is built** (M1, week 3), the map is the canonical JSON of [DECISIONS.md](../DECISIONS.md) entry 23, without its `e:` nodes (entry 28). It already has the same bytes on every OS, and a pinned fixture hash checks that in CI.
 - **Chunking** per workspace package, with chunk-local ids and an import table, is defined when the server needs it (M5). Until then a map is one file.
-- **Hashing** ([ADR-0010](adr/0010-hashing.md)). Git's object hash for file contents. SHA-256 (node:crypto) for everything SIEVE computes: digests, fingerprints, CAS keys.
+- **Hashing** ([ADR-0010](adr/0010-hashing.md)). Git's object hash for file contents. SHA-256 (node:crypto) for everything Trommel computes: digests, fingerprints, CAS keys.
 - **GC.** Per-repo mark-and-sweep.
   - Roots: the latest K = 5 snapshots per live branch (seen in the last 30 days and not deleted), snapshots referenced by plans within proof retention (90 days), and pinned benchmark snapshots.
   - Two-phase: objects unmarked for 24 h become candidates and are deleted in the next cycle, so in-flight uploads are never raced.
@@ -678,23 +678,23 @@ Every escalation appears in the plan summary with its cause. L0 is file-precise.
 
 ## 5. Interfaces
 
-### 5.1 CLI (`sieve`; zero runtime dependencies; Node `>=22`, tested on 22, 24 and 26; npm scope TBD because `sieve` is taken)
+### 5.1 CLI (`trommel`; zero runtime dependencies; Node `>=22`, tested on 22, 24 and 26; npm scope `@trommel`)
 Node 20 reached end of life on 2026-04-30, and Node 22 does on 2027-04-30, so the floor rises to Node 24 at launch ([release schedule](https://github.com/nodejs/Release)).
 | Command | Purpose |
 |---|---|
-| `sieve init` | Detect runners and workspaces; write `sieve.config.json` and the workflow (plan → matrix → gate) |
-| `sieve record -- <cmd>` | Recorded run (plugins inject coverage and fs hooks); upload results plus dynamic deps plus graph segments (trusted lanes) |
-| `sieve plan [--mode safe\|shadow\|budget] [--shadow] [--static] [--budget 10m] [--shards auto\|N] [--map dir]` | Compute selection. Writes `$GITHUB_OUTPUT` (plan_id, matrix, count) and the job summary. `--map` = Lite mode, fully local. `--shadow` is short for `--mode shadow`. `--static` selects from the static graph alone (M1): with no records no skip can be proven safe, so it runs in shadow mode only, refuses `--mode safe` and `budget`, and labels every would-skip **unproven static reachability** ([DECISIONS.md](../DECISIONS.md) entries 1 and 24) |
-| `sieve run [--shard k] -- <cmd>` | Run the shard's file list (plan file read by the runner plugin, no CLI filters), plus every test file the runner discovers that the plan does not mention ([ADR-0004](adr/0004-test-file-selection-unit.md)). Run a planned skip after all when the shard's environment fingerprint or tree differs from what the plan assumed ([ADR-0005](adr/0005-closure-equality-safety-criterion.md)). Apply quarantine exit semantics; upload, or spool `sieve-results.tgz` |
-| `sieve gate` | The single required check: aggregates `needs` results and the plan; fails only on real failures |
-| `sieve upload <files…>` | Results-only ingest (Playwright, any JUnit) |
-| `sieve verify <proof\|plan-id>` · `sieve explain <test>` · `sieve doctor` · `sieve graph\|diff` | Proof check, why-path, environment diagnosis, inspection |
+| `trommel init` | Detect runners and workspaces; write `trommel.config.json` and the workflow (plan → matrix → gate) |
+| `trommel record -- <cmd>` | Recorded run (plugins inject coverage and fs hooks); upload results plus dynamic deps plus graph segments (trusted lanes) |
+| `trommel plan [--mode safe\|shadow\|budget] [--shadow] [--static] [--budget 10m] [--shards auto\|N] [--map dir]` | Compute selection. Writes `$GITHUB_OUTPUT` (plan_id, matrix, count) and the job summary. `--map` = Lite mode, fully local. `--shadow` is short for `--mode shadow`. `--static` selects from the static graph alone (M1): with no records no skip can be proven safe, so it runs in shadow mode only, refuses `--mode safe` and `budget`, and labels every would-skip **unproven static reachability** ([DECISIONS.md](../DECISIONS.md) entries 1 and 24) |
+| `trommel run [--shard k] -- <cmd>` | Run the shard's file list (plan file read by the runner plugin, no CLI filters), plus every test file the runner discovers that the plan does not mention ([ADR-0004](adr/0004-test-file-selection-unit.md)). Run a planned skip after all when the shard's environment fingerprint or tree differs from what the plan assumed ([ADR-0005](adr/0005-closure-equality-safety-criterion.md)). Apply quarantine exit semantics; upload, or spool `trommel-results.tgz` |
+| `trommel gate` | The single required check: aggregates `needs` results and the plan; fails only on real failures |
+| `trommel upload <files…>` | Results-only ingest (Playwright, any JUnit) |
+| `trommel verify <proof\|plan-id>` · `trommel explain <test>` · `trommel doctor` · `trommel graph\|diff` | Proof check, why-path, environment diagnosis, inspection |
 
-**`sieve.config.json`** (JSON, zero-dep parser; validated by the CLI and the server):
+**`trommel.config.json`** (JSON, zero-dep parser; validated by the CLI and the server):
 ```json
 {
   "version": 1,
-  "server": "https://sieve.internal.example",
+  "server": "https://trommel.internal.example",
   "projects": [
     { "name": "web", "runner": "vitest", "root": "packages/web", "command": "npx vitest run" },
     { "name": "api", "runner": "jest", "root": "packages/api", "command": "npx jest" },
@@ -714,14 +714,14 @@ Node 20 reached end of life on 2026-04-30, and Node 22 does on 2027-04-30, so th
 ```
 Notes on the schema, as the M1 CLI implements it ([DECISIONS.md](../DECISIONS.md) entry 24):
 - Unknown keys are errors, and every problem is reported with its path (`projects[0].runner: …`).
-- A project may also give `include` and `exclude`, test-file globs relative to its `root`. Without them, Vitest projects use Vitest's default include and Jest projects Jest's default `testMatch`, both without `**/node_modules/**` and `**/fixtures/**`. SIEVE plans Vitest and Jest projects; the others (and `results-only` ones) are listed in the summary as not planned.
+- A project may also give `include` and `exclude`, test-file globs relative to its `root`. Without them, Vitest projects use Vitest's default include and Jest projects Jest's default `testMatch`, both without `**/node_modules/**` and `**/fixtures/**`. Trommel plans Vitest and Jest projects; the others (and `results-only` ones) are listed in the summary as not planned.
 - `inputs.global` adds to the conventional global inputs (root `package.json`, `.env*`, Vite, Vitest and Jest configs, and `vitest.setup.*`/`jest.setup.*`); `inputs.ignore` replaces the default ignore list of §3.5, so a repository that adds patterns repeats the defaults it wants to keep.
 - In M1 the CLI validates `server`, `generated`, `quarantine`, `auditRate` and `trustPullRequestsFrom` (only `writers` is defined), but does not use them yet.
 - `env.track` is validated and not used either. Tracked variables are environment components, which belong to a record and not to the map (§3.1), so their first reader is the M2 recorder ([DECISIONS.md](../DECISIONS.md) entry 28).
 
 ### 5.2 CLI ↔ server API v1
 Versioning:
-- path `/api/v1` plus a `Sieve-Protocol: 1` header with capability negotiation;
+- path `/api/v1` plus a `Trommel-Protocol: 1` header with capability negotiation;
 - the server supports N and N−1, and an unknown version returns 426, which the CLI treats as run-all.
 
 | Method and path | Purpose | Auth |
@@ -735,9 +735,9 @@ Versioning:
 
 **Degraded mode (never block CI).**
 - Deadlines: connect 1 s, select 5 s total, configurable.
-- Any timeout, 5xx, 503 with Retry-After, auth error or protocol mismatch makes the CLI emit a run-all plan: an equal split, or LPT if cached durations exist. It then annotates "SIEVE unavailable: ran all tests" and exits 0.
+- Any timeout, 5xx, 503 with Retry-After, auth error or protocol mismatch makes the CLI emit a run-all plan: an equal split, or LPT if cached durations exist. It then annotates "Trommel unavailable: ran all tests" and exits 0.
 - Uploads run in the background, capped at 30 s at job end, then spool to an artifact for later pull-ingest.
-- `--strict` is the only mode in which SIEVE errors fail the job.
+- `--strict` is the only mode in which Trommel errors fail the job.
 
 ### 5.3 GitHub integration (the clean-skip pattern for `actions/runner#662`)
 ```yaml
@@ -746,11 +746,11 @@ jobs:
   plan:
     runs-on: ubuntu-latest
     permissions: { id-token: write, contents: read }
-    outputs: { matrix: "${{ steps.sieve.outputs.matrix }}", count: "${{ steps.sieve.outputs.count }}" }
+    outputs: { matrix: "${{ steps.trommel.outputs.matrix }}", count: "${{ steps.trommel.outputs.count }}" }
     steps:
       - uses: actions/checkout@<current major>   # depth 1 is fine
-      - id: sieve
-        run: npx @sieve-ci/cli plan            # placeholder package name
+      - id: trommel
+        run: npx @trommel/cli plan            # not published yet
   test:
     needs: plan
     if: needs.plan.outputs.count != '0'
@@ -758,24 +758,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@<current major>
-      - run: npx @sieve-ci/cli run --shard ${{ matrix.shard }} -- npx vitest run
-  sieve-gate:                                   # the ONLY required check
+      - run: npx @trommel/cli run --shard ${{ matrix.shard }} -- npx vitest run
+  trommel-gate:                                   # the ONLY required check
     needs: [plan, test]
     if: always()
     runs-on: ubuntu-latest
     steps:
-      - run: npx @sieve-ci/cli gate --needs '${{ toJSON(needs) }}'
+      - run: npx @trommel/cli gate --needs '${{ toJSON(needs) }}'
 ```
 **Why this shape** ([ADR-0013](adr/0013-github-integration-pattern.md)).
 - A job skipped by `if` reports **Success** and does not block required checks. A zero-test plan is therefore clean.
 - The `if: always()` gate guarantees a failing shard fails the required check.
 - No early-exit hacks are needed.
-- `pull_request` checks out the merge commit `refs/pull/N/merge`. SIEVE hashes the tree actually tested, and takes `pull_request.base.sha` from `$GITHUB_EVENT_PATH` as the base hint, with no API call.
+- `pull_request` checks out the merge commit `refs/pull/N/merge`. Trommel hashes the tree actually tested, and takes `pull_request.base.sha` from `$GITHUB_EVENT_PATH` as the base hint, with no API call.
 
-**In M1** ([DECISIONS.md](../DECISIONS.md) entry 25), SIEVE's own repository runs this shape as `.github/workflows/sieve.yml`, with three stand-ins:
+**In M1** ([DECISIONS.md](../DECISIONS.md) entry 25), Trommel's own repository runs this shape as `.github/workflows/trommel.yml`, with three stand-ins:
 - the CLI runs from source;
-- each shard hands its exact file list to Vitest in `SIEVE_TEST_FILES` until `sieve run` and the runner plugin exist;
-- the gate is a shell step until `sieve gate` exists.
+- each shard hands its exact file list to Vitest in `TROMMEL_TEST_FILES` until `trommel run` and the runner plugin exist;
+- the gate is a shell step until `trommel gate` exists.
 
 The plan diffs against the Lite-mode map in `actions/cache` (§5.4), which a `map` job builds on every push to `main`.
 
@@ -805,32 +805,32 @@ The plan diffs against the Lite-mode map in `actions/cache` (§5.4), which a `ma
   - Therefore: **≤3 writes per run** (create, final update, optional comment), coalesced per head SHA. Details go to job summaries, which cost nothing.
 
 **Check run format.**
-- Name "SIEVE".
+- Name "Trommel".
 - Title "Ran 238 of 1,420 test files · 83% skipped · 0 escapes in 1,104 audits".
 - Summary (≤65,535 chars):
   - mode badge;
   - new failures;
   - quarantined (non-blocking) failures with evidence;
   - affected tests with why-paths (top 20);
-  - skipped count with a `sieve verify --plan <id>` line;
+  - skipped count with a `trommel verify --plan <id>` line;
   - escalations with causes;
   - duration alarms.
 - Annotations: failing test locations, ≤50 per request.
 - Conclusion: success / failure / neutral (shadow and degraded informational).
 
-**PR comment (optional, off by default).** One sticky comment, found by the marker `<!-- sieve:pr -->` and edited in place, so a run never adds a second comment. It holds:
+**PR comment (optional, off by default).** One sticky comment, found by the marker `<!-- trommel:pr -->` and edited in place, so a run never adds a second comment. It holds:
 - a 3-line verdict (new failures, quarantined failures, skipped with escape bound);
 - up to 5 why-paths;
 - links to the check run and the UI plan page.
 It counts toward the ≤3 writes per run.
 
 ### 5.4 Lite mode (no server; M3)
-- On the default branch, a job triggered by `push` builds the map and saves it with `actions/cache/save` under `sieve-map-v<format>-<cell>-<sha>`. It is the only job with `cache-mode: write`.
-- A pull request restores its base commit's map by exact key, or else the newest map of that format and cell, then runs `sieve plan --map .sieve/map`. The diff, BFS and proofs all happen locally. The map names its origin, and a plan runs everything if that is not this repository's default branch.
+- On the default branch, a job triggered by `push` builds the map and saves it with `actions/cache/save` under `trommel-map-v<format>-<cell>-<sha>`. It is the only job with `cache-mode: write`.
+- A pull request restores its base commit's map by exact key, or else the newest map of that format and cell, then runs `trommel plan --map .trommel/map`. The diff, BFS and proofs all happen locally. The map names its origin, and a plan runs everything if that is not this repository's default branch.
 - A pull request may save a map of its own. GitHub scopes it to that pull request's merge ref, so it is evidence for that pull request only.
 - No flake ledger in Lite mode, and its proofs are unsigned.
 - **Trust.** GitHub lets only trusted triggers on the default branch write that branch's cache scope, so a fork or an untrusted author cannot replace the map. Lite mode trusts every workflow on those triggers, as dependency caching already does. See [ADR-0021](adr/0021-lite-mode-actions-cache.md).
-- **As built in M1** (`.github/workflows/sieve.yml`, [DECISIONS.md](../DECISIONS.md) entry 25): the key is still `sieve-map-<sha>` with a prefix restore, and there is no `cache-mode` or origin check yet. That is safe while every plan is shadow-only.
+- **As built in M1** (`.github/workflows/trommel.yml`, [DECISIONS.md](../DECISIONS.md) entry 25): the key is still `trommel-map-<sha>` with a prefix restore, and there is no `cache-mode` or origin check yet. That is safe while every plan is shadow-only.
 
 ---
 
@@ -867,7 +867,7 @@ A generator produces small TS repos with:
 A mutator flips conditionals, constants and calls in changed functions; ground truth is a full run. **Gate: zero unsafe skips over ≥10k mutants** before any release that changes the selector.
 
 ### 7.3 Golden graphs, the replay harness and the benchmark protocol
-- **Golden graphs.** Pinned commits of 6 OSS TS repos chosen by the corpus criteria, plus SIEVE's own repo once its suite is big enough. Graph statistics and sampled edges are committed; diffs are reviewed like snapshots.
+- **Golden graphs.** Pinned commits of 6 OSS TS repos chosen by the corpus criteria, plus Trommel's own repo once its suite is big enough. Graph statistics and sampled edges are committed; diffs are reviewed like snapshots.
 - **Replay harness (`tools/replay`, re-execution because of the 90-day retention).** For each repo, ≥200 historical commits or PRs in a pinned container:
   1. record at c₀;
   2. for each cᵢ, plan against the latest mapped snapshot, then run the full suite as ground truth (failures rerun 3× to separate flaky from real);
@@ -880,8 +880,8 @@ A mutator flips conditionals, constants and calls in changed functions; ground t
   - `jest --findRelatedTests`;
   - a filename heuristic;
   - coverage-only plus "tracked files → run all" (Datadog-like);
-  - SIEVE static-only, dynamic-only and union.
-- **Compute.** Standard GitHub-hosted runners are free for public repos, so replay matrices can run in a public `sieve-replay` repo, within fair use, or locally.
+  - Trommel static-only, dynamic-only and union.
+- **Compute.** Standard GitHub-hosted runners are free for public repos, so replay matrices can run in a public `trommel-replay` repo, within fair use, or locally.
 - **Measurement discipline:**
   - frozen corpus manifests (hashes), pinned engine (dist hash, `dirty` flag);
   - refuse to report on a mismatch, an empty sample or an unattributed stage;
@@ -900,8 +900,8 @@ A mutator flips conditionals, constants and calls in changed functions; ground t
 
 ### 7.5 How to verify the first deliverables end to end
 1. `npm test` (unit + property + toy-repo seeded faults) is green.
-2. `sieve graph` on each golden-graph repo matches its pinned graph.
-3. A PR on SIEVE's own repo shows the shadow summary with why-paths, and the gate job is green.
+2. `trommel graph` on each golden-graph repo matches its pinned graph.
+3. A PR on Trommel's own repo shows the shadow summary with why-paths, and the gate job is green.
 4. Stopping the server (from M5) still gives a green PR with "ran all tests" (degraded mode).
 5. The corpus collector's daily run commits new manifests.
 
@@ -921,7 +921,7 @@ A mutator flips conditionals, constants and calls in changed functions; ground t
 | 7 | GitHub platform constraints: 90-day retention, secondary write limits, merge queue limited to org or GHEC | H/M | Collector from week 1 plus re-execution replay; ≤3 writes per run; dogfood org |
 | 8 | Poisoning or tenant leak in hosted beta | L/H | Lanes, RLS + FORCE, fuzzing, lint, invite-only beta |
 | 9 | Python order-dependence (59% of Python flakes) breaks subset determinism | M/M | Module units, OD tagging, Python late |
-| 10 | Name collision: npm `sieve` taken; SIEVE (NSDI'24 cache algorithm); RFC 5228 Sieve mail filter | H/L | Keep the codename; pick a final name by M9; scoped packages |
+| 10 | Name collision: npm `sieve` taken; SIEVE (NSDI'24 cache algorithm); RFC 5228 Sieve mail filter | H/L | Resolved 2026-11-14: renamed Trommel after a trademark screen (DECISIONS 30); scoped packages `@trommel/*`; formal trademark clearance before launch (M10) |
 
 ### 8.2 Kill and pivot criteria
 - **K1 (M4, Jan 24, 2027):** <30% median savings at ≤1% change-level miss on ≥5 repos → pivot to a flake-ledger-first product.
@@ -931,8 +931,8 @@ A mutator flips conditionals, constants and calls in changed functions; ground t
 
 ### 8.3 Open questions
 1. Who the 3 non-author M9 testers are.
-2. The final name and npm scope.
-3. Whether to move the repo into a GitHub org before M6, since GitHub's merge queue needs an org-owned repo.
+2. ~~The final name and npm scope.~~ Answered 2026-11-14: Trommel, with the npm scope `@trommel` (DECISIONS 30).
+3. ~~Whether to move the repo into a GitHub org before M6, since GitHub's merge queue needs an org-owned repo.~~ Answered 2026-11-14: yes, into `trommelci`, together with the corpus repository (DECISIONS 30).
 4. Minimum Vitest and Jest versions. The provider interface verified in this session is Vitest 5's; whether it holds for Vitest 3 and 4 is unchecked.
 5. Measured V8 record overhead, binary vs count mode.
 6. ~~The job-outputs size limit.~~ Answered 2026-11-13: 1 MB per job and 50 MB per run (workflow syntax reference). A matrix therefore carries shard numbers, never file lists.
@@ -970,7 +970,7 @@ A mutator flips conditionals, constants and calls in changed functions; ground t
 2. **tree-sitter in Node** (measured earlier in TokenDamper, whose source was read in this session):
    - `web-tree-sitter` (WASM), with grammar packages that ship `.wasm` files, works without native builds. Trees must be freed with `tree.delete()` because WASM memory isn't garbage-collected.
    - Initializing the runtime plus 4 grammars costs about 22 ms per process (TokenDamper DECISIONS §81).
-   - SIEVE's CLI doesn't need tree-sitter: import extraction uses a hand-written lexer ([ADR-0002](adr/0002-zero-dependency-cli.md)).
+   - Trommel's CLI doesn't need tree-sitter: import extraction uses a hand-written lexer ([ADR-0002](adr/0002-zero-dependency-cli.md)).
 3. **GitHub mechanics.**
    - Check conclusions: action_required, cancelled, failure, neutral, success, skipped, stale (GitHub-only), timed_out. 50 annotations per request; 65,535-char summary. Only GitHub Apps can create check runs ([checks/runs](https://docs.github.com/en/rest/checks/runs)).
    - Skipped jobs report Success and don't block required checks ([conditions](https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution)).
@@ -1020,5 +1020,6 @@ A mutator flips conditionals, constants and calls in changed functions; ground t
 9. **Name:**
    - npm `sieve` is taken (Sieve of Eratosthenes, v0.0.4, 2014) ([registry](https://registry.npmjs.org/sieve));
    - SIEVE is an NSDI'24 cache eviction algorithm ([USENIX](https://www.usenix.org/conference/nsdi24/presentation/zhang-yazhuo));
-   - RFC 5228 is "Sieve: An Email Filtering Language" (Proposed Standard, 2008) ([RFC](https://www.rfc-editor.org/rfc/rfc5228)).
+   - RFC 5228 is "Sieve: An Email Filtering Language" (Proposed Standard, 2008) ([RFC](https://www.rfc-editor.org/rfc/rfc5228));
+   - so the project was renamed Trommel on 2026-11-14. A screen of the USPTO register and of TMview (EUIPO, UKIPO, WIPO and national offices) found no live TROMMEL mark for software. The npm name `trommel` and the scope `@trommel` were free (DECISIONS 30).
 

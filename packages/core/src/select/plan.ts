@@ -21,20 +21,20 @@ import type { ObjectFormat } from '../git/git.ts';
 import type { ObjectType } from '../git/ls-tree.ts';
 import { forwardReach, reverseReach, whyPath } from '../graph/graph.ts';
 import { mapGraph } from '../graph/map.ts';
-import { globHash, isModule, readLockfile, type LockfileState, type MapLockfile, type SieveMap } from '../graph/static.ts';
+import { globHash, isModule, readLockfile, type LockfileState, type MapLockfile, type TrommelMap } from '../graph/static.ts';
 import { LOCKFILE_PATHS } from '../lockfile/npm.ts';
 import { matchGlobs } from '../resolve/glob.ts';
 import { Resolver, type Vfs } from '../resolve/resolver.ts';
 
 /** Changes to this file are an L3: it defines the tests and the rules themselves. */
-export const CONFIG_PATH = 'sieve.config.json';
+export const CONFIG_PATH = 'trommel.config.json';
 
 export interface HeadState {
   readonly objectFormat: ObjectFormat;
   readonly index: TreeIndex;
   readonly vfs: Vfs;
   readonly tests: readonly string[];
-  /** The blob id of sieve.config.json at H, or null. */
+  /** The blob id of trommel.config.json at H, or null. */
   readonly config: string | null;
 }
 
@@ -73,7 +73,7 @@ export interface Selection {
   readonly ignored: readonly string[];
 }
 
-export function selectStatic(map: SieveMap, head: HeadState, rules: PlanRules): Selection {
+export function selectStatic(map: TrommelMap, head: HeadState, rules: PlanRules): Selection {
   const tests = [...new Set(head.tests)].sort(compareStrings);
   const headLockfile = readLockfile(head.vfs);
   const fatal = untrusted(map, head, headLockfile);
@@ -222,7 +222,7 @@ export function runAll(tests: readonly string[], cause: string): Selection {
 }
 
 /** Why the map cannot be compared with H at all, or null. */
-function untrusted(map: SieveMap, head: HeadState, lockfile: LockfileState): string | null {
+function untrusted(map: TrommelMap, head: HeadState, lockfile: LockfileState): string | null {
   if (map.objectFormat !== head.objectFormat) {
     return `the map is for ${map.objectFormat} objects, the repository uses ${head.objectFormat}`;
   }
@@ -255,7 +255,7 @@ function describe(lockfile: MapLockfile | LockfileState): string {
 }
 
 /** g: and p: nodes whose hash at H differs from the map's. */
-function recomputedChanges(map: SieveMap, head: HeadState, lockfile: LockfileState): string[] {
+function recomputedChanges(map: TrommelMap, head: HeadState, lockfile: LockfileState): string[] {
   const changed: string[] = [];
   const packages = lockfile.kind === 'npm' ? lockfile.lockfile.packages : new Map<string, { hash: string }>();
   let files: readonly string[] | null = null;

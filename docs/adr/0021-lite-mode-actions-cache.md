@@ -8,8 +8,8 @@
 The selection engine ships before the server (selection-first sequencing, M1–M4). Teams with small repos may never want a server.
 
 ## Decision
-- On the default branch, a job triggered by `push` builds the map and saves it with `actions/cache/save` under `sieve-map-v<format>-<cell>-<sha>`. It is the only job of the workflow with `cache-mode: write`; every other job is read-only.
-- A pull-request run restores the map of its base commit by exact key, or else the newest map of that format and cell, and runs `sieve plan --map .sieve/map`. That computes Δ, the reverse search, proofs and shards locally.
+- On the default branch, a job triggered by `push` builds the map and saves it with `actions/cache/save` under `trommel-map-v<format>-<cell>-<sha>`. It is the only job of the workflow with `cache-mode: write`; every other job is read-only.
+- A pull-request run restores the map of its base commit by exact key, or else the newest map of that format and cell, and runs `trommel plan --map .trommel/map`. That computes Δ, the reverse search, proofs and shards locally.
 - The map names its origin: repository id, ref, commit and workflow. A plan runs everything if the origin is not the default branch of this repository.
 - A pull-request run may save a map of its own. GitHub scopes it to that pull request's merge ref, so it is evidence for that pull request only ([ADR-0012](0012-ci-auth-and-trust-lanes.md)).
 - Lite mode has no flake ledger, ingest or UI, and its proofs are unsigned.
@@ -23,7 +23,7 @@ GitHub's rules, read on 2026-11-13 in the [dependency caching reference](https:/
 A fork or an untrusted author therefore cannot replace the map. Lite mode trusts every workflow that runs on those triggers on the default branch, as dependency caching already does. It does not enforce skips in a repository that grants cache writes to `pull_request_target`, `issue_comment` or `workflow_run` workflows. The map holds paths, object ids and test names, and no secrets. Filling the cache quota evicts the map, which costs a run of everything and nothing else.
 
 ## Alternatives considered
-- **Store maps in git refs (`refs/sieve/*`):** not chosen for v1. Needs write access and adds refs to the repository, but works on any forge, so it stays a possible later option.
+- **Store maps in git refs (`refs/trommel/*`):** not chosen for v1. Needs write access and adds refs to the repository, but works on any forge, so it stays a possible later option.
 - **The Actions artifacts API:** rejected. Downloading across runs needs API calls and tokens.
 
 ## Consequences

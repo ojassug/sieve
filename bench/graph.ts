@@ -3,7 +3,7 @@
 //   node bench/graph.ts [nodes] [edgesPerNode]
 import { cpus, platform, release } from 'node:os';
 
-import { canonicalJsonPretty, GraphBuilder, reverseReach, STATIC } from '@sieve-ci/core';
+import { canonicalJsonPretty, GraphBuilder, reverseReach, STATIC } from '@trommel/core';
 
 const nodes = Number(process.argv[2] ?? 100_000);
 const perNode = Number(process.argv[3] ?? 10);

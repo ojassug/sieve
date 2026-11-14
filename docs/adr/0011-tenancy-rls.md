@@ -5,7 +5,7 @@
 - Related: [threat-model.md](../threat-model.md) §1.1 and §2.2, [architecture.md](../architecture.md) §4.1
 
 ## Context
-SIEVE is self-host first, with a hosted beta later. Multi-tenant isolation is both a product requirement and a learning goal.
+Trommel is self-host first, with a hosted beta later. Multi-tenant isolation is both a product requirement and a learning goal.
 
 The PostgreSQL docs ([row security](https://www.postgresql.org/docs/current/ddl-rowsecurity.html)) say:
 - table owners bypass RLS unless `FORCE ROW LEVEL SECURITY` is set;
@@ -14,7 +14,7 @@ The PostgreSQL docs ([row security](https://www.postgresql.org/docs/current/ddl-
 - referential-integrity checks (unique, primary key, foreign key) bypass RLS and can create covert channels.
 
 ## Decision
-- Every tenant table carries `tenant_id`, has `ENABLE` + `FORCE ROW LEVEL SECURITY`, and has a policy on `current_setting('sieve.tenant_id')`.
+- Every tenant table carries `tenant_id`, has `ENABLE` + `FORCE ROW LEVEL SECURITY`, and has a policy on `current_setting('trommel.tenant_id')`.
 - The application role has no BYPASSRLS.
 - Tenant context is set with `SET LOCAL` inside each request or job transaction, which is safe under transaction pooling.
 - Uniqueness is tenant-scoped.

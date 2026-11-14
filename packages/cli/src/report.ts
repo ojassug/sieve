@@ -1,7 +1,7 @@
-// What `sieve plan` prints and hands to GitHub Actions: the plan JSON, the shard matrix and count
+// What `trommel plan` prints and hands to GitHub Actions: the plan JSON, the shard matrix and count
 // for $GITHUB_OUTPUT, and a markdown job summary. In shadow mode every test runs; the static
 // selection is only reported, and its would-skips are labelled unproven (kickoff gap 1).
-import { canonicalJson, type Escalation, type Selection } from '@sieve-ci/core';
+import { canonicalJson, type Escalation, type Selection } from '@trommel/core';
 
 /** The label of every would-skip until records can prove skips safe (ADR-0005). */
 export const UNPROVEN = 'unproven static reachability';
@@ -27,7 +27,7 @@ export interface PlanReport {
   readonly wouldSkip: readonly { readonly test: string; readonly label: string }[];
   /** Paths of unmapped inputs that `inputs.ignore` exempted from L1. */
   readonly ignored: readonly string[];
-  /** Projects SIEVE does not select for (other runners, results-only); run them as usual. */
+  /** Projects Trommel does not select for (other runners, results-only); run them as usual. */
   readonly notPlanned: readonly string[];
   /** What runs: in shadow mode, every test. */
   readonly run: readonly string[];
@@ -85,9 +85,9 @@ export function githubOutputs(report: PlanReport): string {
 }
 
 export function summaryOf(report: PlanReport): string {
-  const lines = ['## SIEVE plan (shadow, static)', ''];
+  const lines = ['## Trommel plan (shadow, static)', ''];
   if (report.fallback !== undefined) {
-    lines.push(`SIEVE could not use a map (${report.fallback}), so it ran all ${report.run.length} test files.`);
+    lines.push(`Trommel could not use a map (${report.fallback}), so it ran all ${report.run.length} test files.`);
   } else {
     lines.push(
       `Ran all ${report.run.length} test files (shadow mode).`,
@@ -97,7 +97,7 @@ export function summaryOf(report: PlanReport): string {
     );
   }
   if (report.notPlanned.length > 0) {
-    lines.push('', `Not planned by SIEVE: ${report.notPlanned.join(', ')}. Run them as usual.`);
+    lines.push('', `Not planned by Trommel: ${report.notPlanned.join(', ')}. Run them as usual.`);
   }
   if (report.escalations.length > 0) {
     lines.push('', '### Escalations', '');

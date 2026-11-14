@@ -5,7 +5,7 @@
 //
 //   node tools/corpus/src/publish-main.ts --repo-dir . --out out --assets assets \
 //     --state state/collector-state.json --day 2026-11-12 --run-number 7 \
-//     --repo ojassug/sieve-corpus --collector-repo ojassug/sieve --collector-sha <sha>
+//     --repo trommelci/trommel-corpus --collector-repo trommelci/trommel --collector-sha <sha>
 //
 // `gh` reads its token from GH_TOKEN; the push uses the checkout's own credentials.
 import { parseArgs } from 'node:util';

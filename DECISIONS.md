@@ -37,8 +37,9 @@ Implementation decisions too small or too local for an ADR, plus session hand-ov
 
 ## 4. Placeholder package names
 
-- **Context.** The npm name `sieve` is taken, and the final name is chosen by M9 (architecture §8.1, risk 10). Architecture §5.3 already uses `@sieve-ci/cli` as a placeholder.
-- **Decision.** Packages are named `@sieve-ci/*` and marked `"private": true` until the name is final.
+- **Context.** The npm name `sieve` is taken, and the final name was to be chosen by M9 (architecture §8.1, risk 10). Architecture §5.3 used a placeholder scope.
+- **Decision.** Packages are named under a placeholder scope and marked `"private": true` until the name is final.
+- **Superseded by entry 30 (2026-11-14).** The name is Trommel, and the packages are `@trommel/*`. They stay `"private": true` until the first publish.
 
 ## 5. Exact pins; Node types follow the CLI's floor
 
@@ -65,7 +66,7 @@ Implementation decisions too small or too local for an ADR, plus session hand-ov
 ## 8. Seeded property tests
 
 - **Context.** Property tests must be deterministic in CI and still able to explore.
-- **Decision.** fast-check uses the global seed `20261116`, set in `vitest.setup.ts`. `SIEVE_FC_SEED` overrides it, and failures print the seed and path needed to replay them.
+- **Decision.** fast-check uses the global seed `20261116`, set in `vitest.setup.ts`. `TROMMEL_FC_SEED` overrides it, and failures print the seed and path needed to replay them.
 
 ## 9. The corpus collector uses `GITHUB_TOKEN`, not a personal token
 
@@ -96,12 +97,12 @@ Implementation decisions too small or too local for an ADR, plus session hand-ov
 
 - **Context.** The data has to outlive GitHub's 90 days, be publicly reproducible (TARGETS.md, "Publication"), and cost nothing to run.
 - **Decision (proposed).**
-  - A separate public repository, `ojassug/sieve-corpus`, built from the template in `tools/corpus/corpus-repo/`.
+  - A separate public repository, `trommelci/trommel-corpus`, built from the template in `tools/corpus/corpus-repo/`.
   - Manifests and collector state are committed to git.
   - Raw NDJSON (`.tar.gz`) and mirrored artifacts (`.tar`, per repository) are uploaded as daily release assets, which have no retention limit.
   - The collector is pinned by commit in `collector.ref`.
   - Mirroring is limited to permissively licensed repositories; the rest contribute metadata only (bench/CORPUS.md).
-- **Status.** Approved on 2026-11-11 and created as [ojassug/sieve-corpus](https://github.com/ojassug/sieve-corpus), with the collector pinned to `4d28a10`. The first run started the same day (workflow run 43026895799).
+- **Status.** Approved on 2026-11-11 and created as [trommelci/trommel-corpus](https://github.com/trommelci/trommel-corpus), with the collector pinned to `4d28a10`. The first run started the same day (workflow run 43026895799).
 
 ## 12. Snapshot diff semantics (`core/git`)
 
@@ -264,7 +265,7 @@ Implementation decisions too small or too local for an ADR, plus session hand-ov
   | 8, npm lockfile | #7 | open |
 
   At the time of writing, 239 tests pass locally. #2–#5 were green in CI; #6 and #7 were pending.
-- **Corpus.** [ojassug/sieve-corpus](https://github.com/ojassug/sieve-corpus) was created with approval. Its first collection run, 43026895799, was still running.
+- **Corpus.** [trommelci/trommel-corpus](https://github.com/trommelci/trommel-corpus) was created with approval. Its first collection run, 43026895799, was still running.
 - **Open item: day 1–2's "done when".** It is met once that run publishes `manifests/2026/2026-11-11-1.json`. If the run failed, read its log, fix the collector on #2, update `collector.ref` and re-run the workflow.
 - **Next: day 9, CLI v0.**
   - `core/git`: read blob contents with `git cat-file --batch`, and add a `GitVfs` over `TreeIndex` plus blobs.
@@ -275,8 +276,8 @@ Implementation decisions too small or too local for an ADR, plus session hand-ov
     - add each importer's tsconfig chain and nearest package.json;
     - add `p:` nodes through `locate` and lockfile package edges;
     - mark `u:` nodes and uncertain files.
-  - The CLI: an argument parser, a `sieve.config.json` loader, and `sieve graph`, `diff` and `plan --static --shadow --map <dir>`, all emitting canonical JSON. Would-skips must be labelled unproven (kickoff gap 1).
-- **Next: day 10.** The walking skeleton workflow (plan → matrix → shards → `sieve-gate`), with the map in `actions/cache` (roadmap §5).
+  - The CLI: an argument parser, a `trommel.config.json` loader, and `trommel graph`, `diff` and `plan --static --shadow --map <dir>`, all emitting canonical JSON. Would-skips must be labelled unproven (kickoff gap 1).
+- **Next: day 10.** The walking skeleton workflow (plan → matrix → shards → `trommel-gate`), with the map in `actions/cache` (roadmap §5).
 - **How to verify.** Run `npm ci`, then `npm test`, `npm run lint` and `npm run typecheck`. `node bench/ls-tree.ts`, `node bench/lex.ts` and `node bench/graph.ts` reproduce the recorded numbers.
 
 ## 20. Hand-off document (2026-11-11)
@@ -311,16 +312,16 @@ Implementation decisions too small or too local for an ADR, plus session hand-ov
   - **Per-repository shares.** In phase 1, each repository may spend `repoShare` requests (default 1,000; 25 repositories × 1,000 is about one run's capacity). A repository that hits its share stops for the phase; the client throws `ShareExhausted`, distinct from `BudgetExhausted`. In phase 2, the remaining time goes to the open work in plan order. State is saved run by run, so an interrupted day resumes without refetching.
   - **The manifest** now records `requestsByRepo`, `options.repoShare`, and a `capped` item status.
   - **PostHog/posthog is removed** from `repos.json`. It is tier 2 and metadata-only (NOASSERTION), and most of its runs are bots.
-- **Evidence.** Tests in `tools/corpus/test` cover the share limit in the client, the new plan order, and the two phases: a capped repository yields to the others, then finishes from the leftover time. Two hand mutants are caught: dropping phase 2, and ignoring the share. The first run's numbers are in its manifest, `manifests/2026/2026-11-11-1.json` in sieve-corpus.
+- **Evidence.** Tests in `tools/corpus/test` cover the share limit in the client, the new plan order, and the two phases: a capped repository yields to the others, then finishes from the leftover time. Two hand mutants are caught: dropping phase 2, and ignoring the share. The first run's numbers are in its manifest, `manifests/2026/2026-11-11-1.json` in trommel-corpus.
 
 ## 22. Race-proof corpus publishing: a reusable workflow, and re-apply before pushing
 
 - **Context.** A collection run holds the data repository for hours, and its last act is a push to `main` there. Three things could go wrong:
-  - **A push during a run lost the run.** Anything landing on sieve-corpus `main` while a run collected — a `collector.ref` bump, a workflow edit — made the run's final push non-fast-forward. The release, with the data, was already published; the manifest and `state/collector-state.json` were not. The next run redid the work and the release sat orphaned with nothing pointing at it. The `collect` concurrency group keeps two runs apart and does nothing about a person. DECISIONS 21's PR added a `git pull --rebase` loop to the template, but it was untestable bash that left a half-finished rebase behind on a conflict, so attempts 2 and 3 failed for a new reason; the copy live in sieve-corpus never got even that.
+  - **A push during a run lost the run.** Anything landing on trommel-corpus `main` while a run collected — a `collector.ref` bump, a workflow edit — made the run's final push non-fast-forward. The release, with the data, was already published; the manifest and `state/collector-state.json` were not. The next run redid the work and the release sat orphaned with nothing pointing at it. The `collect` concurrency group keeps two runs apart and does nothing about a person. DECISIONS 21's PR added a `git pull --rebase` loop to the template, but it was untestable bash that left a half-finished rebase behind on a conflict, so attempts 2 and 3 failed for a new reason; the copy live in trommel-corpus never got even that.
   - **A partial release was visible.** One `gh release create` created the release and uploaded every asset, so a failure part-way left a published release missing assets.
   - **The cause was structural.** `collector.ref` lived in the data repository, so every collector change needed a hand push into it — exactly the event that lost runs. The workflow also existed twice, as the template here and the copy there, free to drift.
 - **Decision.**
-  - **The data repository no longer holds the collector version.** sieve-corpus's `collect.yml` becomes a thin caller of `.github/workflows/corpus-collect.yml` in this repository, and `collector.ref` is deleted. The reusable workflow checks out the collector from `job.workflow_repository` at `job.workflow_sha`, the commit of the workflow file that is running, so a run is pinned to itself and the manifest still records that commit through `--ref`. Normal operation needs no push to sieve-corpus at all: merging here changes the next run.
+  - **The data repository no longer holds the collector version.** trommel-corpus's `collect.yml` becomes a thin caller of `.github/workflows/corpus-collect.yml` in this repository, and `collector.ref` is deleted. The reusable workflow checks out the collector from `job.workflow_repository` at `job.workflow_sha`, the commit of the workflow file that is running, so a run is pinned to itself and the manifest still records that commit through `--ref`. Normal operation needs no push to trommel-corpus at all: merging here changes the next run.
   - **Pinned to `@main`, not to a tag.** CI gates `main`, and a tag would move the manual step rather than remove it. The cost is that a bad merge can break the next night's collection; that is recoverable, a lost day of a 90-day window is not.
   - **One source of truth, checked daily.** The steps a run performs exist once, here. The caller stub and the data repository's README are still copies, so a `templates` job in the reusable workflow diffs them against `tools/corpus/corpus-repo/` and fails when they differ. It is a job of its own, not a step in `collect`: drift turns the run red without stopping collection, because a stale README must never cost a day of history that GitHub is about to delete.
   - **Publishing is a tested script**, `tools/corpus/src/publish.ts` with a thin `publish-main.ts` CLI, rather than inline YAML. Commands are injected, so ordering and failure handling are testable.
@@ -360,25 +361,25 @@ Implementation decisions too small or too local for an ADR, plus session hand-ov
     - This is §3.5's row "lockfile changed but unparseable". HANDOFF §6.1's "unparseable is L3" is read the same way, so an unchanged pnpm lockfile costs no precision.
     - Both corpus candidates, hono and zod, use pnpm.
   - **Default global inputs:** the root `package.json`, `.env*`, Vite and Vitest configs, `vitest.workspace.*`, `vitest.setup.*`, and Jest's config and setup, by their conventional names. `inputs.global` adds to them. Runner configs are module files, so their imports are followed too.
-  - **The map** is canonical JSON at `.sieve/map/map.json` until SMAP (week 3). It holds `version` 1, `engine` `sieve-static-1` (another engine's map is invalid), `objectFormat`, `rootTree`, `undecodable`, the config's blob id, the lockfile setup, `snapshot`, `nodes`, `edges`, `globs`, `tests` and `uncertain` (the causes per `u:` node).
+  - **The map** is canonical JSON at `.trommel/map/map.json` until SMAP (week 3). It holds `version` 1, `engine` `trommel-static-1` (another engine's map is invalid), `objectFormat`, `rootTree`, `undecodable`, the config's blob id, the lockfile setup, `snapshot`, `nodes`, `edges`, `globs`, `tests` and `uncertain` (the causes per `u:` node).
     - `snapshot` lists every `ls-tree` entry as `[mode, oid, path]`, so a plan diffs against it without the base commit, which a depth-1 checkout does not have.
     - `edges` is an adjacency object, `{ from: { to: provenance } }`: the same content as `[from, to, provenance]` triples, in less space.
     - `parseMap` checks every field and both ends of every edge. Anything wrong is a `MapError`, and the plan runs everything.
 - **Evidence.**
   - Example tests for every node and edge kind (`static.test.ts`, `map.test.ts`), and determinism: identical bytes whatever order the sources arrive in, and byte-identical maps of one revision from the CLI.
   - `Resolver.fileConfigs` passes the evidence-completeness property of entry 17 (400 runs). `GitVfs` and `MemoryVfs` give identical resolutions (500 runs).
-  - **T6:** `sieve graph` on a synthetic 10,000-file TypeScript monorepo (42.1 MB) takes **2.5 s cold**, against 30 s. On this repository it takes 0.36 s. See [bench/README.md](bench/README.md).
+  - **T6:** `trommel graph` on a synthetic 10,000-file TypeScript monorepo (42.1 MB) takes **2.5 s cold**, against 30 s. On this repository it takes 0.36 s. See [bench/README.md](bench/README.md).
   - **Probe-edge volume** (entry 17's open item): in the synthetic repository, 60,000 imports, mostly extensionless, give 684,501 edges, about 10 per import as estimated, and a 26.7 MB map. SMAP and per-directory probe groups are the levers if size matters.
   - On this repository 18 files are uncertain, all lexer fixtures that nothing imports, so no test runs because of them.
 
 ## 24. Static selection and CLI v0; kickoff gap 1 resolved
 
-- **Context.** Day 9's CLI: `sieve graph`, `sieve diff` and `sieve plan --static --shadow --map` ([HANDOFF.md](HANDOFF.md) §6.2). Kickoff gap 1 (entry 1) was still open: no skip can be safe without records, and the docs spelled the flags two ways.
+- **Context.** Day 9's CLI: `trommel graph`, `trommel diff` and `trommel plan --static --shadow --map` ([HANDOFF.md](HANDOFF.md) §6.2). Kickoff gap 1 (entry 1) was still open: no skip can be safe without records, and the docs spelled the flags two ways.
 - **Decision.**
   - **Δ(S,H).** Files and listings come from the Merkle descent against the map's snapshot; `g:`, `p:` and `e:` nodes are recomputed at H. Every `u:` node is a seed. A new install location of a package named `N` seeds every `p:` node named `N`, because it can shadow another copy for some importers.
   - **Escalations** (§3.5), each listed with its cause:
-    - **L1**, every test under the owning package (the nearest `package.json` at H): a changed file that is not a graph node. Exempt are files matching `inputs.ignore` (default `**/*.md`, `docs/**`, `LICENSE*`), lockfiles and `sieve.config.json` (handled below), and newly added module files, whose effect already shows through the probes and listings they would satisfy.
-    - **L3**, every test: `sieve.config.json` changed; another object format; a path that is not UTF-8; the lockfile setup changed; a lockfile that cannot be parsed changed.
+    - **L1**, every test under the owning package (the nearest `package.json` at H): a changed file that is not a graph node. Exempt are files matching `inputs.ignore` (default `**/*.md`, `docs/**`, `LICENSE*`), lockfiles and `trommel.config.json` (handled below), and newly added module files, whose effect already shows through the probes and listings they would satisfy.
+    - **L3**, every test: `trommel.config.json` changed; another object format; a path that is not UTF-8; the lockfile setup changed; a lockfile that cannot be parsed changed.
     - **Run-all fallback, exit 0:** no map, an invalid map (version, engine or any malformed field), an invalid config, or an internal error. CI is never blocked.
   - New test files and `alwaysRun` tests always run. Why-paths go from the test to the changed or uncertain node.
   - **Kickoff gap 1.**
@@ -391,7 +392,7 @@ Implementation decisions too small or too local for an ADR, plus session hand-ov
     - `matrix` is `{"include":[{"shard":k,"files":[…]}]}`: the sorted run set split round-robin into `--shards` exact file lists (default `sharding.max`, else 1).
     - `count` is the number of test files to run.
     - The step summary has the would-run and would-skip counts, escalations, up to 20 why-paths and the would-skip list.
-  - **Config.** `sieve.config.json` is read from git at the planned revision and validated by hand against the §5.1 schema; without one, the defaults apply. Projects may add `include` and `exclude` globs; otherwise each runner's default applies, without `node_modules` and `fixtures`.
+  - **Config.** `trommel.config.json` is read from git at the planned revision and validated by hand against the §5.1 schema; without one, the defaults apply. Projects may add `include` and `exclude` globs; otherwise each runner's default applies, without `node_modules` and `fixtures`.
   - **Exit codes:** 0 for success, fallbacks included; 1 for an error; 2 for a usage error.
 - **Evidence.**
   - **Soundness property:** 2,000 seeded pairs of small repositories with shadowing probes, tsconfig paths, workspaces, nested package copies and global inputs.
@@ -400,39 +401,39 @@ Implementation decisions too small or too local for an ADR, plus session hand-ov
     - 20 hand mutants of the builder and the selection were all caught. A first version that used the builder as its own oracle caught only 7.
   - End-to-end CLI tests on a throwaway repository: graph, plan with `GITHUB_OUTPUT` and `GITHUB_STEP_SUMMARY`, each fallback, `--mode safe` refused, diff, byte-identical maps and absolute paths.
   - On this repository, a map built at `2a4a4b7` and planned at the CLI commit selects 11 of 27 test files: 7 affected, with why-paths, and 4 new test files. The other 16 are unproven would-skips.
-  - **On honojs/hono** (corpus, pnpm, no `sieve.config.json`), at `f6fbaf02`: `sieve graph` takes 0.44 s cold for 585 files, with 161 test files found by Vitest's default include and 45 uncertain files.
+  - **On honojs/hono** (corpus, pnpm, no `trommel.config.json`), at `f6fbaf02`: `trommel graph` takes 0.44 s cold for 585 files, with 161 test files found by Vitest's default include and 45 uncertain files.
     - Planning `HEAD~6` → `HEAD~1` (13 changed nodes, `src/hono-base.ts` among them) selects 114 of 161: 87 through changed files, 26 through uncertain files and 1 new test file. The other 47 are unproven would-skips.
     - The 26 come mostly from adapters that import `hono` itself: its `exports` point at `dist/`, which is build output and not in git. The rest are `bun:test` (an unknown scheme) and one non-literal `import()`.
     - Planning `HEAD~10` → `HEAD` selects all 161: the release commit bumps the version in the root `package.json`, which every file depends on (its nearest `package.json`, and a global input).
-    - hono's own Vitest config uses projects with extglob includes, so discovery without a `sieve.config.json` also counts adapter and runtime tests that hono runs elsewhere.
+    - hono's own Vitest config uses projects with extglob includes, so discovery without a `trommel.config.json` also counts adapter and runtime tests that hono runs elsewhere.
 
 ## 25. The walking skeleton in CI (day 10)
 
-- **Context.** Day 10 puts the plan → matrix → shards → gate slice into CI on this repository, in shadow mode, with the map kept in `actions/cache` (roadmap §4 and §5, architecture §5.3 and §5.4, [HANDOFF.md](HANDOFF.md) §7). Until the runner plugin and `sieve run` arrive (M3), a shard needs some other way to run an exact file list. ADR-0004 rules out Vitest's positional filters, which match substrings.
+- **Context.** Day 10 puts the plan → matrix → shards → gate slice into CI on this repository, in shadow mode, with the map kept in `actions/cache` (roadmap §4 and §5, architecture §5.3 and §5.4, [HANDOFF.md](HANDOFF.md) §7). Until the runner plugin and `trommel run` arrive (M3), a shard needs some other way to run an exact file list. ADR-0004 rules out Vitest's positional filters, which match substrings.
 - **Decision.**
-  - **`.github/workflows/sieve.yml`** runs on pull requests, pushes to `main` and merge groups, alongside `ci.yml`, which still runs the whole suite on every OS and Node version. Its jobs:
-    - **`plan`** restores the map, runs `sieve plan --mode shadow --static --map .sieve/map` from source, and writes `matrix`, `count` and the job summary.
+  - **`.github/workflows/trommel.yml`** runs on pull requests, pushes to `main` and merge groups, alongside `ci.yml`, which still runs the whole suite on every OS and Node version. Its jobs:
+    - **`plan`** restores the map, runs `trommel plan --mode shadow --static --map .trommel/map` from source, and writes `matrix`, `count` and the job summary.
     - **`test`** is a matrix of shards from the plan, skipped when `count` is 0. Each shard runs `npx vitest run` with its file list.
-    - **`sieve-gate`** always runs (`if: always()`). It passes only if `plan` succeeded and every shard succeeded, or the shards were skipped because `count` was 0.
-    - **`map`** runs only on pushes: `sieve graph --out .sieve/map/map.json`, then `actions/cache/save` under `sieve-map-<sha>`.
-  - **Finding the map.** `plan` restores with key `sieve-map-<sha>` and `restore-keys: sieve-map-`, so a pull request gets the newest map saved on `main`. If no cache matches, the CLI's run-all fallback applies.
+    - **`trommel-gate`** always runs (`if: always()`). It passes only if `plan` succeeded and every shard succeeded, or the shards were skipped because `count` was 0.
+    - **`map`** runs only on pushes: `trommel graph --out .trommel/map/map.json`, then `actions/cache/save` under `trommel-map-<sha>`.
+  - **Finding the map.** `plan` restores with key `trommel-map-<sha>` and `restore-keys: trommel-map-`, so a pull request gets the newest map saved on `main`. If no cache matches, the CLI's run-all fallback applies.
   - **Plan and map share one Node version** (`NODE_VERSION`, 26) and one runner image. The map records the runtime and platform as `e:` nodes that every test depends on, so a mismatch would mark every test affected.
   - **Exact file lists, until M3.**
-    - The shard passes `SIEVE_TEST_FILES`, a JSON array of repository-relative POSIX paths, and `vitest.config.ts` makes it the `include` (`scripts/lib/test-files.ts`).
+    - The shard passes `TROMMEL_TEST_FILES`, a JSON array of repository-relative POSIX paths, and `vitest.config.ts` makes it the `include` (`scripts/lib/test-files.ts`).
     - Each path is glob-escaped: what tinyglobby, Vitest's globber, escapes, plus `!`, `+` and `@` everywhere.
     - `exclude` is emptied, so nothing can drop a listed file.
     - A list that is invalid, or that names something that is not a file, fails the shard loudly. Uncertainty means run: a shard must never run fewer files than its plan.
-  - **`sieve.config.json`.**
+  - **`trommel.config.json`.**
     - `sharding.max` is 3: the 29 test files split round-robin into 3 shards.
     - One `inputs.declared` rule: `packages/cli/src/**` affects `packages/cli/test/cli.test.ts`. That test runs the CLI as a child process, by path, which the static graph cannot see. Core changes reach the CLI sources through their imports, so one rule covers both packages.
   - **Global inputs avoid `new URL(…, import.meta.url)`.** The resolver reads it as an import it cannot resolve (§11 of the hand-off). In `vitest.config.ts`, which every test depends on, that would mark every test affected on every change. Both new files use `import.meta.dirname` instead.
   - **Not yet:**
-    - `sieve-gate` is not a required check. That is a branch-protection setting for Ojas to decide ([HANDOFF.md](HANDOFF.md) §10).
-    - The gate is a shell step until `sieve gate` exists.
+    - `trommel-gate` is not a required check. That is a branch-protection setting for Ojas to decide ([HANDOFF.md](HANDOFF.md) §10).
+    - The gate is a shell step until `trommel gate` exists.
     - Shards are round-robin, not duration-balanced; LPT planning (§3.8) needs recorded durations.
 - **Evidence.**
-  - **Discovery matches Vitest.** With no `projects` in the config, `sieve plan` finds the same 29 files as `vitest list` under `vitest.config.ts`.
-  - **Run-all fallback.** With no map, `sieve plan` exits 0, writes `count=29` and 3 shards, and the summary says it could not use a map.
+  - **Discovery matches Vitest.** With no `projects` in the config, `trommel plan` finds the same 29 files as `vitest list` under `vitest.config.ts`.
+  - **Run-all fallback.** With no map, `trommel plan` exits 0, writes `count=29` and 3 shards, and the summary says it could not use a map.
   - **A past fix, re-planned.** A map built at the parent of `4742257` (a fix in `packages/core/src/git/git.ts`), planned at `4742257`, selects 9 of 27 test files, with why-paths. One of the 18 would-skips was `cli.test.ts`, which drives `git.ts` through the CLI, hence the declared rule.
   - **A probe on this branch.** A throwaway commit adds one line to `git.ts` on top of this branch, made with `git commit-tree` so no branch moves. Planned against this branch's map, it selects 10 of 29, `cli.test.ts` among them, through `g:declared:packages/cli/src/**`.
     - Before the switch to `import.meta.dirname`, the same probe selected all 29, through the uncertain `vitest.config.ts`.
@@ -444,7 +445,7 @@ Implementation decisions too small or too local for an ADR, plus session hand-ov
     Mutants that skip escaping, or escape only brackets, fail both end-to-end runs. A config that ignores the list fails the first.
   - **In CI (done when, met 2026-11-13).**
     - **No map yet.** #13's run 43435242836 missed the cache, ran all 29 files in shards of 10, 10 and 9, and the gate passed. The Windows job then caught a test-only path bug: `os.tmpdir()` is an 8.3 short path there.
-    - **Map cached.** The merge's push run 43435914996 built the map in 153 ms (1,464 nodes, 2,804 edges) and cached it as `sieve-map-f065f80…`, 39 KiB.
+    - **Map cached.** The merge's push run 43435914996 built the map in 153 ms (1,464 nodes, 2,804 edges) and cached it as `trommel-map-f065f80…`, 39 KiB.
     - **Shadow summary.** #14's run 43479358998 restored that map. Static reachability would run 11 of 29 test files, each with a why-path, and skip 18 (unproven), as the local dry run predicted.
 
 ## 26. A directory named by `new URL(…, import.meta.url)` is a dependency
@@ -459,7 +460,7 @@ Implementation decisions too small or too local for an ADR, plus session hand-ov
   - **A missing target** is recorded as a directory that may yet appear (a `d:` node), as for imports.
   - **Symlinks and submodules below the directory.** A symlink to a file is followed, and both count. A symlink to a directory or out of the repository, or a submodule, leaves the URL unresolved: what the code could read below it cannot be listed.
   - **Selection (L1).** An added file that a glob of the map matches no longer escalates its package. It shows in Δ as that glob's changed hash, which selects exactly its dependents, like a new module's probes. This covers directory URLs, `import.meta.glob`, `inputs.global` and declared inputs. A new file no glob matches still escalates.
-  - **The engine stays `sieve-static-1`.** The planner never re-resolves at H: it trusts the map's edges and only recomputes node hashes, whose definitions did not change.
+  - **The engine stays `trommel-static-1`.** The planner never re-resolves at H: it trusts the map's edges and only recomputes node hashes, whose definitions did not change.
     - An old map read by the new planner selects what the old engine would have.
     - A new map read by an old planner uses the same glob dialect, and escalates more, not less.
     - So `ENGINE` changes when hash definitions or the reading of a map change, not when the builder becomes more precise.
@@ -485,7 +486,7 @@ Implementation decisions too small or too local for an ADR, plus session hand-ov
   | ADR | What changed | Findings |
   |---|---|---|
   | 0003, graph nodes | Environment components are record attributes, not nodes. Resolution hubs (`r:` for one resolved path, `c:` for one directory's config chain) are node kinds. Provenance is a bitmask. `u:` is an uncertain file | C3, M1, M3 |
-  | 0004, selection unit | The runner, not SIEVE, decides what a test file is. `sieve run` also runs every discovered file the plan does not mention. A plan that knows no tests runs the command unfiltered | C2 |
+  | 0004, selection unit | The runner, not Trommel, decides what a test file is. `trommel run` also runs every discovered file the plan does not mention. A plan that knows no tests runs the command unfiltered | C2 |
   | 0005, safety criterion | A record is self-contained: closure as (node, hash) pairs, digest, environment, engine and recorder versions, completeness flags, time. Validity is base-free. The environment is compared in the job that runs the test. Capture has three scopes (test file, worker, run), and the runner reports its effective configuration. Uncertain nodes and unmapped inputs override a record | C1, C3, H1, H4 |
   | 0009, SMAP | A container with a section table and a trailer; three layers (snapshot, static graph, records); one provenance byte per edge; forward adjacency only; UTF-16 key order; chunking defined in M5 | C3, M2, M4 |
   | 0012, trust lanes | Three lanes: evidence, pull request, untrusted. Only runs of reviewed code change shared state. A pull-request run is evidence for its own pull request only, whoever its author is | H2 |
@@ -497,7 +498,7 @@ Implementation decisions too small or too local for an ADR, plus session hand-ov
   - **Entry 17, probe-edge volume:** exact hub nodes. Measured at 10,000 files, probes are 84% of the 684,501 edges and 91% of the 106,390 nodes. A hub's evidence depends only on its path or directory, never on the importer, so nothing is lost. Not built yet.
   - **The day-9 `u:` rule** (entry 23): every uncertain file counts as changed in every plan. It is now in ADR-0005, and it stays past M3 unless a record carries resolution evidence for that importer. The exemptions of new modules and of glob-matched new files from L1 (entries 24 and 26) are sound only under this rule.
   - **The day-9 lockfile rule** (entry 23): the review recommends confirming that an unparseable lockfile escalates to L3 only when it changes. The code is unchanged, and the confirmation is still Ojas's ([HANDOFF.md](HANDOFF.md) §10).
-- **How it meets entry 26.** Entry 26 keeps `sieve-static-1` when the builder only becomes more precise. The review asked for a guard that fails when the map of a fixture changes and the engine id does not. ADR-0009 now takes both: a changed golden hash comes with a new engine id, or with a recorded reason why older maps stay safe. Once records exist, ADR-0005 makes a record invalid when the engine or recorder version differs from the planner's.
+- **How it meets entry 26.** Entry 26 keeps `trommel-static-1` when the builder only becomes more precise. The review asked for a guard that fails when the map of a fixture changes and the engine id does not. ADR-0009 now takes both: a changed golden hash comes with a new engine id, or with a recorded reason why older maps stay safe. Once records exist, ADR-0005 makes a record invalid when the engine or recorder version differs from the planner's.
 - **Where the code lags the corrected ADRs.** Nothing below is a live fault: every plan is still shadow-only and every would-skip unproven.
 
   | The ADR now says | The code today | When |
@@ -507,8 +508,8 @@ Implementation decisions too small or too local for an ADR, plus session hand-ov
   | Resolution hubs | One edge per probe | M1, with SMAP v0 |
   | SMAP container, snapshot and static layers | Canonical JSON map (entry 23) | M1, week 3 |
   | Self-contained records, three capture scopes, reported configuration, resolution evidence | No recorder yet | M2 |
-  | `sieve run` reconciles with the runner's discovery, and checks the shard's environment and tree | Shards run exactly `SIEVE_TEST_FILES` (entry 25); the plan measures the environment in its own job | M3 |
-  | Record layer in SMAP; base-free proofs; the Lite key layout, `cache-mode` and origin check | `sieve.yml` saves `sieve-map-<sha>` and restores by prefix | M3 |
+  | `trommel run` reconciles with the runner's discovery, and checks the shard's environment and tree | Shards run exactly `TROMMEL_TEST_FILES` (entry 25); the plan measures the environment in its own job | M3 |
+  | Record layer in SMAP; base-free proofs; the Lite key layout, `cache-mode` and origin check | `trommel.yml` saves `trommel-map-<sha>` and restores by prefix | M3 |
   | Lanes from verified claims | No server | M5 |
   | Observation scoping and the burst guard | No ledger | M7 |
 
@@ -524,27 +525,27 @@ Implementation decisions too small or too local for an ADR, plus session hand-ov
   - 12 probes of the real `buildStaticMap` and `selectStatic`, built with the `fakeRepo` test helper.
   - GitHub's dependency caching reference, read on 2026-11-13: a pull request's cache is scoped to its merge ref, and only trusted triggers can write the default branch's scope.
 
-## 28. The environment leaves the static map; the engine is `sieve-static-2` (2026-11-14)
+## 28. The environment leaves the static map; the engine is `trommel-static-2` (2026-11-14)
 
 - **Context.** ADR-0003 and ADR-0009, as corrected on 2026-11-13 (entry 27), make the static map a function of the tree, the config and the engine only. The code still did what entries 23 and 24 describe.
   - `buildStaticMap` added `e:runtime`, `e:platform` and one `e:env/<NAME>` node per tracked variable, with a DECLARED edge from every test. `selectStatic` recomputed them at the head.
   - The review's probe built one tree with a `linux-x64` and a `win32-x64` environment. The two maps differed, in `e:platform` only. M1's exit criterion is a byte-identical map across OSes.
-  - The nodes described the machine that ran `sieve plan`, not the shard that runs the test.
+  - The nodes described the machine that ran `trommel plan`, not the shard that runs the test.
   - This is item 2 of [HANDOFF.md](HANDOFF.md) §1.1.
 - **Decision.**
   - **Neither the map nor a static plan knows the environment.** `StaticInput.env` and `HeadState.env` are gone, and so is the `e:` branch of Δ(S,H). A plan is a function of the map, the head tree and the config.
   - **Nothing compares environments until M3.** A change of Node version or OS between the map and the plan no longer selects every test.
     - That loses no safety. Every would-skip is unproven and shadow-only, and the old comparison was made on the wrong machine.
-    - ADR-0005 puts the comparison in the job that runs the test. `sieve run` does that in M3.
+    - ADR-0005 puts the comparison in the job that runs the test. `trommel run` does that in M3.
   - **`environment()` and `envHash()` stay, for the M2 recorder.** They moved to `packages/core/src/environment.ts` and have tests of their own. Nothing calls them yet.
   - **`env.track` is validated and not used.**
     - It joins `generated`, `quarantine` and the other keys that the M1 CLI checks without using (architecture §5.1). Tracked variables belong to a record, so the M2 recorder is their next reader.
     - `Rules.track` is removed, since nothing read it.
-    - Changing `env.track` still runs everything once, like any change to `sieve.config.json` (L3).
-  - **The engine id becomes `sieve-static-2`.** Entry 26's rule is that the id changes when hash definitions or the reading of a map change. Here the reading changes.
+    - Changing `env.track` still runs everything once, like any change to `trommel.config.json` (L3).
+  - **The engine id becomes `trommel-static-2`.** Entry 26's rule is that the id changes when hash definitions or the reading of a map change. Here the reading changes.
     - **An older map read by this planner:** its `e:` nodes would never change. The plan would ignore a dependency the map declares, and select fewer tests than the engine that built the map.
     - **A new map read by an older planner:** it finds no `e:` node and compares nothing, without saying so.
-    - **Cost:** one run-all plan per cached map. The plan gives the cause: the map was built by engine "sieve-static-1", expected sieve-static-2.
+    - **Cost:** one run-all plan per cached map. The plan gives the cause: the map was built by engine "trommel-static-1", expected trommel-static-2.
     - `MAP_VERSION` stays 1: the fields and their layout did not change.
   - **The golden map** (`packages/core/test/graph/golden.test.ts`) is ADR-0009's cross-OS check, ahead of SMAP v0.
     - It builds the map of an in-memory repository with `fakeRepo` and pins the SHA-256 of its canonical JSON. `ci.yml` runs it on Ubuntu with Node 22, 24 and 26, and on Windows with Node 22.
@@ -557,16 +558,16 @@ Implementation decisions too small or too local for an ADR, plus session hand-ov
     - `core/src/git` is left out: it runs git.
   - **Superseded in earlier entries:** the `e:` node kind and its DECLARED edges (entry 23); recomputing `e:` nodes in Δ(S,H) (entry 24); "plan and map share one Node version" (entry 25); the first row of entry 27's table of where the code lags.
 - **Evidence.**
-  - **Same bytes on two systems, before any CI run.** The fixture's map hashes to `7ec52403…5c7fb7` on Windows 11 (x64, Node 26.4) and on Ubuntu under WSL (x64, Node 22.22). That Ubuntu's Node is built without TypeScript support, so it ran a type-stripped copy of the same sources.
+  - **Same bytes on two systems, before any CI run.** The fixture's map hashes to `7ec52403…5c7fb7` on Windows 11 (x64, Node 26.4) and on Ubuntu under WSL (x64, Node 22.22). That Ubuntu's Node is built without TypeScript support, so it ran a type-stripped copy of the same sources. Entry 30 renamed the engine id, which moved the pinned hash to `6ef757a6…d14aa1` and changed no other byte.
   - **10 hand mutants, all caught.**
     - By the golden map and `static.test.ts`: an `e:platform` node with an edge from every test; an `e:runtime` node with no edge.
-    - By the golden map: the engine id set back to `sieve-static-1`.
+    - By the golden map: the engine id set back to `trommel-static-1`.
     - By lint: `static.ts` reading `process.platform`; `static.ts` importing `environment.ts`; `plan.ts` importing `node:os`.
     - By `environment.test.ts`: the patch version kept in `runtime`; an unset variable read as empty; `envHash` returning the value; `environment()` ignoring the process it is given.
     - By `config.test.ts`: `env.track` passed through to the rules.
-  - **`sieve graph` on this repository** at `4c89e79` emits no `e:` node. The map goes from 1,465 nodes and 2,807 edges to 1,463 and 2,749: two nodes, and two edges for each of 29 tests.
+  - **`trommel graph` on this repository** at `4c89e79` emits no `e:` node. The map goes from 1,465 nodes and 2,807 edges to 1,463 and 2,749: two nodes, and two edges for each of 29 tests.
   - **The synthetic 10,000-file repository** goes from 106,390 nodes and 684,501 edges to 106,388 and 683,501. `bench/static-graph.ts` runs without an environment; its recorded timings were not measured again.
-  - **An older map.** A map of this repository relabelled `sieve-static-1` gives a run-all plan with exit 0 and the cause above.
+  - **An older map.** A map of this repository relabelled `trommel-static-1` gives a run-all plan with exit 0 and the cause above.
   - **The soundness property** of entry 24 still passes its 2,000 runs. Its oracle never looked at the environment.
   - 449 tests in 31 files pass. Lint, typecheck and the zero-dependency check are clean.
 
@@ -590,7 +591,7 @@ Implementation decisions too small or too local for an ADR, plus session hand-ov
   - **`inputs.ignore` covers both kinds of unmapped input, by path**: a file's path, a listing's directory, a package's install location (`node_modules/eslint`). A glob cannot be ignored. The plan JSON and the summary list every path it exempted (`ignored`), so nothing escalates or disappears without a line in the summary.
   - **Every `u:` node seeds the plan**, and `parseMap` rejects a `u:` node without causes and causes for a node that is not `u:`.
   - **This repository's `inputs.ignore`** is the default list plus `bench/**`, `scripts/check-*.ts` and `eslint.config.js`. Benchmarks, the CI guards' entry points and the lint config are read by no test; the guards' logic in `scripts/lib/` is tested and stays mapped. The declared rule of entry 25 stays: a core change reaches `cli.test.ts` only through it, because core's own tests reach core's nodes.
-  - **The engine stays `sieve-static-2`** (entry 26's rule). The map's bytes and the meaning of every field are unchanged; the planner only escalates more. An older map read by this planner selects at least what the old planner did. The golden hash of entry 28 does not move.
+  - **The engine stays `trommel-static-2`** (entry 26's rule). The map's bytes and the meaning of every field are unchanged; the planner only escalates more. An older map read by this planner selects at least what the old planner did. The golden hash of entry 28 does not move.
   - **Not done here:** the review's DECLARED edge from every test to its runner's package node. Vitest is reached through the tests' own imports on this repository, and an unreached runner package now escalates instead of being missed.
   - **Superseded in earlier entries:** L1 as "every test under the owning package (the nearest `package.json` at H)" (entry 24); the second row of entry 27's table of where the code lags.
 - **Evidence.**
@@ -610,3 +611,41 @@ Implementation decisions too small or too local for an ADR, plus session hand-ov
     - The review estimated 14 of 70 at `86a995e`, counting commits that touched one of 16 unreached modules. This window ends 23 commits later, and three things keep the rule quieter than that. Entry 25's declared rule now reaches the CLI sources. An added module is not in the map, so it never fires the rule (it is exempt from L1 as in entry 24). And a commit that escalates to L3 stops before L1.
     - No commit in the window changed `package-lock.json`, so the package rule has no history here.
   - 473 tests in 31 files pass. Lint, typecheck and the zero-dependency check are clean.
+
+## 30. The name is Trommel (2026-11-14)
+
+- **Context.** The project was built under the codename SIEVE, and entry 4 left the final name to M9. "Sieve" was never available: the npm name `sieve` is taken, Sieve Labs is an existing company, SIEVE is an NSDI'24 cache-eviction algorithm, and Sieve is the RFC 5228 mail-filtering language. Ojas asked to settle the name now, before M2 writes the first record and before anything is published.
+- **Decision.**
+  - **The name is Trommel.** A trommel is a rotating drum sieve, so the project keeps its metaphor. The GitHub organisation is `trommelci`, holding `trommelci/trommel` and `trommelci/trommel-corpus`. The npm organisation is `trommel`, and the packages are `@trommel/*`, still `"private": true` until the first publish. Ojas registered both organisations on 2026-11-14.
+  - **Every identifier is renamed, not only the prose:**
+
+    | Was | Is |
+    |---|---|
+    | SIEVE, Sieve (prose, `SieveMap`, `SieveConfig`, `Sieve-Protocol`) | Trommel (`TrommelMap`, `TrommelConfig`, `Trommel-Protocol`) |
+    | the `sieve` command | `trommel` |
+    | `@sieve-ci/*`, `sieve-monorepo` | `@trommel/*`, `trommel-monorepo` |
+    | `sieve.config.json`, `.sieve/map` | `trommel.config.json`, `.trommel/map` |
+    | `SIEVE_*` environment variables | `TROMMEL_*` |
+    | `.github/workflows/sieve.yml`, job `sieve-gate`, cache key `sieve-map-<sha>` | `trommel.yml`, `trommel-gate`, `trommel-map-<sha>` |
+    | engine id `sieve-static-2` | `trommel-static-2` |
+    | `ojassug/sieve`, `ojassug/sieve-corpus` | `trommelci/trommel`, `trommelci/trommel-corpus` |
+
+  - **The old name stays only where it names something else**: the npm package `sieve`, the NSDI'24 algorithm and RFC 5228 (architecture §8.1 risk 10 and §9 item 9), plus this entry and the README's naming note. Earlier entries and the other documents now use the new names, also for things that existed under the old ones (cache keys, engine ids, run summaries). This table maps them back.
+  - **The engine id changes, and the map format does not.** The golden map's pinned hash moves from `7ec52403…5c7fb7` to `6ef757a6…d14aa1` (entry 26's rule: a moved hash comes with a new engine id). Putting `sieve-static-2` back into the new bytes gives the old hash exactly, so the engine id is the only byte that changed. Entry 28's cross-OS evidence therefore carries over.
+- **Consequences.**
+  - **One run-all plan per branch after the merge.** A map cached as `sieve-map-*` is not restored under the new key prefix, and an old map would fail the engine check anyway. The first push to `main` after the merge caches a `trommel-map-*` map.
+  - **Moving the repositories, in order.** The corpus repository's `collect.yml` calls `trommelci/trommel/.github/workflows/corpus-collect.yml@main`, and that only resolves once the main repository is `trommelci/trommel`. Ojas renames and transfers both repositories first, and then the two rename PRs merge: this repository's, and the one in the data repository that changes `README.md`, `collect.yml` and `docs/verification.md` to match `tools/corpus/corpus-repo` (the templates check compares them byte for byte). GitHub redirects the old URLs, so links and PR numbers stay valid.
+  - **Answered here:** architecture §8.3 question 2 (the name and npm scope) and question 3 (the org: `trommelci`, before M6); HANDOFF §10 question 4.
+- **Evidence.** A trademark screen on 2026-11-14, not legal clearance. A formal check stays on M10.
+  - **USPTO** (tmsearch.uspto.gov): no live TROMMEL mark in Nice classes 9 or 42.
+  - **TMview** (EUIPO, UKIPO, WIPO and the national offices; 165 results): no live plain TROMMEL mark for software. The live marks in classes 9 and 42 are compound words (softTrommel washing machines, Trommelflex cable drums) or mining equipment (The Trommel Shop, in Australia and India).
+  - **Products and packages:**
+    - No software product uses the name. CERT/CC's TROMMEL firmware-triage script has been dormant since 2020.
+    - npm `trommel` and the `@trommel` scope, crates.io and Homebrew were free.
+    - PyPI `trommel` is an unrelated data-cleaning library.
+  - **Ruled out:**
+    - Tamis: tamis.app is a live French application-security product.
+    - Alibi: USPTO registration 6689301, Seldon, classes 9, 35 and 42.
+    - Weir, Idem, Sequent, Lacuna, Riffle and Searce: live marks in classes 9 or 42.
+    - Probity: two active 2026 developer tools.
+  - 473 tests in 31 files pass, with the re-pinned golden hash. Lint, typecheck and the zero-dependency check are clean.

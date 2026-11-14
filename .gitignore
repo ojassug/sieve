@@ -5,8 +5,8 @@ coverage/
 *.log
 .DS_Store
 
-# Local SIEVE state (maps, plans) written by the CLI.
-.sieve/
+# Local Trommel state (maps, plans) written by the CLI.
+.trommel/
 
 # Vitest reporter output.
 .vitest/
