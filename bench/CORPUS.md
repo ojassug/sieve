@@ -2,7 +2,7 @@
 
 The corpus serves two purposes, with two repository sets.
 
-1. **Collector set.** An archive of GitHub CI history: workflow runs with every attempt, jobs, check runs, artifact listings and mirrored test reports. GitHub deletes this history after 90 days, so collection started in week 1. Reruns of the same commit are the flake ground truth for T3, and job timings feed duration estimates.
+1. **Collector set.** An archive of GitHub CI history: workflow runs with every attempt, jobs, check runs, artifact listings and mirrored test reports. GitHub deletes this history after 90 days, so collection started first, before the rest of M1. Reruns of the same commit are the flake ground truth for T3, and job timings feed duration estimates.
 2. **Replay set.** At least 8 repositories (at least 5 for the K1 kill gate). Each is re-executed at 200 or more historical commits in pinned containers ([TARGETS.md](TARGETS.md), [architecture.md](../docs/architecture.md) §7.3). The replay set is a subset of the collector set, so the CI history of every replay repository is archived too.
 
 ## Replay-set criteria
@@ -63,7 +63,7 @@ These columns come from the GitHub API on 2026-11-11.
 
 **What this implies.**
 - Only 2 of the 26 repositories use an npm lockfile: 19 use pnpm and 5 use yarn.
-- `core/lockfile/npm` (roadmap day 8) therefore covers almost none of the replay set. The pnpm and yarn parsers in M1's week 3 are a prerequisite for M4, not a nice-to-have.
+- `core/lockfile/npm` (roadmap day 8) therefore covers almost none of the replay set. The pnpm and yarn parsers, still to do in M1, are a prerequisite for M4, not a nice-to-have.
 - Jest is thin among active, permissive repositories: prettier, babel, and Jest itself. So the Vitest/Jest balance will lean towards Vitest.
 
 **Still to do before the corpus is frozen in M4:**

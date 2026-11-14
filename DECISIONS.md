@@ -649,3 +649,24 @@ Implementation decisions too small or too local for an ADR, plus session hand-ov
     - Weir, Idem, Sequent, Lacuna, Riffle and Searce: live marks in classes 9 or 42.
     - Probity: two active 2026 developer tools.
   - 473 tests in 31 files pass, with the re-pinned golden hash. Lint, typecheck and the zero-dependency check are clean.
+
+## 31. The roadmap has no dates or commit budgets (2026-11-14)
+
+- **Context.** The roadmap gave every milestone its weeks, its dates and a commit count: 640 commits over 26 weeks at about 25 a week, from Mon 2026-11-16. Other documents repeated the figures: "week 1" for the collector, "week 3" for SMAP, K1 on 2027-01-24, the pace row and risk 6 in architecture.md, and ADRs 0001, 0019 and 0020. Implementation started five days early (entry 1), so the calendar already disagreed with the work. Ojas asked to drop the dates and commit counts and keep only the milestones and what is left in them: being ahead or behind, or how many commits a milestone takes, doesn't matter; what each milestone has to deliver does.
+- **Decision.**
+  - **A milestone has a scope and exit criteria, and no dates or commit budget.** It is done when its exit criteria are met. The milestones keep their order, and the cut list, the K1 gate at the end of M4 and the pivot plan are unchanged.
+  - **Removed:**
+    - from [roadmap.md](docs/roadmap.md): the weeks, dates and commits columns, the total, the start date, the first steps' dates and commit count, K1's date and "if behind" on the cut list. Its header now says what is left in M1;
+    - from [architecture.md](docs/architecture.md): the pace row (now this rule), risk 6 (now the scope), K1's date, "launch slips" in K3, "week 1" and "week 3";
+    - "month 1", "week 8" and "week 17" from [threat-model.md](docs/threat-model.md) §2.4, which now names M1, M3 and M7;
+    - the weeks from [README.md](README.md), [HANDOFF.md](HANDOFF.md), [bench/TARGETS.md](bench/TARGETS.md), [bench/README.md](bench/README.md) and [bench/CORPUS.md](bench/CORPUS.md);
+    - the pace and commit figures from ADRs 0001, 0019 and 0020, corrected in place, which is still allowed before 2026-11-16. No decision changed.
+  - **Kept, because none of them is a schedule:**
+    - the roadmap's day numbers, which name M1's first ten steps and their branches (`m1/d09-cli`);
+    - K1's threshold. TARGETS.md is pre-registered, and only the gate's date went;
+    - the 4 clean shadow weeks before enforcement (M7, architecture §3.10, the threat model). That is an evidence window, and when to enforce is still open (HANDOFF §10 item 5);
+    - K2's 7 days to root-cause an escape, the collector's daily cron and its backlog estimates;
+    - the date until which ADRs may be corrected in place (2026-11-16), a rule about decisions, not about the plan;
+    - dates that record when something happened.
+  - **Records keep their wording.** Earlier entries in this log, and the dated reports in `docs/research/`, still say "week 1" or "week 3". Read "week 1" as the start of M1, and "week 3" (SMAP, the pnpm and yarn parsers) as later in M1.
+- **Evidence.** A search of every Markdown file outside `docs/research/` for weeks, months, month-and-day dates, commits per week and commit counts. Every match left is in the "kept" list above, is part of a past entry here, or is not about the plan: CORPUS.md's R3 and M4's "≥200 commits" count commits of the repositories Trommel replays, Node's end-of-life dates are Node's, and "fell behind" or "behind an interface" are ordinary words.

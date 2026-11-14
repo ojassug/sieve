@@ -7,7 +7,7 @@ Trommel is a self-hostable test-intelligence service for CI. On every run it:
 
 Every skip carries a machine-checkable proof, and uncertainty always means the test runs.
 
-**Status:** implementation of milestone M1 started on 2026-11-11. Roadmap days 1–10 are merged, the walking skeleton in CI included; the rest of M1 (weeks 2–3) is under way.
+**Status:** implementation of milestone M1 started on 2026-11-11. Roadmap days 1–10 are merged, the walking skeleton in CI included; the rest of M1 is under way. Milestones have no dates or commit budgets: each is done when its exit criteria are met.
 - `packages/core` has the snapshot diff, import lexer, module resolver, impact graph, npm lockfile reader, static graph builder and static selection.
 - `packages/cli` runs from source: `node packages/cli/src/main.ts graph`, `diff` and `plan --mode shadow --static`. Without test records no skip is proven safe, so plans run every test and report the would-skips as unproven static reachability.
 - `.github/workflows/trommel.yml` runs Trommel on its own pull requests: plan, test shards and a gate, in shadow mode, with the map cached from `main`.
@@ -25,7 +25,7 @@ To continue the work, start with [HANDOFF.md](HANDOFF.md).
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Setup, ground rules, workflow and the Developer Certificate of Origin |
 | [docs/architecture.md](docs/architecture.md) | Product definition, architecture diagrams, algorithm specs, data model, interfaces, verification strategy, risks, research spike results |
 | [docs/threat-model.md](docs/threat-model.md) | Security model (tenancy, auth, trust lanes, privacy) and the adversarial review |
-| [docs/roadmap.md](docs/roadmap.md) | 10 milestones (about 640 commits over 26 weeks), the first two weeks in detail, walking skeleton, cut list, pivot plan |
+| [docs/roadmap.md](docs/roadmap.md) | 10 milestones with their scope and exit criteria, what is left in M1, M1's first steps in detail, walking skeleton, cut list, pivot plan |
 | [docs/adr/](docs/adr/README.md) | 21 architecture decision records, seven of them corrected in place on 2026-11-13 |
 | [docs/research/2026-11-foundation-review.md](docs/research/2026-11-foundation-review.md) | The 2026-11-13 review of the design and the M1 code: findings with evidence, the ADR corrections, and the recommendations still open |
 | [bench/TARGETS.md](bench/TARGETS.md) | Pre-registered benchmark targets and the kill criterion |
